@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "classic-burger",
+      "description": "A classic beef burger with lettuce, tomato, and cheese.",
+      "imageUrl": "https://images.unsplash.com/photo-1554288248-a71ba21bf1cc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjbGFzc2ljJTIwYnVyZ2VyfGVufDB8fHx8MTc2MzgyNzk3Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "classic burger"
+    },
+    {
+      "id": "bacon-burger",
+      "description": "A beef burger with crispy bacon and cheese.",
+      "imageUrl": "https://images.unsplash.com/photo-1604366247250-b06cf35fc38a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxiYWNvbiUyMGJ1cmdlcnxlbnwwfHx8fDE3NjM4NjMzMDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "bacon burger"
+    },
+    {
+      "id": "chicken-burger",
+      "description": "A grilled chicken burger with mayo and lettuce.",
+      "imageUrl": "https://images.unsplash.com/photo-1615297928064-24977384d0da?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjaGlja2VuJTIwYnVyZ2VyfGVufDB8fHx8MTc2Mzg4Mjg4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "chicken burger"
+    },
+    {
+      "id": "veggie-burger",
+      "description": "A vegetarian burger patty with fresh vegetables.",
+      "imageUrl": "https://images.unsplash.com/photo-1520073201527-6b044ba2ca9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx2ZWdnaWUlMjBidXJnZXJ8ZW58MHx8fHwxNzYzODQxNDAyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "veggie burger"
+    },
+    {
+      "id": "double-burger",
+      "description": "A double patty beef burger for the extra hungry.",
+      "imageUrl": "https://images.unsplash.com/photo-1607013401178-f9c15ab575bb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxkb3VibGUlMjBidXJnZXJ8ZW58MHx8fHwxNzYzOTE5NTMyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "double burger"
+    },
+    {
+      "id": "fries",
+      "description": "A side of crispy golden french fries.",
+      "imageUrl": "https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmcmVuY2glMjBmcmllc3xlbnwwfHx8fDE3NjM4NjY0MzF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "french fries"
+    },
+    {
+      "id": "soda",
+      "description": "A refreshing carbonated soft drink.",
+      "imageUrl": "https://images.unsplash.com/photo-1629059042675-ce386c84cebf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzb2Z0JTIwZHJpbmt8ZW58MHx8fHwxNzYzODM0NDEwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soft drink"
+    },
+    {
+      "id": "onion-rings",
+      "description": "A side of crispy fried onion rings.",
+      "imageUrl": "https://images.unsplash.com/photo-1612679300857-0b7600449e68?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8b25pb24lMjByaW5nc3xlbnwwfHx8fDE3NjM4MTY3MTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "onion rings"
+    }
+  ]
 }
