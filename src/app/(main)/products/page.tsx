@@ -1,3 +1,4 @@
+'use client';
 import {
   Table,
   TableBody,
@@ -10,10 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { mockProducts } from '@/lib/data';
 import Image from 'next/image';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
+import type { Product } from '@/lib/types';
+
 
 export default function ProductsPage() {
+  const firestore = useFirestore();
+  const productsQuery = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+  const { data: products, isLoading } = useCollection<Product>(productsQuery);
+
   return (
     <Card>
       <CardHeader>
@@ -45,7 +54,8 @@ export default function ProductsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockProducts.map((product) => (
+            {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
+            {products?.map((product) => (
               <TableRow key={product.id}>
                 <TableCell className="hidden sm:table-cell">
                   <Image
@@ -62,7 +72,7 @@ export default function ProductsPage() {
                   <Badge variant="outline">{product.sku}</Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">S/ {product.salePrice.toFixed(2)}</TableCell>
-                <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
+                <TableCell className="hidden md:table-cell">{product.quantity}</TableCell>
                 <TableCell>
                   <Button size="sm" variant="outline">
                     Editar

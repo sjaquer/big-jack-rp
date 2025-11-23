@@ -4,11 +4,13 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { mockProducts } from '@/lib/data';
 import Image from 'next/image';
 import type { Product } from '@/lib/types';
 import { X, Plus, Minus } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
+import { useCollection, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
 
 
 interface OrderItem extends Product {
@@ -16,6 +18,10 @@ interface OrderItem extends Product {
 }
 
 export default function POSPage() {
+    const firestore = useFirestore();
+    const productsQuery = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+    const { data: products, isLoading } = useCollection<Product>(productsQuery);
+    
     const [order, setOrder] = useState<OrderItem[]>([]);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
 
@@ -46,6 +52,33 @@ export default function POSPage() {
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
     const total = subtotal; // Assuming no tax for now
 
+    const handleSuccessfulPayment = (paymentMethod: string) => {
+      const salesCollection = collection(firestore, 'sales');
+      const saleData = {
+        saleDate: serverTimestamp(),
+        totalAmount: total,
+        cashierId: 'cashier-01', // Replace with actual logged-in cashier
+        paymentMethod: paymentMethod,
+      };
+
+      addDocumentNonBlocking(salesCollection, saleData)
+        .then(saleDocRef => {
+            const saleId = saleDocRef.id;
+            const saleItemsCollection = collection(firestore, `sales/${saleId}/sale_items`);
+            order.forEach(item => {
+                const saleItemData = {
+                    saleId: saleId,
+                    productId: item.id,
+                    quantity: item.quantity,
+                    unitPrice: item.salePrice
+                };
+                addDocumentNonBlocking(saleItemsCollection, saleItemData);
+            });
+        });
+
+      handleResetOrder();
+    };
+
     const handleResetOrder = () => {
         setOrder([]);
         setPaymentModalOpen(false);
@@ -57,13 +90,14 @@ export default function POSPage() {
             isOpen={isPaymentModalOpen}
             onClose={() => setPaymentModalOpen(false)}
             total={total}
-            onSuccess={handleResetOrder}
+            onSuccess={handleSuccessfulPayment}
         />
       <div className="md:col-span-2">
         <Card className="h-full">
           <CardContent className="p-4">
+            {isLoading && <p>Cargando productos...</p>}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {mockProducts.map((product) => (
+              {products?.map((product) => (
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow"

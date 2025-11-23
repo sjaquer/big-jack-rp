@@ -1,3 +1,4 @@
+'use client';
 import {
   Table,
   TableBody,
@@ -6,13 +7,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { mockIngredients, mockProducts, mockOtherItems } from '@/lib/data';
 import { format } from 'date-fns';
+import { useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/provider';
+import type { Ingredient, Product, InventoryItem } from '@/lib/types';
+
 
 export default function InventoryPage() {
+  const firestore = useFirestore();
+
+  const ingredientsQuery = useMemoFirebase(() => collection(firestore, 'ingredients'), [firestore]);
+  const { data: ingredients, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
+  
+  const productsQuery = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+  const { data: products, isLoading: productsLoading } = useCollection<Product>(productsQuery);
+
+  const inventoryQuery = useMemoFirebase(() => collection(firestore, 'inventory_items'), [firestore]);
+  const { data: otherItems, isLoading: otherItemsLoading } = useCollection<InventoryItem>(inventoryQuery);
+
   return (
     <div className="space-y-6">
       <div>
@@ -44,14 +61,15 @@ export default function InventoryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockIngredients.map((item) => (
+                  {ingredientsLoading && <TableRow><TableCell colSpan={5}>Cargando...</TableCell></TableRow>}
+                  {ingredients?.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.stock} {item.unit}</TableCell>
-                      <TableCell>{item.minStock} {item.unit}</TableCell>
-                      <TableCell>{format(new Date(item.expiryDate), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>{item.quantity} {item.unit}</TableCell>
+                      <TableCell>{item.minimumStock ?? 0} {item.unit}</TableCell>
+                      <TableCell>{item.expiryDate ? format(new Date(item.expiryDate), 'dd/MM/yyyy') : 'N/A'}</TableCell>
                       <TableCell>
-                        {item.stock <= item.minStock ? (
+                        {item.quantity <= (item.minimumStock ?? 0) ? (
                           <Badge variant="destructive">Bajo Stock</Badge>
                         ) : (
                           <Badge variant="secondary">En Stock</Badge>
@@ -80,11 +98,12 @@ export default function InventoryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockProducts.map((item) => (
+                  {productsLoading && <TableRow><TableCell colSpan={3}>Cargando...</TableCell></TableRow>}
+                  {products?.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell><Badge variant="outline">{item.sku}</Badge></TableCell>
-                      <TableCell>{item.stock}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -109,13 +128,14 @@ export default function InventoryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockOtherItems.map((item) => (
+                  {otherItemsLoading && <TableRow><TableCell colSpan={4}>Cargando...</TableCell></TableRow>}
+                  {otherItems?.filter(item => item.type !== 'product' && item.type !== 'ingredient').map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.stock}</TableCell>
-                      <TableCell>{item.minStock}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{item.minimumStock}</TableCell>
                       <TableCell>
-                        {item.stock <= item.minStock ? (
+                        {item.quantity <= item.minimumStock ? (
                           <Badge variant="destructive">Bajo Stock</Badge>
                         ) : (
                           <Badge variant="secondary">En Stock</Badge>

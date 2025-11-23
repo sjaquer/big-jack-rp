@@ -1,3 +1,4 @@
+'use client';
 import {
   Card,
   CardContent,
@@ -9,12 +10,30 @@ import StatCard from '@/components/dashboard/stat-card';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 import { PopularItemsChart } from '@/components/dashboard/popular-items-chart';
 import { DollarSign, ShoppingCart, BarChart } from 'lucide-react';
-import { mockSalesData, mockProducts } from '@/lib/data';
+import { useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/provider';
+import type { Sale, Product } from '@/lib/types';
+
 
 export default function DashboardPage() {
-  const totalRevenue = mockSalesData.reduce((acc, sale) => acc + sale.revenue, 0);
-  const totalProfit = mockSalesData.reduce((acc, sale) => acc + sale.netProfit, 0);
-  const totalSales = mockSalesData.length; // Simplified for mock data
+  const firestore = useFirestore();
+  
+  const salesQuery = useMemoFirebase(() => {
+    return collection(firestore, 'sales');
+  }, [firestore]);
+  const { data: salesData, isLoading: salesLoading } = useCollection<Sale>(salesQuery);
+
+  const productsQuery = useMemoFirebase(() => {
+    return collection(firestore, 'products');
+  }, [firestore]);
+  const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsQuery);
+
+  const totalRevenue = salesData?.reduce((acc, sale) => acc + sale.totalAmount, 0) ?? 0;
+  // Note: netProfit is not available in the Sale entity. We'll use a placeholder calculation.
+  const totalProfit = totalRevenue * 0.4; // Assuming a 40% profit margin
+  const totalSales = salesData?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -32,7 +51,7 @@ export default function DashboardPage() {
           title="Beneficio Neto"
           value={`S/ ${totalProfit.toLocaleString('es-PE')}`}
           icon={BarChart}
-          description="Beneficio total después de costos"
+          description="Beneficio total después de costos (estimado)"
         />
         <StatCard
           title="Ventas Totales"
@@ -48,7 +67,7 @@ export default function DashboardPage() {
             <CardDescription>Resumen de los ingresos de los últimos 7 días.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <SalesChart data={mockSalesData} />
+            <SalesChart data={salesData ?? []} isLoading={salesLoading} />
           </CardContent>
         </Card>
         <Card className="col-span-4 lg:col-span-3">
@@ -57,7 +76,7 @@ export default function DashboardPage() {
             <CardDescription>Los productos más vendidos.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PopularItemsChart data={mockProducts} />
+            <PopularItemsChart data={productsData ?? []} isLoading={productsLoading} />
           </CardContent>
         </Card>
       </div>
