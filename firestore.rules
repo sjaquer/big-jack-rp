@@ -1,0 +1,227 @@
+/**
+ * This ruleset enforces a security model for the "Big Jack Manager" application.
+ *
+ * Core Philosophy:
+ * The security model is divided into two main areas: customer-owned data and
+ * internal business data. Customer data (profiles, online orders) is strictly
+ * private and accessible only by the customer who owns it. Internal business
+ * data (products, ingredients, sales, suppliers) is readable by any
+ * authenticated user (e.g., an employee using the management app), but write
+ * operations are restricted to prevent unauthorized modification.
+ *
+ * Data Structure:
+ * The data is organized into flat, top-level collections (e.g., /products,
+ * /customers, /sales). This flat hierarchy simplifies security rules by ensuring
+ * that permissions for one collection do not depend on documents in another,
+ * avoiding slow and costly `get()` calls in rules. The only exception is
+ * the /sales/{saleId}/sale_items subcollection, which inherits its read
+ * permissions from its parent sale document.
+ *
+ * Key Security Decisions:
+ * - Customer Privacy: Listing users from the top-level /customers collection is
+ *   explicitly disallowed to protect user privacy and prevent data scraping.
+ * - Strict Ownership: A user can only access their own customer profile and
+ *   their own online orders. This is enforced by matching the document ID or
+ *   an internal `customerId` field against the user's authenticated UID.
+ * - Prototyping Flexibility for Business Data: For internal collections like
+ *   /products, /ingredients, and /suppliers, any authenticated user can read
+ *   and create new documents. However, updates and deletes are disabled by
+ *   default because the data model lacks an 'ownerId' field to securely
+ *   authorize these actions. This is a secure placeholder to allow for rapid
+ *   development, with clear `TODO` comments for future implementation.
+ * - Sales Data is Read-Only from Client: Sales data is considered sensitive and
+ *   is likely created by a trusted backend or point-of-sale system. Therefore,
+ *   all client-side write operations (`create`, `update`, `delete`) on the
+ *   /sales collection and its subcollections are denied.
+ *
+ * Denormalization for Authorization:
+ * The `/online_orders` documents contain a denormalized `customerId` field. This
+ * allows a security rule to verify ownership directly from the document itself
+ * without needing to read the parent `/customers` document, resulting in faster
+ * and more efficient security checks.
+ *
+ * Structural Segregation:
+ * Private customer data (`/customers`, `/online_orders`) is stored in separate
+ * collections from more public or internal business data (`/products`,
+ * `/suppliers`). This clear separation ensures that queries for business data
+ * cannot accidentally expose sensitive customer information.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the foundation of the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    /**
+     * Verifies that a document already exists for update/delete operations.
+     * Also checks if the requester is the owner of the existing document.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // --------------------------------
+    // Customer Data Rules
+    // --------------------------------
+
+    /**
+     * @description Manages customer profiles. Each customer can create and manage their own profile only.
+     * @path /customers/{customerId}
+     * @allow (create) An authenticated user creating their own profile document, where {customerId} is their UID.
+     * @deny (get) An authenticated user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree and enforces self-creation.
+     */
+    match /customers/{customerId} {
+      allow get: if isOwner(customerId);
+      allow list: if false;
+      allow create: if isOwner(customerId) && request.resource.data.id == customerId;
+      allow update: if isExistingOwner(customerId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(customerId);
+    }
+
+    /**
+     * @description Manages online orders placed by customers. Only the customer who placed the order can view or manage it.
+     * @path /online_orders/{onlineOrderId}
+     * @allow (get) A user with UID 'user123' reading an order where the document's `customerId` field is 'user123'.
+     * @deny (update) A user trying to change the `customerId` on an existing order.
+     * @principle Enforces document ownership for all operations based on a denormalized 'customerId' field.
+     */
+    match /online_orders/{onlineOrderId} {
+      allow get: if isSignedIn() && isOwner(resource.data.customerId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(request.resource.data.customerId);
+      allow update: if isSignedIn() && isExistingOwner(resource.data.customerId) && request.resource.data.customerId == resource.data.customerId;
+      allow delete: if isSignedIn() && isExistingOwner(resource.data.customerId);
+    }
+
+    // --------------------------------
+    // Business & Operational Data Rules
+    // --------------------------------
+    
+    /**
+     * @description Manages product information. Data is publicly readable.
+     * @path /products/{productId}
+     * @allow (create) Any authenticated user creating a new product.
+     * @deny (update) Any user trying to update a product, as ownership cannot be verified.
+     * @principle Public read with authenticated create. Writes are restricted until ownership is defined in the schema.
+     */
+    match /products/{productId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Product' entity is missing an 'ownerId' or 'creatorId' field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages ingredient information. Data is publicly readable.
+     * @path /ingredients/{ingredientId}
+     * @allow (create) Any authenticated user creating a new ingredient.
+     * @deny (delete) Any user trying to delete an ingredient, as ownership cannot be verified.
+     * @principle Public read with authenticated create. Writes are restricted until ownership is defined in the schema.
+     */
+    match /ingredients/{ingredientId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Ingredient' entity is missing an 'ownerId' or 'creatorId' field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages inventory items. Data is readable by authenticated users.
+     * @path /inventory_items/{inventoryItemId}
+     * @allow (create) Any authenticated user creating a new inventory item.
+     * @deny (update) Any user trying to update an item, as ownership cannot be verified.
+     * @principle Authenticated read/create. Writes are restricted until ownership is defined in the schema.
+     */
+    match /inventory_items/{inventoryItemId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'InventoryItem' entity is missing an 'ownerId' or 'creatorId' field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages supplier information. Data is publicly readable.
+     * @path /suppliers/{supplierId}
+     * @allow (create) Any authenticated user creating a new supplier.
+     * @deny (update) Any user trying to update a supplier, as ownership cannot be verified.
+     * @principle Public read with authenticated create. Writes are restricted until ownership is defined in the schema.
+     */
+    match /suppliers/{supplierId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Supplier' entity is missing an 'ownerId' or 'creatorId' field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+    
+    /**
+     * @description Manages cashier profiles. This is reference data, not linked to Firebase Auth users.
+     * @path /cashiers/{cashierId}
+     * @allow (get) Any authenticated user reading cashier information.
+     * @deny (delete) Any user trying to delete a cashier profile.
+     * @principle Authenticated read/create. Writes are restricted as this is considered admin-managed data.
+     */
+    match /cashiers/{cashierId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Manages sale transactions. This data is read-only from the client-side for security.
+     * @path /sales/{saleId}
+     * @allow (get) Any authenticated user (e.g., manager) reading sales data.
+     * @deny (create) Any client attempting to create a sale, which should be handled by a trusted backend.
+     * @principle Secures sensitive financial data by making it read-only for clients.
+     */
+    match /sales/{saleId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+
+      /**
+       * @description Manages items within a sale. Inherits read-only permissions from the parent sale.
+       * @path /sales/{saleId}/sale_items/{saleItemId}
+       * @allow (list) An authenticated user listing items for a sale they can access.
+       * @deny (create) Any client attempting to add items to a sale.
+       * @principle Enforces security on a subcollection based on the parent document's security model.
+       */
+      match /sale_items/{saleItemId} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}

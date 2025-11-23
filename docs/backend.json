@@ -1,0 +1,502 @@
+{
+  "entities": {
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product sold by Big Jack Manager.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product."
+        },
+        "sku": {
+          "type": "string",
+          "description": "Stock Keeping Unit for the product."
+        },
+        "ingredientIds": {
+          "type": "array",
+          "description": "References to Ingredients. (Relationship: Product N:N Ingredient)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "price": {
+          "type": "number",
+          "description": "Cost price of the product."
+        },
+        "salePrice": {
+          "type": "number",
+          "description": "Selling price of the product."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to Supplier. (Relationship: Supplier 1:N Product)"
+        },
+        "purchaseDate": {
+          "type": "string",
+          "description": "Date the product was purchased.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "sku",
+        "price",
+        "salePrice",
+        "supplierId",
+        "purchaseDate"
+      ]
+    },
+    "Ingredient": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ingredient",
+      "type": "object",
+      "description": "Represents an ingredient used in a product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ingredient entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the ingredient."
+        },
+        "cost": {
+          "type": "number",
+          "description": "Cost of the ingredient."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the ingredient in inventory."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measurement for the ingredient (e.g., grams, kilograms)."
+        },
+        "productIds": {
+          "type": "array",
+          "description": "References to Products. (Relationship: Product N:N Ingredient)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "cost",
+        "quantity",
+        "unit"
+      ]
+    },
+    "InventoryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InventoryItem",
+      "type": "object",
+      "description": "Represents an item in the inventory, including products, ingredients, and other items.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the inventory item entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the inventory item (e.g., product name, ingredient name)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of inventory item (e.g., 'product', 'ingredient', 'packaging')."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the item in inventory."
+        },
+        "expiryDate": {
+          "type": "string",
+          "description": "Expiry date of the item, if applicable.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "Storage location of the item within the inventory."
+        },
+        "minimumStock": {
+          "type": "number",
+          "description": "Minimum stock level for the item, triggering alerts when reached."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "quantity"
+      ]
+    },
+    "Sale": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Sale",
+      "type": "object",
+      "description": "Represents a sale transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the sale transaction."
+        },
+        "saleDate": {
+          "type": "string",
+          "description": "Date and time of the sale.",
+          "format": "date-time"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the sale in soles peruanos."
+        },
+        "cashierId": {
+          "type": "string",
+          "description": "Reference to Cashier. (Relationship: Cashier 1:N Sale)"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Method of payment used for the sale (e.g., cash, card)."
+        }
+      },
+      "required": [
+        "id",
+        "saleDate",
+        "totalAmount",
+        "cashierId",
+        "paymentMethod"
+      ]
+    },
+    "SaleItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SaleItem",
+      "type": "object",
+      "description": "Represents an item within a sale transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the sale item."
+        },
+        "saleId": {
+          "type": "string",
+          "description": "Reference to Sale. (Relationship: Sale 1:N SaleItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to Product. (Relationship: Product 1:N SaleItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the product sold in this sale item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Price of a single unit of the product at the time of sale."
+        }
+      },
+      "required": [
+        "id",
+        "saleId",
+        "productId",
+        "quantity",
+        "unitPrice"
+      ]
+    },
+    "Supplier": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Supplier",
+      "type": "object",
+      "description": "Represents a supplier of products or ingredients.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the supplier entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the supplier."
+        },
+        "contactName": {
+          "type": "string",
+          "description": "Contact person at the supplier."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "Email address of the supplier.",
+          "format": "email"
+        },
+        "contactPhone": {
+          "type": "string",
+          "description": "Phone number of the supplier."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "contactName"
+      ]
+    },
+    "OnlineOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OnlineOrder",
+      "type": "object",
+      "description": "Represents an order received from the online website.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the online order."
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "Date and time the order was placed.",
+          "format": "date-time"
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to Customer. (Relationship: Customer 1:N OnlineOrder)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the order (e.g., 'pending', 'processing', 'completed')."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the order."
+        }
+      },
+      "required": [
+        "id",
+        "orderDate",
+        "customerId",
+        "status",
+        "totalAmount"
+      ]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a customer placing online orders.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the customer."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the customer."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the customer."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the customer.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Phone number of the customer."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "Cashier": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Cashier",
+      "type": "object",
+      "description": "Represents a cashier processing sales transactions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the cashier."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the cashier."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the cashier."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product information. Includes denormalized 'supplierId' for easier access to the supplier. Consider adding a 'members' map if products need shared access.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "Unique identifier for the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/ingredients/{ingredientId}",
+        "definition": {
+          "entityName": "Ingredient",
+          "schema": {
+            "$ref": "#/backend/entities/Ingredient"
+          },
+          "description": "Stores ingredient information.",
+          "params": [
+            {
+              "name": "ingredientId",
+              "description": "Unique identifier for the ingredient."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/inventory_items/{inventoryItemId}",
+        "definition": {
+          "entityName": "InventoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/InventoryItem"
+          },
+          "description": "Stores inventory item details.",
+          "params": [
+            {
+              "name": "inventoryItemId",
+              "description": "Unique identifier for the inventory item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sales/{saleId}",
+        "definition": {
+          "entityName": "Sale",
+          "schema": {
+            "$ref": "#/backend/entities/Sale"
+          },
+          "description": "Stores sale transaction details. Includes 'cashierId' for access control.",
+          "params": [
+            {
+              "name": "saleId",
+              "description": "Unique identifier for the sale."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sales/{saleId}/sale_items/{saleItemId}",
+        "definition": {
+          "entityName": "SaleItem",
+          "schema": {
+            "$ref": "#/backend/entities/SaleItem"
+          },
+          "description": "Stores individual items within a sale transaction. Inherits access control from the parent 'sale'.",
+          "params": [
+            {
+              "name": "saleId",
+              "description": "Unique identifier for the parent sale."
+            },
+            {
+              "name": "saleItemId",
+              "description": "Unique identifier for the sale item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/suppliers/{supplierId}",
+        "definition": {
+          "entityName": "Supplier",
+          "schema": {
+            "$ref": "#/backend/entities/Supplier"
+          },
+          "description": "Stores supplier information.",
+          "params": [
+            {
+              "name": "supplierId",
+              "description": "Unique identifier for the supplier."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/online_orders/{onlineOrderId}",
+        "definition": {
+          "entityName": "OnlineOrder",
+          "schema": {
+            "$ref": "#/backend/entities/OnlineOrder"
+          },
+          "description": "Stores online order information. Includes 'customerId' for access control.",
+          "params": [
+            {
+              "name": "onlineOrderId",
+              "description": "Unique identifier for the online order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores customer information.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/cashiers/{cashierId}",
+        "definition": {
+          "entityName": "Cashier",
+          "schema": {
+            "$ref": "#/backend/entities/Cashier"
+          },
+          "description": "Stores cashier information.  Used to control access to sales data.",
+          "params": [
+            {
+              "name": "cashierId",
+              "description": "Unique identifier for the cashier."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to store and manage product, ingredient, inventory, sales, supplier, online order, customer and cashier data for the Big Jack Manager application. The structure emphasizes simplicity, security, and scalability. It follows the principle of Authorization Independence by avoiding hierarchical authorization dependencies. All collections are designed with homogeneous security needs, enabling straightforward security rules. The data model leverages path-based ownership for user-related data and membership maps for collaborative access where applicable.  \n\n**Authorization Independence and QAPs:**\n\n*   **Products:** The `products` collection stores product details. Access control will be managed at the product level, potentially using a membership map if shared access is needed (although not explicitly defined in the requirements).\n*   **Ingredients:** The `ingredients` collection stores ingredient information. Similar to products, access is controlled at the ingredient level.\n*   **Inventory:** The `inventory_items` collection stores inventory data.  Access will be managed at the item level.\n*   **Sales & SaleItems:** `sales` stores sale transaction data, and `sale_items` stores individual items within a sale.  Access is controlled via cashier ownership of sales. \n*   **Suppliers:** `suppliers` stores supplier information. Access is controlled at the supplier level.\n*   **Online Orders & Customers:** `online_orders` stores order data, linked to customers in the `customers` collection. Access is tied to the customer ID.\n*   **Cashiers:** The `cashiers` collection stores cashier information. This is separate from user authentication information.\n\nThis structure avoids `get()` calls in security rules because each entity's access control is self-contained.  QAPs are supported through structural segregation (different data types in different collections) and, where necessary, membership maps, ensuring secure `list` operations are possible."
+  }
+}
