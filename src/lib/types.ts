@@ -16,7 +16,7 @@ export interface Product {
 }
 
 export interface Ingredient {
-  id: string;
+  id:string;
   name: string;
   cost: number;
   quantity: number;
@@ -53,6 +53,10 @@ export interface OnlineOrder {
   totalAmount: number;
 }
 
+export interface Supplier {
+    id: string;
+    name: string;
+}
 
 export interface OtherItem {
   id: string;
