@@ -13,6 +13,8 @@ import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/fireba
 import { collection, doc } from 'firebase/firestore';
 import type { OnlineOrder } from '@/lib/types';
 import { useMemoFirebase } from '@/firebase/provider';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 
 const statusMap: { [key in OnlineOrder['status']]: { label: string; color: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
@@ -27,6 +29,7 @@ export default function OnlineOrdersPage() {
   const { data: onlineOrders, isLoading } = useCollection<OnlineOrder>(ordersQuery);
 
   const handleStatusChange = (orderId: string, newStatus: OnlineOrder['status']) => {
+    if (!firestore) return;
     const orderDocRef = doc(firestore, 'online_orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { status: newStatus });
   };
@@ -45,13 +48,18 @@ export default function OnlineOrdersPage() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="font-headline text-lg">{order.id.slice(0,8)}</CardTitle>
-                  <CardDescription>{order.customerId}</CardDescription>
+                  <CardTitle className="font-headline text-lg">#{order.id.slice(0,6)}</CardTitle>
+                  <CardDescription>
+                    {order.orderDate ? format(order.orderDate.toDate(), 'dd/MM/yyyy HH:mm', { locale: es }) : 'Fecha no disponible'}
+                    </CardDescription>
                 </div>
                 <Badge variant={statusMap[order.status]?.color ?? 'default'}>{statusMap[order.status]?.label ?? 'Desconocido'}</Badge>
               </div>
             </CardHeader>
             <CardContent>
+               <div className="text-sm">
+                <p className="font-medium">Cliente: {order.customerId.slice(0,10)}...</p>
+              </div>
               <div className="mt-4 pt-4 border-t">
                 <p className="flex justify-between font-semibold">
                   <span>Total:</span>

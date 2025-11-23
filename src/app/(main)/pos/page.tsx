@@ -9,8 +9,9 @@ import type { Product } from '@/lib/types';
 import { X, Plus, Minus } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
 import { useCollection, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface OrderItem extends Product {
@@ -19,7 +20,8 @@ interface OrderItem extends Product {
 
 export default function POSPage() {
     const firestore = useFirestore();
-    const productsQuery = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+    const { toast } = useToast();
+    const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
     
     const [order, setOrder] = useState<OrderItem[]>([]);
@@ -52,8 +54,9 @@ export default function POSPage() {
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
     const total = subtotal; // Assuming no tax for now
 
-    const handleSuccessfulPayment = (paymentMethod: string) => {
-      const salesCollection = collection(firestore, 'sales');
+    const handleSuccessfulPayment = async (paymentMethod: string) => {
+      if (!firestore) return;
+
       const saleData = {
         saleDate: serverTimestamp(),
         totalAmount: total,
@@ -61,20 +64,38 @@ export default function POSPage() {
         paymentMethod: paymentMethod,
       };
 
-      addDocumentNonBlocking(salesCollection, saleData)
-        .then(saleDocRef => {
-            const saleId = saleDocRef.id;
-            const saleItemsCollection = collection(firestore, `sales/${saleId}/sale_items`);
-            order.forEach(item => {
-                const saleItemData = {
-                    saleId: saleId,
-                    productId: item.id,
-                    quantity: item.quantity,
-                    unitPrice: item.salePrice
-                };
-                addDocumentNonBlocking(saleItemsCollection, saleItemData);
-            });
+      try {
+        const newSaleRef = doc(collection(firestore, 'sales'));
+        const batch = writeBatch(firestore);
+
+        batch.set(newSaleRef, saleData);
+
+        order.forEach(item => {
+            const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
+            const saleItemData = {
+                saleId: newSaleRef.id,
+                productId: item.id,
+                quantity: item.quantity,
+                unitPrice: item.salePrice
+            };
+            batch.set(saleItemRef, saleItemData);
         });
+
+        await batch.commit();
+
+        toast({
+          title: "Venta registrada",
+          description: "La venta se ha guardado correctamente.",
+        });
+
+      } catch (error) {
+        console.error("Error creating sale:", error);
+        toast({
+          variant: "destructive",
+          title: "Error al registrar la venta",
+          description: "No se pudo guardar la venta. Inténtalo de nuevo.",
+        });
+      }
 
       handleResetOrder();
     };
