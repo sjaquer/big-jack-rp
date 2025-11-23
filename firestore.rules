@@ -204,7 +204,7 @@ service cloud.firestore {
     match /sales/{saleId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if false;
+      allow create: if isSignedIn();
       allow update: if false;
       allow delete: if false;
 
@@ -218,7 +218,7 @@ service cloud.firestore {
       match /sale_items/{saleItemId} {
         allow get: if isSignedIn();
         allow list: if isSignedIn();
-        allow create: if false;
+        allow create: if isSignedIn();
         allow update: if false;
         allow delete: if false;
       }
