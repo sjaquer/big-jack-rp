@@ -16,7 +16,7 @@ import Image from 'next/image';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Product, Supplier } from '@/lib/types';
+import type { Product, Supplier, Ingredient } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
 
 export default function ProductsPage() {
@@ -29,7 +29,9 @@ export default function ProductsPage() {
 
   const suppliersQuery = useMemoFirebase(() => collection(firestore, 'suppliers'), [firestore]);
   const { data: suppliers, isLoading: suppliersLoading } = useCollection<Supplier>(suppliersQuery);
-
+  
+  const ingredientsQuery = useMemoFirebase(() => collection(firestore, 'ingredients'), [firestore]);
+  const { data: ingredients, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -46,6 +48,8 @@ export default function ProductsPage() {
     setSelectedProduct(null);
   };
 
+  const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
+
   return (
     <>
       <ProductForm 
@@ -53,6 +57,7 @@ export default function ProductsPage() {
         onClose={handleFormClose}
         product={selectedProduct}
         suppliers={suppliers ?? []}
+        ingredients={ingredients ?? []}
       />
       <Card>
         <CardHeader>
@@ -84,7 +89,7 @@ export default function ProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(productsLoading || suppliersLoading) && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
               {products?.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="hidden sm:table-cell">

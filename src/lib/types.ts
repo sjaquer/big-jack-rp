@@ -1,11 +1,17 @@
 
 import { Timestamp } from 'firebase/firestore';
 
+export interface ProductIngredient {
+  ingredientId: string;
+  quantity: number;
+  unit: string;
+}
+
 export interface Product {
   id: string;
   name: string;
   sku: string;
-  ingredientIds?: string[];
+  ingredients?: ProductIngredient[];
   price: number;
   salePrice: number;
   supplierId: string;
