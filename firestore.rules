@@ -1,48 +1,9 @@
+
 /**
- * This ruleset enforces a security model for the "Big Jack Manager" application.
- *
- * Core Philosophy:
- * The security model is divided into two main areas: customer-owned data and
- * internal business data. Customer data (profiles, online orders) is strictly
- * private and accessible only by the customer who owns it. Internal business
- * data (products, ingredients, sales, suppliers) is readable by any
- * authenticated user (e.g., an employee using the management app), but write
- * operations are restricted to prevent unauthorized modification.
- *
- * Data Structure:
- * The data is organized into flat, top-level collections (e.g., /products,
- * /customers, /sales). This flat hierarchy simplifies security rules by ensuring
- * that permissions for one collection do not depend on documents in another,
- * avoiding slow and costly `get()` calls in rules. The only exception is
- * the /sales/{saleId}/sale_items subcollection, which inherits its read
- * permissions from its parent sale document.
- *
- * Key Security Decisions:
- * - Customer Privacy: Listing users from the top-level /customers collection is
- *   explicitly disallowed to protect user privacy and prevent data scraping.
- * - Strict Ownership: A user can only access their own customer profile and
- *   their own online orders. This is enforced by matching the document ID or
- *   an internal `customerId` field against the user's authenticated UID.
- * - Prototyping Flexibility for Business Data: For internal collections like
- *   /products, /ingredients, and /suppliers, any authenticated user can read
- *   and write. This is a secure placeholder to allow for rapid
- *   development.
- * - Sales Data is Read-Only from Client: Sales data is considered sensitive and
- *   is likely created by a trusted backend or point-of-sale system. Therefore,
- *   all client-side write operations (`create`, `update`, `delete`) on the
- *   /sales collection and its subcollections are denied for some roles.
- *
- * Denormalization for Authorization:
- * The `/online_orders` documents contain a denormalized `customerId` field. This
- * allows a security rule to verify ownership directly from the document itself
- * without needing to read the parent `/customers` document, resulting in faster
- * and more efficient security checks.
- *
- * Structural Segregation:
- * Private customer data (`/customers`, `/online_orders`) is stored in separate
- * collections from more public or internal business data (`/products`,
- * `/suppliers`). This clear separation ensures that queries for business data
- * cannot accidentally expose sensitive customer information.
+ * This ruleset is for the "Big Jack Manager" application.
+ * It's designed for an internal management tool where authenticated
+ * users (employees/managers) have broad access, while still protecting
+ * sensitive customer data.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -53,149 +14,120 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * Checks if the user is authenticated.
+     * Checks if the user is authenticated (logged in).
+     * This is the base for all other permissions.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * Checks if the authenticated user's UID matches the provided userId.
-     * This is the foundation of the user-ownership model.
+     * Checks if the authenticated user's UID matches a given userId.
+     * This is used for ownership-based security.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
+
     /**
-     * Verifies that a document already exists for update/delete operations.
-     * Also checks if the requester is the owner of the existing document.
+     * Confirms a document exists and the user is the owner,
+     * for update/delete operations.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
-    
+
     /**
-     * Checks if the user has an admin/manager role.
-     * WARNING: Hardcoding emails is not recommended for production.
-     * Use custom claims for a more secure and scalable solution.
+     * Checks if the user has a 'Manager' role via their email.
+     * This provides admin-level access across the app.
+     * For production, it's better to use custom claims.
      */
     function isManager() {
-      // TODO: Replace with custom claims for production
-      return isSignedIn() && request.auth.token.email == "manager@bigjack.com";
+      return isSignedIn() && request.auth.token.email == "bigjackpe@gmail.com";
     }
 
     // --------------------------------
-    // Customer Data Rules
+    // Customer & Order Data Rules
     // --------------------------------
 
     /**
-     * @description Manages customer profiles. Each customer can manage their own profile. Admins can view/list all.
-     * @path /customers/{customerId}
+     * Customer profiles. Only the owner can manage their own profile.
+     * A Manager can view and list all customer profiles for support.
      */
     match /customers/{customerId} {
       allow get: if isOwner(customerId) || isManager();
-      allow list: if isManager();
-      allow create: if isOwner(customerId) && request.resource.data.id == customerId;
-      allow update: if isExistingOwner(customerId) && request.resource.data.id == resource.data.id;
+      allow list: if isManager(); // Only managers can list all customers
+      allow create: if isOwner(customerId);
+      allow update: if isExistingOwner(customerId);
       allow delete: if isExistingOwner(customerId);
     }
 
     /**
-     * @description Manages online orders. Customers can manage their own orders. Admins can see all.
-     * @path /online_orders/{onlineOrderId}
+     * Online orders. Customers can see their own orders.
+     * Managers can see and manage all orders.
      */
     match /online_orders/{onlineOrderId} {
-      allow read: if (isSignedIn() && isOwner(resource.data.customerId)) || isManager();
-      allow list: if isManager();
-      allow create: if isSignedIn();
-      allow update: if (isSignedIn() && isExistingOwner(resource.data.customerId) && request.resource.data.customerId == resource.data.customerId) || isManager();
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.customerId);
+      allow get: if (isSignedIn() && isOwner(resource.data.customerId)) || isManager();
+      allow list: if isManager(); // Only managers can see the full order list
+      allow create: if isSignedIn(); // Any logged-in user (incl. POS system) can create
+      allow update: if isManager(); // Only managers can change order status
+      allow delete: if isManager();
     }
 
     // --------------------------------
     // Business & Operational Data Rules
+    // (Broadly accessible to authenticated staff)
     // --------------------------------
-    
+
     /**
-     * @description Manages product information. Data is publicly readable.
-     * @path /products/{productId}
+     * Products, Ingredients, Inventory, Suppliers.
+     * Any authenticated user (staff) can read this data.
+     * Any authenticated user (staff) can also write, to allow POS stock updates.
      */
     match /products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn(); 
-      allow delete: if isSignedIn(); 
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
-    /**
-     * @description Manages ingredient information. Data is publicly readable.
-     * @path /ingredients/{ingredientId}
-     */
     match /ingredients/{ingredientId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn(); 
-      allow delete: if isSignedIn(); 
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
-    /**
-     * @description Manages inventory items. Data is readable by authenticated users.
-     * @path /inventory_items/{inventoryItemId}
-     */
     match /inventory_items/{inventoryItemId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     /**
-     * @description Manages supplier information. Data is publicly readable.
-     * @path /suppliers/{supplierId}
-     */
-    match /suppliers/{supplierId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-    
-    /**
-     * @description Manages cashier profiles. This is reference data, not linked to Firebase Auth users.
-     * @path /cashiers/{cashierId}
+     * Cashier profiles. Reference data.
      */
     match /cashiers/{cashierId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isManager();
-      allow delete: if isManager();
+      allow read: if isSignedIn();
+      allow write: if isManager(); // Only managers can add/edit cashier info
     }
 
     /**
-     * @description Manages sale transactions. This data is read-only from the client-side for security.
-     * @path /sales/{saleId}
+     * Sales data. This is created by the POS.
+     * For security, updates and deletes from the client are disabled.
      */
     match /sales/{saleId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn(); // POS creates sales
       allow update: if false;
       allow delete: if false;
 
       /**
-       * @description Manages items within a sale. Inherits read-only permissions from the parent sale.
-       * @path /sales/{saleId}/sale_items/{saleItemId}
+       * Items within a sale.
        */
       match /sale_items/{saleItemId} {
-        allow get: if true;
-        allow list: if true;
-        allow create: if isSignedIn();
+        allow read: if isSignedIn();
+        allow create: if isSignedIn(); // POS creates sale items
         allow update: if false;
         allow delete: if false;
       }

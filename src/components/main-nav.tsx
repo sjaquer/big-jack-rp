@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -11,12 +12,27 @@ import {
   Package,
   BrainCircuit,
   PanelLeft,
+  UserCircle,
+  LogOut,
 } from "lucide-react"
+import { getAuth, signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
+
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { BurgerIcon } from "@/components/icons"
+import { useUser, useAuth } from "@/firebase";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 
 function NavItems() {
@@ -76,6 +92,45 @@ function MobileNav() {
     )
 }
 
+function UserMenu() {
+    const { user } = useUser();
+    const auth = useAuth();
+    const router = useRouter();
+
+    const handleSignOut = () => {
+        signOut(auth).then(() => {
+            router.push('/login');
+        });
+    }
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="overflow-hidden rounded-full"
+          >
+             <Avatar>
+                <AvatarImage src={user?.photoURL ?? undefined} alt="@shadcn" />
+                <AvatarFallback>
+                    <UserCircle className="h-5 w-5" />
+                </AvatarFallback>
+             </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>{user?.email ?? 'Mi Cuenta'}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Cerrar Sesión</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
 export function MainNav({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -93,6 +148,9 @@ export function MainNav({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <MobileNav />
+            <div className="ml-auto">
+                <UserMenu />
+            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}
