@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -47,6 +47,29 @@ export default function ProductsPage() {
     setFormOpen(false);
     setSelectedProduct(null);
   };
+  
+  const calculateProducibleQuantity = (product: Product, allIngredients: Ingredient[]): number | string => {
+    if (!product.ingredients || product.ingredients.length === 0) {
+      return 'N/A';
+    }
+
+    let maxProducible = Infinity;
+
+    for (const recipeIngredient of product.ingredients) {
+      const inventoryIngredient = allIngredients.find(i => i.id === recipeIngredient.ingredientId);
+
+      if (!inventoryIngredient) {
+        return 0; // Required ingredient is not in inventory
+      }
+      
+      const producibleWithThisIngredient = Math.floor(inventoryIngredient.quantity / recipeIngredient.quantity);
+      if (producibleWithThisIngredient < maxProducible) {
+        maxProducible = producibleWithThisIngredient;
+      }
+    }
+
+    return maxProducible === Infinity ? 0 : maxProducible;
+  };
 
   const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
 
@@ -81,15 +104,16 @@ export default function ProductsPage() {
                 </TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead className="hidden md:table-cell">Precio de Venta</TableHead>
-                <TableHead className="hidden md:table-cell">Stock</TableHead>
+                <TableHead>Precio de Venta</TableHead>
+                <TableHead>Stock Actual</TableHead>
+                <TableHead>Stock Producible</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={7}>Cargando...</TableCell></TableRow>}
               {products?.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="hidden sm:table-cell">
@@ -106,8 +130,11 @@ export default function ProductsPage() {
                   <TableCell>
                     <Badge variant="outline">{product.sku}</Badge>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">S/ {product.salePrice.toFixed(2)}</TableCell>
-                  <TableCell className="hidden md:table-cell">{product.quantity}</TableCell>
+                  <TableCell>S/ {product.salePrice.toFixed(2)}</TableCell>
+                  <TableCell>{product.quantity}</TableCell>
+                  <TableCell>
+                    {calculateProducibleQuantity(product, ingredients ?? [])}
+                  </TableCell>
                   <TableCell>
                     <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
                       Editar
