@@ -12,11 +12,12 @@ import { SalesChart } from '@/components/dashboard/sales-chart';
 import { PopularItemsChart } from '@/components/dashboard/popular-items-chart';
 import { DollarSign, ShoppingCart, BarChart } from 'lucide-react';
 import { useCollection } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Sale, Product } from '@/lib/types';
+import type { Sale, Product, SaleItem } from '@/lib/types';
 import { startOfToday } from 'date-fns';
+import { useMemo } from 'react';
 
 
 export default function DashboardPage() {
@@ -38,9 +39,35 @@ export default function DashboardPage() {
   }, [firestore]);
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsQuery);
 
-  const totalRevenue = todaySalesData?.reduce((acc, sale) => acc + sale.totalAmount, 0) ?? 0;
-  // Note: netProfit is not available in the Sale entity. We'll use a placeholder calculation.
-  const totalProfit = totalRevenue * 0.4; // Assuming a 40% profit margin
+  const saleItemsQuery = useMemoFirebase(() => {
+    return collectionGroup(firestore, 'sale_items');
+  }, [firestore]);
+  const { data: saleItems, isLoading: saleItemsLoading } = useCollection<SaleItem>(saleItemsQuery);
+
+  const todaySalesIds = useMemo(() => todaySalesData?.map(s => s.id) ?? [], [todaySalesData]);
+  
+  const todaySaleItems = useMemo(() => {
+    return saleItems?.filter(item => todaySalesIds.includes(item.saleId)) ?? [];
+  }, [saleItems, todaySalesIds]);
+
+  const { totalRevenue, totalProfit } = useMemo(() => {
+    if (!todaySaleItems || !productsData) return { totalRevenue: 0, totalProfit: 0 };
+    
+    let revenue = 0;
+    let cost = 0;
+
+    todaySaleItems.forEach(item => {
+      const product = productsData.find(p => p.id === item.productId);
+      revenue += item.unitPrice * item.quantity;
+      if (product) {
+        cost += product.price * item.quantity;
+      }
+    });
+
+    return { totalRevenue: revenue, totalProfit: revenue - cost };
+  }, [todaySaleItems, productsData]);
+
+
   const totalSales = todaySalesData?.length ?? 0;
 
   return (
@@ -59,7 +86,7 @@ export default function DashboardPage() {
           title="Beneficio Neto de Hoy"
           value={`S/ ${totalProfit.toLocaleString('es-PE')}`}
           icon={BarChart}
-          description="Beneficio total después de costos (estimado)"
+          description="Beneficio total después de costos"
         />
         <StatCard
           title="Ventas de Hoy"
@@ -84,7 +111,7 @@ export default function DashboardPage() {
             <CardDescription>Los 5 productos más vendidos históricamente.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PopularItemsChart products={productsData ?? []} isLoadingProducts={productsLoading} />
+            <PopularItemsChart products={productsData ?? []} saleItems={saleItems ?? []} isLoading={productsLoading || saleItemsLoading} />
           </CardContent>
         </Card>
       </div>

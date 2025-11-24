@@ -15,8 +15,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { BurgerIcon } from "@/components/icons"
 
 
@@ -77,33 +75,6 @@ function MobileNav() {
     )
 }
 
-function UserNav() {
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                variant="outline"
-                size="icon"
-                className="overflow-hidden rounded-full"
-                >
-                    <Avatar>
-                        <AvatarImage src="https://picsum.photos/seed/user/32/32" alt="@user" />
-                        <AvatarFallback>BJ</AvatarFallback>
-                    </Avatar>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Support</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    )
-}
-
 export function MainNav({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -121,8 +92,6 @@ export function MainNav({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <MobileNav />
-            <div className="relative ml-auto flex-1 md:grow-0" />
-            <UserNav />
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}

@@ -2,20 +2,16 @@
 'use client';
 import type { Product, SaleItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collectionGroup } from 'firebase/firestore';
 import { useMemo } from 'react';
 
 interface PopularItemsChartProps {
   products: Product[];
-  isLoadingProducts: boolean;
+  saleItems: SaleItem[];
+  isLoading: boolean;
 }
 
-export function PopularItemsChart({ products, isLoadingProducts }: PopularItemsChartProps) {
-  const firestore = useFirestore();
-  const saleItemsQuery = useMemoFirebase(() => collectionGroup(firestore, 'sale_items'), [firestore]);
-  const { data: saleItems, isLoading: isLoadingSaleItems } = useCollection<SaleItem>(saleItemsQuery);
-
+export function PopularItemsChart({ products, saleItems, isLoading }: PopularItemsChartProps) {
+  
   const popularItems = useMemo(() => {
     if (!saleItems || !products) return [];
 
@@ -38,8 +34,6 @@ export function PopularItemsChart({ products, isLoadingProducts }: PopularItemsC
       .slice(0, 5);
 
   }, [saleItems, products]);
-  
-  const isLoading = isLoadingProducts || isLoadingSaleItems;
 
   if (isLoading) {
     return (
