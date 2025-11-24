@@ -197,13 +197,13 @@ service cloud.firestore {
     /**
      * @description Manages sale transactions. This data is read-only from the client-side for security.
      * @path /sales/{saleId}
-     * @allow (get) Any authenticated user (e.g., manager) reading sales data.
+     * @allow (get) Any user reading sales data.
      * @deny (create) Any client attempting to create a sale, which should be handled by a trusted backend.
-     * @principle Secures sensitive financial data by making it read-only for clients.
+     * @principle Secures financial data by making it read-only for clients.
      */
     match /sales/{saleId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow get: if true;
+      allow list: if true;
       allow create: if isSignedIn();
       allow update: if false;
       allow delete: if false;
@@ -211,13 +211,13 @@ service cloud.firestore {
       /**
        * @description Manages items within a sale. Inherits read-only permissions from the parent sale.
        * @path /sales/{saleId}/sale_items/{saleItemId}
-       * @allow (list) An authenticated user listing items for a sale they can access.
+       * @allow (list) Any user listing items for a sale they can access.
        * @deny (create) Any client attempting to add items to a sale.
        * @principle Enforces security on a subcollection based on the parent document's security model.
        */
       match /sale_items/{saleItemId} {
-        allow get: if isSignedIn();
-        allow list: if isSignedIn();
+        allow get: if true;
+        allow list: if true;
         allow create: if isSignedIn();
         allow update: if false;
         allow delete: if false;
