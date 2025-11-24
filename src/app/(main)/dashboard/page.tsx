@@ -24,22 +24,26 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   
   const salesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     return collection(firestore, 'sales');
   }, [firestore]);
   const { data: salesData, isLoading: salesLoading } = useCollection<Sale>(salesQuery);
 
   const todaySalesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     const today = startOfToday();
     return query(collection(firestore, 'sales'), where('saleDate', '>=', Timestamp.fromDate(today)));
   }, [firestore]);
   const { data: todaySalesData, isLoading: todaySalesLoading } = useCollection<Sale>(todaySalesQuery);
 
   const productsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     return collection(firestore, 'products');
   }, [firestore]);
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsQuery);
 
   const saleItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     return collectionGroup(firestore, 'sale_items');
   }, [firestore]);
   const { data: saleItems, isLoading: saleItemsLoading } = useCollection<SaleItem>(saleItemsQuery);
