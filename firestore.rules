@@ -34,7 +34,7 @@ service cloud.firestore {
      */
     function isManager() {
       // IMPORTANT: Login with this exact email to get manager access.
-      return isSignedIn() && request.auth.token.email == "bigjackpe@gmail.com";
+      return isSignedIn() && request.auth.token.email == "bigjack@gmail.com";
     }
 
     // --------------------------------
