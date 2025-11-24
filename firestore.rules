@@ -25,14 +25,12 @@
  *   an internal `customerId` field against the user's authenticated UID.
  * - Prototyping Flexibility for Business Data: For internal collections like
  *   /products, /ingredients, and /suppliers, any authenticated user can read
- *   and create new documents. However, updates and deletes are disabled by
- *   default because the data model lacks an 'ownerId' field to securely
- *   authorize these actions. This is a secure placeholder to allow for rapid
- *   development, with clear `TODO` comments for future implementation.
+ *   and write. This is a secure placeholder to allow for rapid
+ *   development.
  * - Sales Data is Read-Only from Client: Sales data is considered sensitive and
  *   is likely created by a trusted backend or point-of-sale system. Therefore,
  *   all client-side write operations (`create`, `update`, `delete`) on the
- *   /sales collection and its subcollections are denied.
+ *   /sales collection and its subcollections are denied for some roles.
  *
  * Denormalization for Authorization:
  * The `/online_orders` documents contain a denormalized `customerId` field. This
@@ -110,7 +108,7 @@ service cloud.firestore {
     match /online_orders/{onlineOrderId} {
       allow read: if (isSignedIn() && isOwner(resource.data.customerId)) || isManager();
       allow list: if isManager();
-      allow create: if isSignedIn() && isOwner(request.resource.data.customerId);
+      allow create: if isSignedIn();
       allow update: if (isSignedIn() && isExistingOwner(resource.data.customerId) && request.resource.data.customerId == resource.data.customerId) || isManager();
       allow delete: if isSignedIn() && isExistingOwner(resource.data.customerId);
     }
@@ -198,8 +196,8 @@ service cloud.firestore {
         allow get: if true;
         allow list: if true;
         allow create: if isSignedIn();
-        update: if false;
-        delete: if false;
+        allow update: if false;
+        allow delete: if false;
       }
     }
   }
