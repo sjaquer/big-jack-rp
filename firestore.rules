@@ -76,38 +76,42 @@ service cloud.firestore {
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
+    
+    /**
+     * Checks if the user has an admin/manager role.
+     * WARNING: Hardcoding emails is not recommended for production.
+     * Use custom claims for a more secure and scalable solution.
+     */
+    function isManager() {
+      // TODO: Replace with custom claims for production
+      return isSignedIn() && request.auth.token.email == "manager@bigjack.com";
+    }
 
     // --------------------------------
     // Customer Data Rules
     // --------------------------------
 
     /**
-     * @description Manages customer profiles. Each customer can create and manage their own profile only.
+     * @description Manages customer profiles. Each customer can manage their own profile. Admins can view/list all.
      * @path /customers/{customerId}
-     * @allow (create) An authenticated user creating their own profile document, where {customerId} is their UID.
-     * @deny (get) An authenticated user trying to read another user's profile.
-     * @principle Restricts access to a user's own data tree and enforces self-creation.
      */
     match /customers/{customerId} {
-      allow get: if isOwner(customerId);
-      allow list: if false;
+      allow get: if isOwner(customerId) || isManager();
+      allow list: if isManager();
       allow create: if isOwner(customerId) && request.resource.data.id == customerId;
       allow update: if isExistingOwner(customerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(customerId);
     }
 
     /**
-     * @description Manages online orders placed by customers. Only the customer who placed the order can view or manage it.
+     * @description Manages online orders. Customers can manage their own orders. Admins can see all.
      * @path /online_orders/{onlineOrderId}
-     * @allow (get) A user with UID 'user123' reading an order where the document's `customerId` field is 'user123'.
-     * @deny (update) A user trying to change the `customerId` on an existing order.
-     * @principle Enforces document ownership for all operations based on a denormalized 'customerId' field.
      */
     match /online_orders/{onlineOrderId} {
-      allow get: if isSignedIn() && isOwner(resource.data.customerId);
-      allow list: if isSignedIn();
+      allow read: if (isSignedIn() && isOwner(resource.data.customerId)) || isManager();
+      allow list: if isManager();
       allow create: if isSignedIn() && isOwner(request.resource.data.customerId);
-      allow update: if isSignedIn() && isExistingOwner(resource.data.customerId) && request.resource.data.customerId == resource.data.customerId;
+      allow update: if (isSignedIn() && isExistingOwner(resource.data.customerId) && request.resource.data.customerId == resource.data.customerId) || isManager();
       allow delete: if isSignedIn() && isExistingOwner(resource.data.customerId);
     }
 
@@ -118,88 +122,66 @@ service cloud.firestore {
     /**
      * @description Manages product information. Data is publicly readable.
      * @path /products/{productId}
-     * @allow (create) Any authenticated user creating a new product.
-     * @deny (update) Any user trying to update a product, as ownership cannot be verified.
-     * @principle Public read with authenticated create. Writes are restricted until ownership is defined in the schema.
      */
     match /products/{productId} {
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'Product' entity is missing an 'ownerId' or 'creatorId' field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn(); 
+      allow delete: if isSignedIn(); 
     }
 
     /**
      * @description Manages ingredient information. Data is publicly readable.
      * @path /ingredients/{ingredientId}
-     * @allow (create) Any authenticated user creating a new ingredient.
-     * @deny (delete) Any user trying to delete an ingredient, as ownership cannot be verified.
-     * @principle Public read with authenticated create. Writes are restricted until ownership is defined in the schema.
      */
     match /ingredients/{ingredientId} {
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'Ingredient' entity is missing an 'ownerId' or 'creatorId' field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn(); 
+      allow delete: if isSignedIn(); 
     }
 
     /**
      * @description Manages inventory items. Data is readable by authenticated users.
      * @path /inventory_items/{inventoryItemId}
-     * @allow (create) Any authenticated user creating a new inventory item.
-     * @deny (update) Any user trying to update an item, as ownership cannot be verified.
-     * @principle Authenticated read/create. Writes are restricted until ownership is defined in the schema.
      */
     match /inventory_items/{inventoryItemId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'InventoryItem' entity is missing an 'ownerId' or 'creatorId' field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
      * @description Manages supplier information. Data is publicly readable.
      * @path /suppliers/{supplierId}
-     * @allow (create) Any authenticated user creating a new supplier.
-     * @deny (update) Any user trying to update a supplier, as ownership cannot be verified.
-     * @principle Public read with authenticated create. Writes are restricted until ownership is defined in the schema.
      */
     match /suppliers/{supplierId} {
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'Supplier' entity is missing an 'ownerId' or 'creatorId' field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
     
     /**
      * @description Manages cashier profiles. This is reference data, not linked to Firebase Auth users.
      * @path /cashiers/{cashierId}
-     * @allow (get) Any authenticated user reading cashier information.
-     * @deny (delete) Any user trying to delete a cashier profile.
-     * @principle Authenticated read/create. Writes are restricted as this is considered admin-managed data.
      */
     match /cashiers/{cashierId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      allow update: if isManager();
+      allow delete: if isManager();
     }
 
     /**
      * @description Manages sale transactions. This data is read-only from the client-side for security.
      * @path /sales/{saleId}
-     * @allow (get) Any user reading sales data.
-     * @deny (create) Any client attempting to create a sale, which should be handled by a trusted backend.
-     * @principle Secures financial data by making it read-only for clients.
      */
     match /sales/{saleId} {
       allow get: if true;
@@ -211,16 +193,13 @@ service cloud.firestore {
       /**
        * @description Manages items within a sale. Inherits read-only permissions from the parent sale.
        * @path /sales/{saleId}/sale_items/{saleItemId}
-       * @allow (list) Any user listing items for a sale they can access.
-       * @deny (create) Any client attempting to add items to a sale.
-       * @principle Enforces security on a subcollection based on the parent document's security model.
        */
       match /sale_items/{saleItemId} {
         allow get: if true;
         allow list: if true;
         allow create: if isSignedIn();
-        allow update: if false;
-        allow delete: if false;
+        update: if false;
+        delete: if false;
       }
     }
   }
