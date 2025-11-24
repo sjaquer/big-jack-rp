@@ -84,7 +84,8 @@ export default function POSPage() {
               saleId: newSaleRef.id,
               productId: item.id,
               quantity: item.quantity,
-              unitPrice: item.salePrice
+              unitPrice: item.salePrice,
+              profit: (item.salePrice - item.price) * item.quantity, // Calculate profit
             };
             transaction.set(saleItemRef, saleItemData);
     
