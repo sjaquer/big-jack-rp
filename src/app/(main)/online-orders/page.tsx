@@ -25,7 +25,7 @@ const statusMap: { [key in OnlineOrder['status']]: { label: string; color: 'defa
   completed: { label: 'Listo para Recoger', color: 'outline' },
 };
 
-export default function OnlineOrdersPage() {
+export default function IncomingOrdersPage() {
   const firestore = useFirestore();
   const ordersQuery = useMemoFirebase(() => collection(firestore, 'online_orders'), [firestore]);
   const { data: onlineOrders, isLoading } = useCollection<OnlineOrder>(ordersQuery);
@@ -40,8 +40,8 @@ export default function OnlineOrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Gestión de Pedidos en Línea</h1>
-        <p className="text-muted-foreground">Revisa y actualiza el estado de los pedidos en línea.</p>
+        <h1 className="text-3xl font-headline font-bold">Gestión de Pedidos Entrantes</h1>
+        <p className="text-muted-foreground">Revisa y actualiza el estado de todos los pedidos a preparar.</p>
       </div>
       {isLoading && <p>Cargando pedidos...</p>}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

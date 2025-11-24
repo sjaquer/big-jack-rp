@@ -25,7 +25,7 @@ function NavItems() {
       { href: '/pos', icon: Coins, label: 'Punto de Venta (POS)' },
       { href: '/products', icon: BurgerIcon, label: 'Registro de Productos' },
       { href: '/inventory', icon: Warehouse, label: 'Gestión de Inventario' },
-      { href: '/online-orders', icon: Package, label: 'Pedidos en Línea' },
+      { href: '/incoming-orders', icon: Package, label: 'Pedidos Entrantes' },
       { href: '/cash-prediction', icon: BrainCircuit, label: 'Predicción de Efectivo' },
     ];
     return (
@@ -75,7 +75,7 @@ function MobileNav() {
     )
 }
 
-export function MainNav({ children }: { children: React.ReactNode }) {
+export function MainNav({ children }: { children: React.Node }) {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
