@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -15,6 +16,7 @@ import type { OnlineOrder } from '@/lib/types';
 import { useMemoFirebase } from '@/firebase/provider';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 const statusMap: { [key in OnlineOrder['status']]: { label: string; color: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
@@ -51,15 +53,30 @@ export default function OnlineOrdersPage() {
                   <CardTitle className="font-headline text-lg">#{order.id.slice(0,6)}</CardTitle>
                   <CardDescription>
                     {order.orderDate ? format(order.orderDate.toDate(), 'dd/MM/yyyy HH:mm', { locale: es }) : 'Fecha no disponible'}
-                    </CardDescription>
+                  </CardDescription>
                 </div>
                 <Badge variant={statusMap[order.status]?.color ?? 'default'}>{statusMap[order.status]?.label ?? 'Desconocido'}</Badge>
               </div>
             </CardHeader>
             <CardContent>
                <div className="text-sm">
-                <p className="font-medium">Cliente: {order.customerId.slice(0,10)}...</p>
+                <p className="font-medium">Cliente: {order.customerName ?? order.customerId.slice(0,10)}</p>
               </div>
+               <Accordion type="single" collapsible className="w-full mt-4">
+                <AccordionItem value="items">
+                  <AccordionTrigger className="text-sm">Ver artículos ({order.items.length})</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 pt-2">
+                      {order.items.map(item => (
+                        <div key={item.productId} className="flex justify-between text-xs">
+                          <span>{item.quantity} x {item.productName}</span>
+                          <span>S/ {(item.quantity * item.unitPrice).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
               <div className="mt-4 pt-4 border-t">
                 <p className="flex justify-between font-semibold">
                   <span>Total:</span>

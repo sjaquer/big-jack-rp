@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -40,6 +41,8 @@ interface ProductFormProps {
   ingredients: Ingredient[];
 }
 
+const ingredientUnits = ['g', 'ml', 'unidad'];
+
 export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }: ProductFormProps) {
   const firestore = useFirestore();
   const [selectedIngredient, setSelectedIngredient] = useState('');
@@ -63,26 +66,29 @@ export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }
   });
 
   useEffect(() => {
-    if (product) {
-      form.reset({
-        name: product.name,
-        sku: product.sku,
-        salePrice: product.salePrice,
-        quantity: product.quantity,
-        supplierId: product.supplierId,
-        ingredients: product.ingredients || [],
-      });
-    } else {
-      form.reset({
-        name: '',
-        sku: '',
-        salePrice: 0,
-        quantity: 0,
-        supplierId: '',
-        ingredients: [],
-      });
+    if (isOpen) {
+        if (product) {
+        form.reset({
+            name: product.name,
+            sku: product.sku,
+            salePrice: product.salePrice,
+            quantity: product.quantity,
+            supplierId: product.supplierId,
+            ingredients: product.ingredients || [],
+        });
+        } else {
+        form.reset({
+            name: '',
+            sku: '',
+            salePrice: 0,
+            quantity: 0,
+            supplierId: '',
+            ingredients: [],
+        });
+        }
+        setSelectedIngredient('');
     }
-  }, [product, form]);
+  }, [product, form, isOpen]);
 
   const handleAddIngredient = () => {
     const ingredient = ingredients.find(i => i.id === selectedIngredient);
@@ -95,7 +101,6 @@ export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }
   async function onSubmit(values: FormValues) {
     const data = { 
         ...values,
-        // Fields not in the form but required by the type
         price: values.salePrice * 0.5, // placeholder calculation
         purchaseDate: new Date().toISOString(),
         ingredients: values.ingredients || []
@@ -113,13 +118,14 @@ export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[640px]">
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-headline">{product ? 'Editar Producto' : 'Añadir Nuevo Producto'}</DialogTitle>
           <DialogDescription>
             {product ? 'Actualiza los detalles y la receta del producto.' : 'Completa los detalles para añadir un nuevo producto al inventario.'}
           </DialogDescription>
         </DialogHeader>
+        <div className="flex-grow overflow-y-auto pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -202,17 +208,17 @@ export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }
             />
             <Separator />
             <div>
-              <h3 className="text-lg font-medium">Receta / Ingredientes</h3>
+              <h3 className="text-lg font-medium mb-2">Receta / Ingredientes</h3>
                  {fields.map((field, index) => {
                     const ingredient = ingredients.find(i => i.id === field.ingredientId);
                     return (
                         <div key={field.id} className="flex items-end gap-2 my-2 p-2 rounded-md border">
-                            <div className="flex-grow font-medium">{ingredient?.name}</div>
+                            <div className="flex-grow font-medium text-sm">{ingredient?.name}</div>
                             <FormField
                                 control={form.control}
                                 name={`ingredients.${index}.quantity`}
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="w-20">
                                         <FormLabel className="text-xs">Cantidad</FormLabel>
                                         <Input type="number" step="0.1" {...field} className="h-8" />
                                     </FormItem>
@@ -222,9 +228,18 @@ export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }
                                 control={form.control}
                                 name={`ingredients.${index}.unit`}
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="w-24">
                                          <FormLabel className="text-xs">Unidad</FormLabel>
-                                        <Input {...field} className="h-8" />
+                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="h-8">
+                                                    <SelectValue placeholder="Unidad"/>
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {ingredientUnits.map(unit => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}
+                                            </SelectContent>
+                                         </Select>
                                     </FormItem>
                                 )}
                             />
@@ -256,12 +271,13 @@ export function ProductForm({ isOpen, onClose, product, suppliers, ingredients }
                  </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
               <Button type="submit">Guardar Producto</Button>
             </DialogFooter>
           </form>
         </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

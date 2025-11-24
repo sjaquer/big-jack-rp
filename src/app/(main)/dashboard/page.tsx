@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -11,10 +12,11 @@ import { SalesChart } from '@/components/dashboard/sales-chart';
 import { PopularItemsChart } from '@/components/dashboard/popular-items-chart';
 import { DollarSign, ShoppingCart, BarChart } from 'lucide-react';
 import { useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Sale, Product } from '@/lib/types';
+import { startOfToday } from 'date-fns';
 
 
 export default function DashboardPage() {
@@ -25,46 +27,52 @@ export default function DashboardPage() {
   }, [firestore]);
   const { data: salesData, isLoading: salesLoading } = useCollection<Sale>(salesQuery);
 
+  const todaySalesQuery = useMemoFirebase(() => {
+    const today = startOfToday();
+    return query(collection(firestore, 'sales'), where('saleDate', '>=', Timestamp.fromDate(today)));
+  }, [firestore]);
+  const { data: todaySalesData, isLoading: todaySalesLoading } = useCollection<Sale>(todaySalesQuery);
+
   const productsQuery = useMemoFirebase(() => {
     return collection(firestore, 'products');
   }, [firestore]);
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsQuery);
 
-  const totalRevenue = salesData?.reduce((acc, sale) => acc + sale.totalAmount, 0) ?? 0;
+  const totalRevenue = todaySalesData?.reduce((acc, sale) => acc + sale.totalAmount, 0) ?? 0;
   // Note: netProfit is not available in the Sale entity. We'll use a placeholder calculation.
   const totalProfit = totalRevenue * 0.4; // Assuming a 40% profit margin
-  const totalSales = salesData?.length ?? 0;
+  const totalSales = todaySalesData?.length ?? 0;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-headline font-bold">Panel de Informes de Ventas</h1>
+        <h1 className="text-3xl font-headline font-bold">Panel de Informes de Hoy</h1>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Ingresos Totales"
+          title="Ingresos de Hoy"
           value={`S/ ${totalRevenue.toLocaleString('es-PE')}`}
           icon={DollarSign}
-          description="Total de ingresos generados"
+          description="Total de ingresos generados hoy"
         />
         <StatCard
-          title="Beneficio Neto"
+          title="Beneficio Neto de Hoy"
           value={`S/ ${totalProfit.toLocaleString('es-PE')}`}
           icon={BarChart}
           description="Beneficio total después de costos (estimado)"
         />
         <StatCard
-          title="Ventas Totales"
+          title="Ventas de Hoy"
           value={`+${totalSales}`}
           icon={ShoppingCart}
-          description="Número total de transacciones"
+          description="Número total de transacciones de hoy"
         />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle className="font-headline">Ventas Diarias</CardTitle>
-            <CardDescription>Resumen de los ingresos de los últimos 7 días.</CardDescription>
+            <CardTitle className="font-headline">Ventas de los Últimos 7 Días</CardTitle>
+            <CardDescription>Resumen de los ingresos diarios.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <SalesChart data={salesData ?? []} isLoading={salesLoading} />
@@ -72,11 +80,11 @@ export default function DashboardPage() {
         </Card>
         <Card className="col-span-4 lg:col-span-3">
           <CardHeader>
-            <CardTitle className="font-headline">Artículos Populares</CardTitle>
-            <CardDescription>Los productos más vendidos.</CardDescription>
+            <CardTitle className="font-headline">Artículos Más Vendidos</CardTitle>
+            <CardDescription>Los 5 productos más vendidos históricamente.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PopularItemsChart data={productsData ?? []} isLoading={productsLoading} />
+            <PopularItemsChart products={productsData ?? []} isLoadingProducts={productsLoading} />
           </CardContent>
         </Card>
       </div>

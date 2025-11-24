@@ -5,13 +5,14 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import type { Product } from '@/lib/types';
-import { X, Plus, Minus } from 'lucide-react';
+import type { Product, Ingredient } from '@/lib/types';
+import { X, Plus, Minus, CheckCircle } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
-import { useCollection, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser } from '@/firebase';
+import { collection, serverTimestamp, doc, writeBatch, runTransaction, getDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 
 interface OrderItem extends Product {
@@ -20,23 +21,29 @@ interface OrderItem extends Product {
 
 export default function POSPage() {
     const firestore = useFirestore();
+    const { user } = useUser();
     const { toast } = useToast();
-    const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
-    const { data: products, isLoading } = useCollection<Product>(productsQuery);
     
     const [order, setOrder] = useState<OrderItem[]>([]);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
+
+    const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
+    const { data: products, isLoading } = useCollection<Product>(productsQuery);
 
     const addToOrder = (product: Product) => {
         setOrder((prevOrder) => {
-        const existingItem = prevOrder.find((item) => item.id === product.id);
-        if (existingItem) {
-            return prevOrder.map((item) =>
-            item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-            );
-        }
-        return [...prevOrder, { ...product, quantity: 1 }];
+            const existingItem = prevOrder.find((item) => item.id === product.id);
+            if (existingItem) {
+                return prevOrder.map((item) =>
+                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                );
+            }
+            return [...prevOrder, { ...product, quantity: 1 }];
         });
+
+        setRecentlyAdded(product.id);
+        setTimeout(() => setRecentlyAdded(null), 1000);
     };
 
     const updateQuantity = (productId: string, amount: number) => {
@@ -55,49 +62,72 @@ export default function POSPage() {
     const total = subtotal; // Assuming no tax for now
 
     const handleSuccessfulPayment = async (paymentMethod: string) => {
-      if (!firestore) return;
-
-      const saleData = {
-        saleDate: serverTimestamp(),
-        totalAmount: total,
-        cashierId: 'cashier-01', // Replace with actual logged-in cashier
-        paymentMethod: paymentMethod,
-      };
+      if (!firestore || !user) {
+        toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos o no hay usuario."});
+        return;
+      }
 
       try {
-        const newSaleRef = doc(collection(firestore, 'sales'));
-        const batch = writeBatch(firestore);
-
-        batch.set(newSaleRef, saleData);
-
-        order.forEach(item => {
+        await runTransaction(firestore, async (transaction) => {
+          const newSaleRef = doc(collection(firestore, 'sales'));
+          const saleData = {
+            saleDate: serverTimestamp(),
+            totalAmount: total,
+            cashierId: user.uid,
+            paymentMethod: paymentMethod,
+          };
+          transaction.set(newSaleRef, saleData);
+    
+          for (const item of order) {
             const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
             const saleItemData = {
-                saleId: newSaleRef.id,
-                productId: item.id,
-                quantity: item.quantity,
-                unitPrice: item.salePrice
+              saleId: newSaleRef.id,
+              productId: item.id,
+              quantity: item.quantity,
+              unitPrice: item.salePrice
             };
-            batch.set(saleItemRef, saleItemData);
-        });
+            transaction.set(saleItemRef, saleItemData);
+    
+            // Decrease product stock
+            const productRef = doc(firestore, 'products', item.id);
+            const productDoc = await transaction.get(productRef);
+            if (!productDoc.exists()) {
+              throw new Error(`Producto ${item.name} no encontrado.`);
+            }
+            const currentProduct = productDoc.data() as Product;
+            const newProductStock = currentProduct.quantity - item.quantity;
+            transaction.update(productRef, { quantity: newProductStock });
 
-        await batch.commit();
+            // Decrease ingredient stock
+            if (currentProduct.ingredients) {
+              for (const recipeIngredient of currentProduct.ingredients) {
+                const ingredientRef = doc(firestore, 'ingredients', recipeIngredient.ingredientId);
+                const ingredientDoc = await transaction.get(ingredientRef);
+                if(!ingredientDoc.exists()) {
+                   throw new Error(`Ingrediente con ID ${recipeIngredient.ingredientId} no encontrado.`);
+                }
+                const currentIngredient = ingredientDoc.data() as Ingredient;
+                const newIngredientStock = currentIngredient.quantity - (recipeIngredient.quantity * item.quantity);
+                transaction.update(ingredientRef, { quantity: newIngredientStock });
+              }
+            }
+          }
+        });
 
         toast({
           title: "Venta registrada",
-          description: "La venta se ha guardado correctamente.",
+          description: "La venta se ha guardado y el stock se ha actualizado.",
         });
+        handleResetOrder();
 
       } catch (error) {
         console.error("Error creating sale:", error);
         toast({
           variant: "destructive",
           title: "Error al registrar la venta",
-          description: "No se pudo guardar la venta. Inténtalo de nuevo.",
+          description: (error as Error).message || "No se pudo guardar la venta. Inténtalo de nuevo.",
         });
       }
-
-      handleResetOrder();
     };
 
     const handleResetOrder = () => {
@@ -121,13 +151,21 @@ export default function POSPage() {
               {products?.map((product) => (
                 <Card
                   key={product.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  className="cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
                   onClick={() => addToOrder(product)}
                 >
+                    {recentlyAdded === product.id && (
+                       <div className="absolute inset-0 bg-primary/80 flex items-center justify-center z-10 animate-in fade-in-0 zoom-in-95">
+                           <CheckCircle className="h-8 w-8 text-primary-foreground" />
+                       </div>
+                    )}
                   <CardContent className="p-0 flex flex-col items-center text-center">
                     <Image
                       alt={product.name}
-                      className="aspect-square w-full rounded-t-lg object-cover"
+                      className={cn(
+                        "aspect-square w-full rounded-t-lg object-cover transition-transform duration-300",
+                        recentlyAdded === product.id ? "scale-105" : ""
+                      )}
                       data-ai-hint={product.imageHint}
                       height="150"
                       src={product.imageUrl || 'https://picsum.photos/seed/placeholder/150/150'}

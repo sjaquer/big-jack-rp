@@ -1,26 +1,53 @@
+
 'use client';
-import type { Product } from '@/lib/types';
+import type { Product, SaleItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collectionGroup } from 'firebase/firestore';
+import { useMemo } from 'react';
 
 interface PopularItemsChartProps {
-  data: Product[];
-  isLoading: boolean;
+  products: Product[];
+  isLoadingProducts: boolean;
 }
 
-export function PopularItemsChart({ data, isLoading }: PopularItemsChartProps) {
-  // Mocking popularity based on stock (lower stock = more sold)
-  const sortedData = [...data]
-    .filter(p => p.id && !['6','7','8'].includes(p.id)) // Exclude sides/drinks
-    .sort((a, b) => a.quantity - b.quantity)
-    .slice(0, 5);
+export function PopularItemsChart({ products, isLoadingProducts }: PopularItemsChartProps) {
+  const firestore = useFirestore();
+  const saleItemsQuery = useMemoFirebase(() => collectionGroup(firestore, 'sale_items'), [firestore]);
+  const { data: saleItems, isLoading: isLoadingSaleItems } = useCollection<SaleItem>(saleItemsQuery);
+
+  const popularItems = useMemo(() => {
+    if (!saleItems || !products) return [];
+
+    const productSales = new Map<string, number>();
+
+    saleItems.forEach(item => {
+      productSales.set(item.productId, (productSales.get(item.productId) || 0) + item.quantity);
+    });
+
+    return Array.from(productSales.entries())
+      .map(([productId, quantitySold]) => {
+        const product = products.find(p => p.id === productId);
+        return {
+          id: productId,
+          name: product?.name || 'Producto Desconocido',
+          quantitySold,
+        };
+      })
+      .sort((a, b) => b.quantitySold - a.quantitySold)
+      .slice(0, 5);
+
+  }, [saleItems, products]);
+  
+  const isLoading = isLoadingProducts || isLoadingSaleItems;
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="flex items-center">
-            <Skeleton className="h-4 w-4 rounded-full" />
-            <Skeleton className="h-4 w-3/4 ml-2" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-1/5 ml-auto" />
           </div>
         ))}
       </div>
@@ -29,13 +56,14 @@ export function PopularItemsChart({ data, isLoading }: PopularItemsChartProps) {
 
   return (
     <div className="space-y-4">
-      {sortedData.map((item, index) => (
+      {popularItems.length === 0 && <p className="text-sm text-muted-foreground">No hay datos de ventas para mostrar.</p>}
+      {popularItems.map((item, index) => (
         <div key={item.id} className="flex items-center">
           <div className="text-sm font-medium">
             {index + 1}. {item.name}
           </div>
           <div className="ml-auto text-sm font-semibold">
-            {100 - item.quantity} vendidos
+            {item.quantitySold} vendidos
           </div>
         </div>
       ))}

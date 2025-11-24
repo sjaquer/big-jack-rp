@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import {
@@ -133,15 +134,23 @@ export default function InventoryPage() {
                     <TableHead>Nombre</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Stock</TableHead>
+                    <TableHead>Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {productsLoading && <TableRow><TableCell colSpan={3}>Cargando...</TableCell></TableRow>}
+                  {productsLoading && <TableRow><TableCell colSpan={4}>Cargando...</TableCell></TableRow>}
                   {products?.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell><Badge variant="outline">{item.sku}</Badge></TableCell>
                       <TableCell>{item.quantity}</TableCell>
+                      <TableCell>
+                         {item.quantity <= 10 ? (
+                          <Badge variant="destructive">Bajo Stock</Badge>
+                        ) : (
+                          <Badge variant="secondary">En Stock</Badge>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

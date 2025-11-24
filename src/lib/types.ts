@@ -51,12 +51,29 @@ export interface Sale {
   paymentMethod: string;
 }
 
+export interface SaleItem {
+  id: string;
+  saleId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface OrderItem {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+}
+
 export interface OnlineOrder {
   id: string;
   orderDate: Timestamp;
   customerId: string;
   status: 'pending' | 'processing' | 'completed';
   totalAmount: number;
+  items: OrderItem[];
+  customerName: string;
 }
 
 export interface Supplier {
