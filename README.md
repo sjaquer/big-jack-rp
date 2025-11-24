@@ -1,5 +1,3 @@
-# Firebase Studio
+# Big Jack Manager
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+This is a Next.js application for managing a restaurant, built to be deployed on Firebase.

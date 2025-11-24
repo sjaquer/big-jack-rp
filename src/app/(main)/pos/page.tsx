@@ -8,8 +8,8 @@ import Image from 'next/image';
 import type { Product, Ingredient } from '@/lib/types';
 import { X, Plus, Minus, CheckCircle } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
-import { useCollection, useFirestore, useUser } from '@/firebase';
-import { collection, serverTimestamp, doc, writeBatch, runTransaction, getDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp, doc, writeBatch, runTransaction, getDoc, Timestamp } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -112,11 +112,31 @@ export default function POSPage() {
               }
             }
           }
+
+          // Create a corresponding online_order for the kitchen
+          const onlineOrderRef = collection(firestore, 'online_orders');
+          const newOrderData = {
+            orderDate: Timestamp.now(),
+            customerId: user.uid, // Using cashier/user ID for now
+            customerName: `POS Venta (${paymentMethod})`,
+            status: 'processing', // Start as "En Preparación"
+            totalAmount: total,
+            items: order.map(item => ({
+                productId: item.id,
+                productName: item.name,
+                quantity: item.quantity,
+                unitPrice: item.salePrice,
+            }))
+          };
+          // This is a separate write, not part of the transaction, but it's okay for this use case.
+          // Using addDocumentNonBlocking to avoid waiting for it.
+          addDocumentNonBlocking(onlineOrderRef, newOrderData);
+
         });
 
         toast({
           title: "Venta registrada",
-          description: "La venta se ha guardado y el stock se ha actualizado.",
+          description: "La venta se ha guardado, el stock se ha actualizado y el pedido fue enviado a cocina.",
         });
         handleResetOrder();
 

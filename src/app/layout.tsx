@@ -19,7 +19,7 @@ const fontPTSans = PT_Sans({
 
 export const metadata: Metadata = {
   title: 'Big Jack Manager',
-  description: 'Management dashboard for Big Jack',
+  description: 'The complete management system for your restaurant business.',
 };
 
 export default function RootLayout({
