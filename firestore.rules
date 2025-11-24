@@ -1,9 +1,9 @@
 
 /**
  * This ruleset is for the "Big Jack Manager" application.
- * It's designed for an internal management tool where authenticated
- * users (employees/managers) have broad access, while still protecting
- * sensitive customer data.
+ * It's designed for an internal management tool where an authenticated
+ * manager has broad access, while the system itself (e.g., POS) can
+ * perform specific write operations.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -15,7 +15,6 @@ service cloud.firestore {
 
     /**
      * Checks if the user is authenticated (logged in).
-     * This is the base for all other permissions.
      */
     function isSignedIn() {
       return request.auth != null;
@@ -23,18 +22,9 @@ service cloud.firestore {
 
     /**
      * Checks if the authenticated user's UID matches a given userId.
-     * This is used for ownership-based security.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * Confirms a document exists and the user is the owner,
-     * for update/delete operations.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
     }
 
     /**
@@ -43,6 +33,7 @@ service cloud.firestore {
      * For production, it's better to use custom claims.
      */
     function isManager() {
+      // IMPORTANT: Login with this exact email to get manager access.
       return isSignedIn() && request.auth.token.email == "bigjackpe@gmail.com";
     }
 
@@ -51,73 +42,84 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * Customer profiles. Only the owner can manage their own profile.
-     * A Manager can view and list all customer profiles for support.
+     * Customer profiles are only used for online orders.
+     * Only the manager can list/view them for administrative purposes.
+     * A customer can only be created as part of an online order process.
      */
     match /customers/{customerId} {
-      allow get: if isOwner(customerId) || isManager();
-      allow list: if isManager(); // Only managers can list all customers
-      allow create: if isOwner(customerId);
-      allow update: if isExistingOwner(customerId);
-      allow delete: if isExistingOwner(customerId);
+      allow get: if isManager();
+      allow list: if isManager();
+      allow create: if isSignedIn(); // Allow creation for new online orders
+      allow update: if isManager();
+      allow delete: if isManager();
     }
 
     /**
-     * Online orders. Customers can see their own orders.
-     * Managers can see and manage all orders.
+     * Online orders can be viewed by the manager.
+     * Any authenticated system (like the POS or a future online portal) can create them.
+     * Only the manager can update or delete them.
      */
     match /online_orders/{onlineOrderId} {
-      allow get: if (isSignedIn() && isOwner(resource.data.customerId)) || isManager();
-      allow list: if isManager(); // Only managers can see the full order list
-      allow create: if isSignedIn(); // Any logged-in user (incl. POS system) can create
-      allow update: if isManager(); // Only managers can change order status
+      allow read: if isManager();
+      allow create: if isSignedIn();
+      allow update: if isManager();
       allow delete: if isManager();
     }
 
     // --------------------------------
     // Business & Operational Data Rules
-    // (Broadly accessible to authenticated staff)
+    // (Manager has full access, general system has read/specific write)
     // --------------------------------
 
     /**
-     * Products, Ingredients, Inventory, Suppliers.
-     * Any authenticated user (staff) can read this data.
-     * Any authenticated user (staff) can also write, to allow POS stock updates.
+     * All business-critical data like products, ingredients, inventory, and suppliers
+     * should be readable by any authenticated employee/system.
+     * However, only the manager should be able to create, modify, or delete these records
+     * to maintain data integrity. The POS system will only UPDATE stock quantities.
      */
     match /products/{productId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create: if isManager();
+      // Allow updates for managers OR for stock changes by any signed-in user (POS)
+      allow update: if isManager() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity']));
+      allow delete: if isManager();
     }
 
     match /ingredients/{ingredientId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create: if isManager();
+       // Allow updates for managers OR for stock changes by any signed-in user (POS)
+      allow update: if isManager() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity']));
+      allow delete: if isManager();
     }
 
     match /inventory_items/{inventoryItemId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if isManager();
     }
 
     match /suppliers/{supplierId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if isManager();
     }
 
     /**
-     * Cashier profiles. Reference data.
+     * Cashier profiles. Reference data, only manager can edit.
      */
     match /cashiers/{cashierId} {
       allow read: if isSignedIn();
-      allow write: if isManager(); // Only managers can add/edit cashier info
+      allow write: if isManager();
     }
 
     /**
-     * Sales data. This is created by the POS.
-     * For security, updates and deletes from the client are disabled.
+     * Sales data. This is critical financial data.
+     * The POS system can create sales records.
+     * For data integrity, updates and deletes are disallowed from the client.
+     * Only the manager can read the full list of sales for reporting.
      */
     match /sales/{saleId} {
-      allow read: if isSignedIn();
+      allow get: if isManager();
+      allow list: if isManager();
       allow create: if isSignedIn(); // POS creates sales
       allow update: if false;
       allow delete: if false;
@@ -126,7 +128,8 @@ service cloud.firestore {
        * Items within a sale.
        */
       match /sale_items/{saleItemId} {
-        allow read: if isSignedIn();
+        allow get: if isManager();
+        allow list: if isManager();
         allow create: if isSignedIn(); // POS creates sale items
         allow update: if false;
         allow delete: if false;
