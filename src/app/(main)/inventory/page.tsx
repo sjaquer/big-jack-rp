@@ -30,13 +30,22 @@ export default function InventoryPage() {
   const [isOtherItemFormOpen, setOtherItemFormOpen] = useState(false);
   const [selectedOtherItem, setSelectedOtherItem] = useState<InventoryItem | null>(null);
 
-  const ingredientsQuery = useMemoFirebase(() => collection(firestore, 'ingredients'), [firestore]);
+  const ingredientsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'ingredients');
+  }, [firestore]);
   const { data: ingredients, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
   
-  const productsQuery = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+  const productsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'products');
+  }, [firestore]);
   const { data: products, isLoading: productsLoading } = useCollection<Product>(productsQuery);
 
-  const inventoryQuery = useMemoFirebase(() => collection(firestore, 'inventory_items'), [firestore]);
+  const inventoryQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'inventory_items');
+  }, [firestore]);
   const { data: otherItems, isLoading: otherItemsLoading } = useCollection<InventoryItem>(inventoryQuery);
 
   const handleAddIngredient = () => {
@@ -186,7 +195,7 @@ export default function InventoryPage() {
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell>{item.quantity}</TableCell>
                       <TableCell>
-                        {item.quantity <= item.minimumStock ? (
+                        {item.quantity <= (item.minimumStock ?? 0) ? (
                           <Badge variant="destructive">Bajo Stock</Badge>
                         ) : (
                           <Badge variant="secondary">En Stock</Badge>

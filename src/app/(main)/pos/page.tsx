@@ -28,7 +28,10 @@ export default function POSPage() {
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
 
-    const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
+    const productsQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return collection(firestore, 'products');
+    }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
 
     const addToOrder = (product: Product) => {
@@ -73,7 +76,7 @@ export default function POSPage() {
           const saleData = {
             saleDate: serverTimestamp(),
             totalAmount: total,
-            cashierId: user.uid,
+            cashierId: user.uid, // Use anonymous user ID as cashier ID
             paymentMethod: paymentMethod,
           };
           transaction.set(newSaleRef, saleData);
@@ -85,7 +88,7 @@ export default function POSPage() {
               productId: item.id,
               quantity: item.quantity,
               unitPrice: item.salePrice,
-              profit: (item.salePrice - item.price) * item.quantity, // Calculate profit
+              profit: (item.salePrice - item.price) * item.quantity,
             };
             transaction.set(saleItemRef, saleItemData);
     
@@ -96,7 +99,7 @@ export default function POSPage() {
               throw new Error(`Producto ${item.name} no encontrado.`);
             }
             const currentProduct = productDoc.data() as Product;
-            const newProductStock = currentProduct.quantity - item.quantity;
+            const newProductStock = (currentProduct.quantity ?? 0) - item.quantity;
             transaction.update(productRef, { quantity: newProductStock });
 
             // Decrease ingredient stock
@@ -108,7 +111,7 @@ export default function POSPage() {
                    throw new Error(`Ingrediente con ID ${recipeIngredient.ingredientId} no encontrado.`);
                 }
                 const currentIngredient = ingredientDoc.data() as Ingredient;
-                const newIngredientStock = currentIngredient.quantity - (recipeIngredient.quantity * item.quantity);
+                const newIngredientStock = (currentIngredient.quantity ?? 0) - (recipeIngredient.quantity * item.quantity);
                 transaction.update(ingredientRef, { quantity: newIngredientStock });
               }
             }
@@ -118,9 +121,9 @@ export default function POSPage() {
           const onlineOrderRef = collection(firestore, 'online_orders');
           const newOrderData = {
             orderDate: Timestamp.now(),
-            customerId: user.uid, // Using cashier/user ID for now
+            customerId: user.uid,
             customerName: `POS Venta (${paymentMethod})`,
-            status: 'processing', // Start as "En Preparación"
+            status: 'processing',
             totalAmount: total,
             items: order.map(item => ({
                 productId: item.id,
@@ -129,9 +132,10 @@ export default function POSPage() {
                 unitPrice: item.salePrice,
             }))
           };
-          // This is a separate write, not part of the transaction, but it's okay for this use case.
-          // Using addDocumentNonBlocking to avoid waiting for it.
-          addDocumentNonBlocking(onlineOrderRef, newOrderData);
+          
+          // Add the document outside the transaction, but we need its ID for the transaction
+          // So we will just add it, it's not critical if it fails.
+           addDocumentNonBlocking(onlineOrderRef, newOrderData);
 
         });
 

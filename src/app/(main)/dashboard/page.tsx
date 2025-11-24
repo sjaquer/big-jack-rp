@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const todaySalesIds = useMemo(() => todaySalesData?.map(s => s.id) ?? [], [todaySalesData]);
   
   const todaySaleItems = useMemo(() => {
+    if (!saleItems || !todaySalesIds) return [];
     return saleItems?.filter(item => todaySalesIds.includes(item.saleId)) ?? [];
   }, [saleItems, todaySalesIds]);
 
@@ -58,17 +59,18 @@ export default function DashboardPage() {
     if (!todaySaleItems || !productsData) return { totalRevenue: 0, totalProfit: 0 };
     
     let revenue = 0;
-    let cost = 0;
+    let profit = 0;
 
     todaySaleItems.forEach(item => {
       const product = productsData.find(p => p.id === item.productId);
       revenue += item.unitPrice * item.quantity;
       if (product) {
-        cost += product.price * item.quantity;
+        // Calculate profit based on the difference between sale price and cost price
+        profit += (item.unitPrice - product.price) * item.quantity;
       }
     });
 
-    return { totalRevenue: revenue, totalProfit: revenue - cost };
+    return { totalRevenue: revenue, totalProfit: profit };
   }, [todaySaleItems, productsData]);
 
 
@@ -111,8 +113,8 @@ export default function DashboardPage() {
         </Card>
         <Card className="col-span-4 lg:col-span-3">
           <CardHeader>
-            <CardTitle className="font-headline">Artículos Más Vendidos</CardTitle>
-            <CardDescription>Los 5 productos más vendidos históricamente.</CardDescription>
+            <CardTitle className="font-headline">Los 5 Artículos Más Vendidos</CardTitle>
+            <CardDescription>Los productos más vendidos históricamente.</CardDescription>
           </CardHeader>
           <CardContent>
             <PopularItemsChart products={productsData ?? []} saleItems={saleItems ?? []} isLoading={productsLoading || saleItemsLoading} />

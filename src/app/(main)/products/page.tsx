@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo } from 'react';
 import {
@@ -24,13 +25,22 @@ export default function ProductsPage() {
   const [isFormOpen, setFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const productsQuery = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+  const productsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'products');
+  }, [firestore]);
   const { data: products, isLoading: productsLoading } = useCollection<Product>(productsQuery);
 
-  const suppliersQuery = useMemoFirebase(() => collection(firestore, 'suppliers'), [firestore]);
+  const suppliersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'suppliers');
+  }, [firestore]);
   const { data: suppliers, isLoading: suppliersLoading } = useCollection<Supplier>(suppliersQuery);
   
-  const ingredientsQuery = useMemoFirebase(() => collection(firestore, 'ingredients'), [firestore]);
+  const ingredientsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'ingredients');
+  }, [firestore]);
   const { data: ingredients, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
 
   const handleAddProduct = () => {
@@ -51,6 +61,9 @@ export default function ProductsPage() {
   const calculateProducibleQuantity = (product: Product, allIngredients: Ingredient[]): number | string => {
     if (!product.ingredients || product.ingredients.length === 0) {
       return 'N/A';
+    }
+    if (!allIngredients || allIngredients.length === 0) {
+      return 0;
     }
 
     let maxProducible = Infinity;
