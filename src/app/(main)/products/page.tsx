@@ -19,6 +19,7 @@ import { collection } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Product, Supplier, Ingredient } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
+import { placeholderImages } from '@/lib/placeholder-images.json';
 
 export default function ProductsPage() {
   const firestore = useFirestore();
@@ -57,6 +58,12 @@ export default function ProductsPage() {
     setFormOpen(false);
     setSelectedProduct(null);
   };
+
+  const getProductImage = (product: Product) => {
+      if (product.imageUrl) return product.imageUrl;
+      const placeholder = placeholderImages.find(p => p.imageHint === product.imageHint);
+      return placeholder?.imageUrl || 'https://picsum.photos/seed/placeholder/64/64';
+  }
   
   const calculateProducibleQuantity = (product: Product, allIngredients: Ingredient[]): number | string => {
     if (!product.ingredients || product.ingredients.length === 0) {
@@ -135,7 +142,7 @@ export default function ProductsPage() {
                       className="aspect-square rounded-md object-cover"
                       data-ai-hint={product.imageHint}
                       height="64"
-                      src={product.imageUrl || 'https://picsum.photos/seed/placeholder/64/64'}
+                      src={getProductImage(product)}
                       width="64"
                     />
                   </TableCell>

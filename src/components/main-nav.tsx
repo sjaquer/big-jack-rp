@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -75,7 +76,7 @@ function MobileNav() {
     )
 }
 
-export function MainNav({ children }: { children: React.Node }) {
+export function MainNav({ children }: { children: React.ReactNode }) {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">

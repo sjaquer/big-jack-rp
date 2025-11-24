@@ -9,10 +9,11 @@ import type { Product, Ingredient } from '@/lib/types';
 import { X, Plus, Minus, CheckCircle } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, writeBatch, runTransaction, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { placeholderImages } from '@/lib/placeholder-images.json';
 
 
 interface OrderItem extends Product {
@@ -33,6 +34,12 @@ export default function POSPage() {
       return collection(firestore, 'products');
     }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
+
+    const getProductImage = (product: Product) => {
+      if (product.imageUrl) return product.imageUrl;
+      const placeholder = placeholderImages.find(p => p.imageHint === product.imageHint);
+      return placeholder?.imageUrl || 'https://picsum.photos/seed/placeholder/150/150';
+    }
 
     const addToOrder = (product: Product) => {
         setOrder((prevOrder) => {
@@ -76,7 +83,7 @@ export default function POSPage() {
           const saleData = {
             saleDate: serverTimestamp(),
             totalAmount: total,
-            cashierId: user.uid, // Use anonymous user ID as cashier ID
+            cashierId: user.uid,
             paymentMethod: paymentMethod,
           };
           transaction.set(newSaleRef, saleData);
@@ -88,7 +95,7 @@ export default function POSPage() {
               productId: item.id,
               quantity: item.quantity,
               unitPrice: item.salePrice,
-              profit: (item.salePrice - item.price) * item.quantity,
+              profit: item.price ? (item.salePrice - item.price) * item.quantity : 0,
             };
             transaction.set(saleItemRef, saleItemData);
     
@@ -116,10 +123,11 @@ export default function POSPage() {
               }
             }
           }
-
-          // Create a corresponding online_order for the kitchen
-          const onlineOrderRef = collection(firestore, 'online_orders');
-          const newOrderData = {
+        });
+        
+        // Create a corresponding online_order for the kitchen
+        const onlineOrderRef = collection(firestore, 'online_orders');
+        const newOrderData = {
             orderDate: Timestamp.now(),
             customerId: user.uid,
             customerName: `POS Venta (${paymentMethod})`,
@@ -131,13 +139,8 @@ export default function POSPage() {
                 quantity: item.quantity,
                 unitPrice: item.salePrice,
             }))
-          };
-          
-          // Add the document outside the transaction, but we need its ID for the transaction
-          // So we will just add it, it's not critical if it fails.
-           addDocumentNonBlocking(onlineOrderRef, newOrderData);
-
-        });
+        };
+        await addDocumentNonBlocking(onlineOrderRef, newOrderData);
 
         toast({
           title: "Venta registrada",
@@ -193,7 +196,7 @@ export default function POSPage() {
                       )}
                       data-ai-hint={product.imageHint}
                       height="150"
-                      src={product.imageUrl || 'https://picsum.photos/seed/placeholder/150/150'}
+                      src={getProductImage(product)}
                       width="150"
                     />
                     <div className="p-2">

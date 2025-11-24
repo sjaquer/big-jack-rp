@@ -64,7 +64,7 @@ export default function DashboardPage() {
     todaySaleItems.forEach(item => {
       const product = productsData.find(p => p.id === item.productId);
       revenue += item.unitPrice * item.quantity;
-      if (product) {
+      if (product && product.price) {
         // Calculate profit based on the difference between sale price and cost price
         profit += (item.unitPrice - product.price) * item.quantity;
       }
