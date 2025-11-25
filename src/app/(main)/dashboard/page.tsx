@@ -10,6 +10,7 @@ import {
 import StatCard from '@/components/dashboard/stat-card';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 import { PopularItemsChart } from '@/components/dashboard/popular-items-chart';
+import { DailyOrdersBreakdown } from '@/components/dashboard/daily-orders-breakdown';
 import { DollarSign, ShoppingCart, BarChart } from 'lucide-react';
 import { useCollection } from '@/firebase';
 import { collection, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
@@ -121,6 +122,22 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Desglose de pedidos diarios */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline">Desglose de Pedidos de Hoy</CardTitle>
+          <CardDescription>Detalle completo de todas las ventas realizadas hoy.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DailyOrdersBreakdown 
+            sales={todaySalesData ?? []} 
+            saleItems={todaySaleItems ?? []} 
+            products={productsData ?? []} 
+            isLoading={todaySalesLoading || saleItemsLoading || productsLoading}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

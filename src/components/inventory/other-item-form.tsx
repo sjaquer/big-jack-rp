@@ -77,26 +77,38 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
   }, [item, form, isOpen]);
 
   async function onSubmit(values: FormValues) {
+    // Preparar todos los datos asegurando que los campos opcionales se guarden correctamente
+    const data = {
+      name: values.name,
+      type: values.type,
+      quantity: values.quantity,
+      minimumStock: values.minimumStock,
+      location: values.location,
+      supplier: values.supplier || null,
+      costPerUnit: values.costPerUnit || null,
+      notes: values.notes || null,
+    };
+
     if (item) {
       const itemDocRef = doc(firestore, 'inventory_items', item.id);
-      updateDocumentNonBlocking(itemDocRef, values);
+      updateDocumentNonBlocking(itemDocRef, data);
     } else {
       const itemsCollectionRef = collection(firestore, 'inventory_items');
-      addDocumentNonBlocking(itemsCollectionRef, values);
+      addDocumentNonBlocking(itemsCollectionRef, data);
     }
     onClose();
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[100vw] h-[100dvh] sm:h-[70vh] sm:max-w-lg p-0 flex flex-col overflow-hidden">
+      <DialogContent className="w-full max-w-[100vw] h-[100dvh] sm:h-[65vh] sm:max-w-lg p-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
           <DialogTitle className="font-headline text-lg sm:text-xl">{item ? 'Editar Artículo' : 'Añadir Nuevo Artículo'}</DialogTitle>
           <DialogDescription className="text-sm">
             {item ? 'Actualiza los detalles del artículo.' : 'Completa los detalles para añadir un nuevo artículo al inventario.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden min-h-0 sm:min-h-[300px]">
+        <div className="flex-1 overflow-hidden min-h-0 sm:min-h-[150px]">
           <ScrollArea className="h-full px-4 sm:px-6" type="always">
             <ScrollBar className="z-50" />
             <Form {...form}>
@@ -114,8 +126,9 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Nombre del artículo</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Caja burger mediana" {...field} />
+                        <Input className="h-11 sm:h-10 text-base" placeholder="Ej.: Caja para burger mediana (50 unidades)" {...field} />
                       </FormControl>
+                      <FormDescription className="text-xs">Nombre claro del artículo tal como aparecerá en órdenes de compra y en almacén. Incluye tamaño o unidades si aplica.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -140,6 +153,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                           <SelectItem value="other" className="py-3 sm:py-2">Otro</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription className="text-xs">Selecciona la categoría que mejor describa el artículo para agruparlo en el inventario.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -153,8 +167,9 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Cantidad en stock</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="e.g., 200" {...field} />
+                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="Cantidad disponible actualmente (ej.: 200)" {...field} />
                       </FormControl>
+                      <FormDescription className="text-xs">Indica cuántas unidades hay físicamente en almacén. Para items empaquetados, registra el número de paquetes.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -168,7 +183,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                       <FormControl>
                         <Input className="h-11 sm:h-10 text-base" type="number" placeholder="e.g., 50" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Define el mínimo operativo para activar reposición.</FormDescription>
+                      <FormDescription className="text-xs">Cantidad mínima a partir de la cual deberías reponer. El sistema puede avisarte si cae por debajo de este valor.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -182,6 +197,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                       <FormControl>
                         <Input className="h-11 sm:h-10 text-base" type="number" step="0.01" placeholder="e.g., 0.45" {...field} />
                       </FormControl>
+                      <FormDescription className="text-xs">Costo de compra por unidad o paquete. Útil para calcular el coste total del inventario y compararlo entre proveedores.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -204,6 +220,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                       <FormControl>
                         <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Almacén principal" {...field} />
                       </FormControl>
+                      <FormDescription className="text-xs">Lugar físico donde se guarda el artículo (p.ej., Almacén principal, Estante A4).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -217,6 +234,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                       <FormControl>
                         <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Empaques Lima" {...field} />
                       </FormControl>
+                      <FormDescription className="text-xs">Indica el proveedor habitual para facilitar nuevas órdenes y comparar precios.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -231,6 +249,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                     <FormControl>
                       <Textarea className="text-base min-h-[100px]" rows={3} placeholder="e.g., Usar solo para delivery, revisar cada sábado" {...field} />
                     </FormControl>
+                    <FormDescription className="text-xs">Notas para el equipo: condiciones especiales, frecuencia de uso, instrucciones de almacenamiento o restricciones.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -238,14 +257,15 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
             </section>
               </form>
             </Form>
+            <div className="h-4" />
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex-shrink-0 px-4 pb-4 sm:px-6 sm:pb-6 pt-4 border-t gap-3 sm:gap-2">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-12 sm:h-10 text-base">
+        <DialogFooter className="flex-shrink-0 px-4 pb-5 sm:px-6 sm:pb-6 pt-4 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] gap-3 sm:gap-2">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-12 sm:h-10 text-base font-medium">
             Cancelar
           </Button>
-          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-12 sm:h-10 text-base">
+          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-12 sm:h-10 text-base font-semibold bg-primary hover:bg-primary/90">
             Guardar Artículo
           </Button>
         </DialogFooter>

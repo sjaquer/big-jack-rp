@@ -25,7 +25,7 @@ export type IngredientCategory = 'protein' | 'vegetable' | 'dairy' | 'sauce' | '
 
 export interface IngredientProvider {
   name: string;
-  price: number;
+  pricePerUnit: number;
 }
 
 export interface Ingredient {

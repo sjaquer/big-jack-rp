@@ -99,7 +99,6 @@ export default function ProductsPage() {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         product={selectedProduct}
-        suppliers={suppliers ?? []}
         ingredients={ingredients ?? []}
       />
       <Card>
