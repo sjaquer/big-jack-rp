@@ -153,9 +153,11 @@ export function DailyOrdersBreakdown({ sales, saleItems, products, isLoading }: 
                   </TableCell>
                   <TableCell>
                     <Badge variant={order.paymentMethod === 'cash' ? 'default' : 'secondary'}>
-                      {order.paymentMethod === 'cash' ? 'Efectivo' : 
-                       order.paymentMethod === 'card' ? 'Tarjeta' : 
-                       order.paymentMethod === 'transfer' ? 'Transferencia' : 
+                      {order.paymentMethod === 'cash' ? 'Efectivo' :
+                       order.paymentMethod === 'card' ? 'Tarjeta' :
+                       order.paymentMethod === 'yape' ? 'Yape' :
+                       order.paymentMethod === 'plin' ? 'Plin' :
+                       order.paymentMethod === 'transfer' ? 'Transferencia' :
                        order.paymentMethod}
                     </Badge>
                   </TableCell>

@@ -65,14 +65,26 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
         <div className="grid gap-4 py-4">
 
         <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod}>
-            <div className="flex items-center space-x-2">
-                <RadioGroupItem value="cash" id="cash" />
-                <Label htmlFor="cash">Efectivo</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-                <RadioGroupItem value="card" id="card" />
-                <Label htmlFor="card">Tarjeta</Label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="cash" id="cash" />
+            <Label htmlFor="cash">Efectivo</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="card" id="card" />
+            <Label htmlFor="card">Tarjeta</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="yape" id="yape" />
+            <Label htmlFor="yape">Yape</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="plin" id="plin" />
+            <Label htmlFor="plin">Plin</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="transfer" id="transfer" />
+            <Label htmlFor="transfer">Transferencia</Label>
+          </div>
         </RadioGroup>
 
           {paymentMethod === 'cash' && (
