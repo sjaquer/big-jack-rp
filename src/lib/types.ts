@@ -21,15 +21,28 @@ export interface Product {
   imageHint?: string;
 }
 
+export type IngredientCategory = 'protein' | 'vegetable' | 'dairy' | 'sauce' | 'bakery' | 'other';
+
+export interface IngredientProvider {
+  name: string;
+  price: number;
+}
+
 export interface Ingredient {
   id:string;
   name: string;
+  sku?: string;
+  category?: IngredientCategory;
   cost: number;
   quantity: number;
   unit: string;
+  storageLocation?: string;
+  reorderLeadTimeDays?: number;
+  notes?: string;
   productIds?: string[];
   minimumStock?: number;
   expiryDate?: string;
+  providers?: IngredientProvider[];
 }
 
 export interface InventoryItem {
@@ -40,6 +53,9 @@ export interface InventoryItem {
   expiryDate?: string;
   location?: string;
   minimumStock: number;
+  costPerUnit?: number;
+  supplier?: string;
+  notes?: string;
 }
 
 
