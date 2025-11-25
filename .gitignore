@@ -43,3 +43,8 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# product images (opcional: descomentar si no quieres subir las imágenes al repositorio)
+# /public/images/*
+# !/public/images/.gitkeep
+# !/public/images/README.md

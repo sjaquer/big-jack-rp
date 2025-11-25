@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Product, Ingredient, ProductIngredient } from '@/lib/types';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import Image from 'next/image';
 
 const ingredientSchema = z.object({
   ingredientId: z.string().min(1, 'El ingrediente es requerido.'),
@@ -56,6 +57,9 @@ function generateProductSKU(name: string): string {
 export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFormProps) {
   const firestore = useFirestore();
   const [selectedIngredient, setSelectedIngredient] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
 
   const form = useForm<FormValues>({
@@ -97,6 +101,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
             salePrice: product.salePrice,
             ingredients: product.ingredients || [],
         });
+        setImageUrl(product.imageUrl || null);
         } else {
         const defaultSKU = generateProductSKU('');
         form.reset({
@@ -105,8 +110,10 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
             salePrice: 0,
             ingredients: [],
         });
+        setImageUrl(null);
         }
         setSelectedIngredient('');
+        setImageError(null);
     }
   }, [product, form, isOpen]);
 
@@ -118,12 +125,49 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
     }
   }
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    setImageError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al subir la imagen');
+      }
+
+      setImageUrl(data.imageUrl);
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      setImageError(error instanceof Error ? error.message : 'Error al subir la imagen');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl(null);
+    setImageError(null);
+  };
+
   async function onSubmit(values: FormValues) {
     const data = { 
         name: values.name,
         sku: values.sku || null,
         salePrice: values.salePrice,
         ingredients: values.ingredients || [],
+        imageUrl: imageUrl || null,
         updatedAt: new Date().toISOString(),
     };
 
@@ -198,6 +242,66 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                         </FormItem>
                       )}
                     />
+                    
+                    {/* Sección de imagen */}
+                    <div className="space-y-3">
+                      <Label className="text-sm sm:text-base">Imagen del Producto</Label>
+                      <p className="text-xs text-muted-foreground">Sube una imagen del producto para mostrar en el menú (opcional)</p>
+                      
+                      {imageUrl ? (
+                        <div className="relative w-full aspect-video max-w-sm rounded-lg border overflow-hidden bg-muted">
+                          <Image
+                            src={imageUrl}
+                            alt="Imagen del producto"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 384px"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8"
+                            onClick={handleRemoveImage}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="w-full">
+                          <label
+                            htmlFor="image-upload"
+                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              {isUploadingImage ? (
+                                <div className="text-sm text-muted-foreground">Subiendo imagen...</div>
+                              ) : (
+                                <>
+                                  <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                                  <p className="text-sm text-muted-foreground">
+                                    <span className="font-semibold">Click para subir</span> o arrastra la imagen
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WebP o GIF (máx. 5MB)</p>
+                                </>
+                              )}
+                            </div>
+                            <input
+                              id="image-upload"
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              disabled={isUploadingImage}
+                            />
+                          </label>
+                        </div>
+                      )}
+                      
+                      {imageError && (
+                        <p className="text-sm text-destructive">{imageError}</p>
+                      )}
+                    </div>
                   </div>
                 </section>
                 <section className="space-y-4 rounded-lg border p-3 sm:p-4">
