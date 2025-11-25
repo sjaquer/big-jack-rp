@@ -80,6 +80,44 @@ export default function POSPage() {
       try {
         await runTransaction(firestore, async (transaction) => {
           const newSaleRef = doc(collection(firestore, 'sales'));
+
+          // --- READS first: gather all product and ingredient documents needed ---
+          const productRefs = order.map(item => doc(firestore, 'products', item.id));
+          const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+
+          // Verify products exist and build a map
+          const productsMap = new Map<string, Product>();
+          productDocs.forEach((pDoc, idx) => {
+            if (!pDoc.exists()) {
+              const missing = order[idx];
+              throw new Error(`Producto ${missing?.name || missing?.id || productRefs[idx].id} no encontrado.`);
+            }
+            productsMap.set(productRefs[idx].id, pDoc.data() as Product);
+          });
+
+          // Collect unique ingredient ids that will be touched
+          const ingredientIdSet = new Set<string>();
+          productsMap.forEach((prod) => {
+            if (prod.ingredients) {
+              for (const ri of prod.ingredients) {
+                if (ri?.ingredientId) ingredientIdSet.add(ri.ingredientId);
+              }
+            }
+          });
+
+          const ingredientIds = Array.from(ingredientIdSet);
+          const ingredientRefs = ingredientIds.map(id => doc(firestore, 'ingredients', id));
+          const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+
+          const ingredientMap = new Map<string, Ingredient>();
+          ingredientDocs.forEach((iDoc, idx) => {
+            if (!iDoc.exists()) {
+              throw new Error(`Ingrediente con ID ${ingredientIds[idx]} no encontrado.`);
+            }
+            ingredientMap.set(ingredientIds[idx], iDoc.data() as Ingredient);
+          });
+
+          // --- All reads done. Perform writes now ---
           const saleData = {
             saleDate: serverTimestamp(),
             totalAmount: total,
@@ -87,9 +125,10 @@ export default function POSPage() {
             paymentMethod: paymentMethod,
           };
           transaction.set(newSaleRef, saleData);
-    
+
           for (const item of order) {
             const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
+            const productData = productsMap.get(item.id)!;
             const saleItemData = {
               saleId: newSaleRef.id,
               productId: item.id,
@@ -98,26 +137,17 @@ export default function POSPage() {
               profit: item.price ? (item.salePrice - item.price) * item.quantity : 0,
             };
             transaction.set(saleItemRef, saleItemData);
-    
-            // Decrease product stock
+
+            // Update product stock
             const productRef = doc(firestore, 'products', item.id);
-            const productDoc = await transaction.get(productRef);
-            if (!productDoc.exists()) {
-              throw new Error(`Producto ${item.name} no encontrado.`);
-            }
-            const currentProduct = productDoc.data() as Product;
-            const newProductStock = (currentProduct.quantity ?? 0) - item.quantity;
+            const newProductStock = (productData.quantity ?? 0) - item.quantity;
             transaction.update(productRef, { quantity: newProductStock });
 
-            // Decrease ingredient stock
-            if (currentProduct.ingredients) {
-              for (const recipeIngredient of currentProduct.ingredients) {
+            // Update ingredient stocks (if any)
+            if (productData.ingredients) {
+              for (const recipeIngredient of productData.ingredients) {
                 const ingredientRef = doc(firestore, 'ingredients', recipeIngredient.ingredientId);
-                const ingredientDoc = await transaction.get(ingredientRef);
-                if(!ingredientDoc.exists()) {
-                   throw new Error(`Ingrediente con ID ${recipeIngredient.ingredientId} no encontrado.`);
-                }
-                const currentIngredient = ingredientDoc.data() as Ingredient;
+                const currentIngredient = ingredientMap.get(recipeIngredient.ingredientId)!;
                 const newIngredientStock = (currentIngredient.quantity ?? 0) - (recipeIngredient.quantity * item.quantity);
                 transaction.update(ingredientRef, { quantity: newIngredientStock });
               }
