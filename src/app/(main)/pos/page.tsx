@@ -5,11 +5,12 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import type { Product, Ingredient } from '@/lib/types';
+import type { Product, Ingredient, Customer } from '@/lib/types';
 import { X, Plus, Minus, CheckCircle } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
+import { CustomerSelector } from '@/components/customers/customer-selector';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ export default function POSPage() {
     const [order, setOrder] = useState<OrderItem[]>([]);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -129,6 +131,8 @@ export default function POSPage() {
             source: 'pos',
             deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
             createdAt: Timestamp.now(),
+            customerId: selectedCustomer?.id || null,
+            customerName: selectedCustomer ? (selectedCustomer.nickname || `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim()) : null,
           };
           transaction.set(newSaleRef, saleData);
 
@@ -165,8 +169,11 @@ export default function POSPage() {
         const onlineOrderRef = collection(firestore, 'online_orders');
         const newOrderData = {
             orderDate: Timestamp.now(),
-            customerId: user.uid,
-            customerName: `POS Venta (${paymentMethod})`,
+            customerId: selectedCustomer?.id || user.uid,
+            customerName: selectedCustomer 
+              ? (selectedCustomer.nickname || `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim())
+              : `POS Venta (${paymentMethod})`,
+            customerPhone: selectedCustomer?.phone || null,
             status: 'processing',
             totalAmount: total,
             paymentMethod: paymentMethod,
@@ -178,13 +185,28 @@ export default function POSPage() {
                 quantity: item.quantity,
                 unitPrice: item.salePrice,
                 subtotal: item.salePrice * item.quantity,
-            }))
+            })),
+            notes: selectedCustomer?.preferences || null,
         };
         await addDocumentNonBlocking(onlineOrderRef, newOrderData);
 
+        // Update customer stats if a customer was selected
+        if (selectedCustomer && firestore) {
+          const customerRef = doc(firestore, 'customers', selectedCustomer.id);
+          const pointsEarned = Math.floor(total / 10); // 1 punto por cada S/ 10 gastados
+          await updateDoc(customerRef, {
+            totalVisits: (selectedCustomer.totalVisits || 0) + 1,
+            totalSpent: (selectedCustomer.totalSpent || 0) + total,
+            loyaltyPoints: (selectedCustomer.loyaltyPoints || 0) + pointsEarned,
+            lastVisit: Timestamp.now(),
+          });
+        }
+
         toast({
           title: "Venta registrada",
-          description: "La venta se ha guardado, el stock se ha actualizado y el pedido fue enviado a cocina.",
+          description: selectedCustomer 
+            ? `Venta guardada. ${selectedCustomer.firstName} ganó ${Math.floor(total / 10)} puntos de lealtad.`
+            : "La venta se ha guardado, el stock se ha actualizado y el pedido fue enviado a cocina.",
         });
         handleResetOrder();
 
@@ -200,6 +222,7 @@ export default function POSPage() {
 
     const handleResetOrder = () => {
         setOrder([]);
+        setSelectedCustomer(null);
         setPaymentModalOpen(false);
     }
 
@@ -255,6 +278,15 @@ export default function POSPage() {
         <Card className="h-full flex flex-col">
           <CardContent className="p-4 flex-grow overflow-y-auto">
             <h2 className="text-xl font-headline font-semibold mb-4">Pedido Actual</h2>
+            
+            {/* Selector de cliente */}
+            <div className="mb-4">
+              <CustomerSelector
+                selectedCustomer={selectedCustomer}
+                onSelectCustomer={setSelectedCustomer}
+              />
+            </div>
+
             {order.length === 0 ? (
                 <p className="text-muted-foreground text-center mt-8">Selecciona productos para empezar un pedido.</p>
             ) : (

@@ -90,6 +90,28 @@ export interface OnlineOrder {
   totalAmount: number;
   items: OrderItem[];
   customerName: string;
+  customerPhone?: string;
+  paymentMethod?: string;
+  notes?: string;
+  deliveryAddress?: string;
+  completedAt?: Timestamp;
+}
+
+export interface Customer {
+  id: string;
+  firstName: string;
+  lastName?: string;
+  nickname?: string;
+  phone?: string;
+  email?: string;
+  allergies?: string[];
+  preferences?: string;
+  notes?: string;
+  registrationDate: Timestamp;
+  lastVisit?: Timestamp;
+  totalVisits: number;
+  totalSpent: number;
+  loyaltyPoints: number;
 }
 
 export interface Supplier {

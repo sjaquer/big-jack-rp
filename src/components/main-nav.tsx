@@ -14,6 +14,7 @@ import {
   PanelLeft,
   UserCircle,
   LogOut,
+  Users,
 } from "lucide-react"
 import { getAuth, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ function NavItems() {
     const navItems = [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Panel de Informes' },
       { href: '/pos', icon: Coins, label: 'Punto de Venta (POS)' },
+      { href: '/customers', icon: Users, label: 'Clientes' },
       { href: '/products', icon: BurgerIcon, label: 'Registro de Productos' },
       { href: '/inventory', icon: Warehouse, label: 'Gestión de Inventario' },
       { href: '/incoming-orders', icon: Package, label: 'Pedidos Entrantes' },

@@ -1,5 +1,6 @@
 
 'use client';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -9,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -17,6 +19,8 @@ import { useMemoFirebase } from '@/firebase/provider';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { OrderDetailDialog } from '@/components/online-orders/order-detail-dialog';
+import { Eye } from 'lucide-react';
 
 
 const statusMap: { [key in OnlineOrder['status']]: { label: string; color: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
@@ -29,11 +33,18 @@ export default function IncomingOrdersPage() {
   const firestore = useFirestore();
   const ordersQuery = useMemoFirebase(() => collection(firestore, 'online_orders'), [firestore]);
   const { data: onlineOrders, isLoading } = useCollection<OnlineOrder>(ordersQuery);
+  const [selectedOrder, setSelectedOrder] = useState<OnlineOrder | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const handleStatusChange = (orderId: string, newStatus: OnlineOrder['status']) => {
     if (!firestore) return;
     const orderDocRef = doc(firestore, 'online_orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { status: newStatus });
+  };
+
+  const handleViewDetails = (order: OnlineOrder) => {
+    setSelectedOrder(order);
+    setDetailDialogOpen(true);
   };
 
 
@@ -86,7 +97,15 @@ export default function IncomingOrdersPage() {
                 </p>
               </div>
             </CardContent>
-            <CardFooter className="pt-4">
+            <CardFooter className="pt-4 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleViewDetails(order)}
+                className="w-full h-11 text-base touch-manipulation"
+              >
+                <Eye className="mr-2 h-5 w-5" />
+                Ver Detalles
+              </Button>
               <Select defaultValue={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus as OnlineOrder['status'])}>
                 <SelectTrigger className="h-12 text-base font-medium touch-manipulation">
                   <SelectValue placeholder="Cambiar estado" />
@@ -101,6 +120,12 @@ export default function IncomingOrdersPage() {
           </Card>
         ))}
       </div>
+
+      <OrderDetailDialog
+        order={selectedOrder}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
     </div>
   );
 }

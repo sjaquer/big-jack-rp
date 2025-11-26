@@ -54,8 +54,15 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
     setIsProcessing(true);
     try {
       await onSuccess(paymentMethod);
+      // Cerrar modal automáticamente después del éxito
+      onClose();
     } catch (error) {
       setIsProcessing(false);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo procesar el pago. Intenta nuevamente.",
+      });
     }
   };
 
