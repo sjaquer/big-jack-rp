@@ -49,13 +49,13 @@ export default function IncomingOrdersPage() {
         <p className="text-muted-foreground">Revisa y actualiza el estado de todos los pedidos a preparar.</p>
       </div>
       {isLoading && <p>Cargando pedidos...</p>}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {onlineOrders?.map((order) => (
-          <Card key={order.id}>
+          <Card key={order.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="font-headline text-lg">#{order.id.slice(0,6)}</CardTitle>
+              <div className="flex justify-between items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="font-headline text-base sm:text-lg truncate">#{order.id.slice(0,6)}</CardTitle>
                   <CardDescription>
                     {order.orderDate ? format(order.orderDate.toDate(), 'dd/MM/yyyy HH:mm', { locale: es }) : 'Fecha no disponible'}
                   </CardDescription>
@@ -68,14 +68,16 @@ export default function IncomingOrdersPage() {
                 <p className="font-medium">Cliente: {order.customerName ?? order.customerId.slice(0,10)}</p>
               </div>
                <Accordion type="single" collapsible className="w-full mt-4">
-                <AccordionItem value="items">
-                  <AccordionTrigger className="text-sm">Ver artículos ({order.items.length})</AccordionTrigger>
+                <AccordionItem value="items" className="border-none">
+                  <AccordionTrigger className="text-sm sm:text-base font-medium py-3 hover:no-underline touch-manipulation">
+                    Ver artículos ({order.items.length})
+                  </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
                       {order.items.map(item => (
-                        <div key={item.productId} className="flex justify-between text-xs">
-                          <span>{item.quantity} x {item.productName}</span>
-                          <span>S/ {(item.quantity * item.unitPrice).toFixed(2)}</span>
+                        <div key={item.productId} className="flex justify-between text-xs sm:text-sm p-2 rounded-md bg-muted/30">
+                          <span className="font-medium">{item.quantity} x {item.productName}</span>
+                          <span className="font-semibold">S/ {(item.quantity * item.unitPrice).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -89,14 +91,14 @@ export default function IncomingOrdersPage() {
                 </p>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="pt-4">
               <Select defaultValue={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus as OnlineOrder['status'])}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 text-base font-medium touch-manipulation">
                   <SelectValue placeholder="Cambiar estado" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(statusMap).map(([status, { label }]) => (
-                    <SelectItem key={status} value={status}>{label}</SelectItem>
+                    <SelectItem key={status} value={status} className="text-base py-3">{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

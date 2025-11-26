@@ -103,13 +103,13 @@ export default function ProductsPage() {
       />
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
-                  <CardTitle className="font-headline">Registro de Productos</CardTitle>
-                  <CardDescription>Gestiona todos los productos de tu inventario.</CardDescription>
+                  <CardTitle className="font-headline text-lg sm:text-xl">Registro de Productos</CardTitle>
+                  <CardDescription className="text-sm">Gestiona todos los productos de tu inventario.</CardDescription>
               </div>
-              <Button onClick={handleAddProduct}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
+              <Button onClick={handleAddProduct} size="default" className="h-11 sm:h-10 text-base w-full sm:w-auto touch-manipulation">
+                  <PlusCircle className="mr-2 h-5 w-5" />
                   Añadir Producto
               </Button>
           </div>
@@ -155,7 +155,7 @@ export default function ProductsPage() {
                     {calculateProducibleQuantity(product, ingredients ?? [])}
                   </TableCell>
                   <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
+                    <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>
                       Editar
                     </Button>
                   </TableCell>

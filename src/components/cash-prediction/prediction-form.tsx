@@ -60,9 +60,9 @@ export function PredictionForm() {
               name="dailySales"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ventas del Día (PEN)</FormLabel>
+                  <FormLabel className="text-sm sm:text-base">Ventas del Día (PEN)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 1500" {...field} />
+                    <Input type="number" placeholder="e.g., 1500" className="h-12 sm:h-14 text-base" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -73,9 +73,9 @@ export function PredictionForm() {
               name="previousDayCashBalance"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Saldo de Caja Anterior (PEN)</FormLabel>
+                  <FormLabel className="text-sm sm:text-base">Saldo de Caja Anterior (PEN)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 350" {...field} />
+                    <Input type="number" placeholder="e.g., 350" className="h-12 sm:h-14 text-base" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -86,9 +86,9 @@ export function PredictionForm() {
               name="expectedOnlineOrders"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Pedidos en Línea (Efectivo, PEN)</FormLabel>
+                  <FormLabel className="text-sm sm:text-base">Pedidos en Línea (Efectivo, PEN)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 200" {...field} />
+                    <Input type="number" placeholder="e.g., 200" className="h-12 sm:h-14 text-base" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -99,24 +99,24 @@ export function PredictionForm() {
               name="expectedCashExpenses"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gastos en Efectivo (PEN)</FormLabel>
+                  <FormLabel className="text-sm sm:text-base">Gastos en Efectivo (PEN)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 100" {...field} />
+                    <Input type="number" placeholder="e.g., 100" className="h-12 sm:h-14 text-base" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          <Button type="submit" disabled={isLoading} className="w-full">
+          <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base touch-manipulation">
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Generando...
               </>
             ) : (
                <>
-                <Wand2 className="mr-2 h-4 w-4" />
+                <Wand2 className="mr-2 h-5 w-5" />
                 Predecir Saldo de Caja
                </>
             )}

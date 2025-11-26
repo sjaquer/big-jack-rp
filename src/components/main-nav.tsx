@@ -54,11 +54,11 @@ function NavItems() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                    isActive && "bg-muted text-primary"
+                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm sm:text-base font-medium text-muted-foreground transition-all hover:text-primary touch-manipulation active:scale-[0.98]",
+                    isActive && "bg-muted text-primary shadow-sm"
                 )}
                 >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 {item.label}
                 </Link>
             )
@@ -71,18 +71,18 @@ function MobileNav() {
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Button size="icon" variant="outline" className="sm:hidden">
-                <PanelLeft className="h-5 w-5" />
+                <Button size="icon" variant="outline" className="sm:hidden h-11 w-11 touch-manipulation">
+                <PanelLeft className="h-6 w-6" />
                 <span className="sr-only">Toggle Menu</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs">
-                <nav className="grid gap-6 text-lg font-medium">
+            <SheetContent side="left" className="sm:max-w-xs w-[85vw]">
+                <nav className="grid gap-3 text-lg font-medium">
                     <Link
-                        href="#"
-                        className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
+                        href="/dashboard"
+                        className="group flex h-12 w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base mb-4"
                         >
-                        <BurgerIcon className="h-5 w-5 transition-all group-hover:scale-110" />
+                        <BurgerIcon className="h-6 w-6 transition-all group-hover:scale-110" />
                         <span className="sr-only">Big Jack Manager</span>
                     </Link>
                     <NavItems />
@@ -109,21 +109,21 @@ function UserMenu() {
           <Button
             variant="outline"
             size="icon"
-            className="overflow-hidden rounded-full"
+            className="overflow-hidden rounded-full h-11 w-11 touch-manipulation"
           >
-             <Avatar>
+             <Avatar className="h-10 w-10">
                 <AvatarImage src={user?.photoURL ?? undefined} alt="@shadcn" />
                 <AvatarFallback>
-                    <UserCircle className="h-5 w-5" />
+                    <UserCircle className="h-6 w-6" />
                 </AvatarFallback>
              </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{user?.email ?? 'Mi Cuenta'}</DropdownMenuLabel>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="text-base">{user?.email ?? 'Mi Cuenta'}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
+          <DropdownMenuItem onClick={handleSignOut} className="py-3 text-base cursor-pointer">
+            <LogOut className="mr-2 h-5 w-5" />
             <span>Cerrar Sesión</span>
           </DropdownMenuItem>
         </DropdownMenuContent>

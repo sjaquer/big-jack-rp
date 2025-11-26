@@ -87,13 +87,13 @@ export default function InventoryPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
-                    <CardTitle className="font-headline">Inventario de Ingredientes</CardTitle>
-                    <CardDescription>Materias primas para tus productos.</CardDescription>
+                    <CardTitle className="font-headline text-lg sm:text-xl">Inventario de Ingredientes</CardTitle>
+                    <CardDescription className="text-sm">Materias primas para tus productos.</CardDescription>
                 </div>
-                <Button onClick={handleAddIngredient} size="sm">
-                    <PlusCircle className="h-4 w-4 mr-2"/>
+                <Button onClick={handleAddIngredient} size="default" className="h-11 sm:h-10 text-base w-full sm:w-auto touch-manipulation">
+                    <PlusCircle className="h-5 w-5 mr-2"/>
                     Añadir Ingrediente
                 </Button>
             </CardHeader>
@@ -121,7 +121,7 @@ export default function InventoryPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleEditIngredient(item)}>Editar</Button>
+                        <Button variant="outline" size="default" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditIngredient(item)}>Editar</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -167,13 +167,13 @@ export default function InventoryPage() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
-                  <CardTitle className="font-headline">Otros Artículos</CardTitle>
-                  <CardDescription>Empaques, utensilios, etc.</CardDescription>
+                  <CardTitle className="font-headline text-lg sm:text-xl">Otros Artículos</CardTitle>
+                  <CardDescription className="text-sm">Empaques, utensilios, etc.</CardDescription>
                 </div>
-                 <Button onClick={handleAddOtherItem} size="sm">
-                    <PlusCircle className="h-4 w-4 mr-2"/>
+                 <Button onClick={handleAddOtherItem} size="default" className="h-11 sm:h-10 text-base w-full sm:w-auto touch-manipulation">
+                    <PlusCircle className="h-5 w-5 mr-2"/>
                     Añadir Artículo
                 </Button>
             </CardHeader>
@@ -201,7 +201,7 @@ export default function InventoryPage() {
                         )}
                       </TableCell>
                        <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleEditOtherItem(item)}>Editar</Button>
+                        <Button variant="outline" size="default" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditOtherItem(item)}>Editar</Button>
                       </TableCell>
                     </TableRow>
                   ))}
