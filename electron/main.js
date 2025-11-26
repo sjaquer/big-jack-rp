@@ -1,7 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
-const waitOn = require('wait-on');
 
 const isDev = process.env.ELECTRON_DEV === 'true' || process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
@@ -40,8 +39,38 @@ app.on('ready', async () => {
     startNext();
   }
 
+  // Espera la URL del servidor sin depender de la librería externa `wait-on`.
+  const waitForUrl = (url, { timeout = 30000, interval = 500 } = {}) => {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      const check = () => {
+        try {
+          const lib = url.startsWith('https') ? require('https') : require('http');
+          const req = lib.request(url, { method: 'HEAD', timeout: 2000 }, (res) => {
+            // cualquier respuesta indica que el servidor está arriba
+            resolve();
+          });
+          req.on('error', () => {
+            if (Date.now() - start >= timeout) return reject(new Error('Timeout waiting for ' + url));
+            setTimeout(check, interval);
+          });
+          req.on('timeout', () => {
+            req.destroy();
+            if (Date.now() - start >= timeout) return reject(new Error('Timeout waiting for ' + url));
+            setTimeout(check, interval);
+          });
+          req.end();
+        } catch (err) {
+          if (Date.now() - start >= timeout) return reject(err);
+          setTimeout(check, interval);
+        }
+      };
+      check();
+    });
+  };
+
   try {
-    await waitOn({ resources: [`http://localhost:${port}`], timeout: 30000 });
+    await waitForUrl(`http://localhost:${port}`, { timeout: 30000, interval: 500 });
     createWindow();
   } catch (err) {
     console.error('Timeout waiting for server:', err);

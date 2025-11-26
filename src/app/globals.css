@@ -67,3 +67,50 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Mejoras para tablets y móviles */
+  .touch-target {
+    @apply min-h-[48px] min-w-[48px];
+  }
+  
+  .btn-touch {
+    @apply min-h-[48px] px-6 text-base font-medium touch-manipulation;
+  }
+  
+  .btn-touch-lg {
+    @apply min-h-[56px] px-8 text-lg font-semibold touch-manipulation;
+  }
+  
+  /* Mejorar feedback táctil */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Botones con animación táctil mejorada */
+  button, [role="button"] {
+    @apply touch-manipulation;
+  }
+  
+  button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+  
+  /* Mejorar contraste y legibilidad en móviles */
+  @media (max-width: 768px) {
+    body {
+      font-size: 16px; /* Prevenir zoom automático en iOS */
+    }
+    
+    input, textarea, select {
+      font-size: 16px; /* Prevenir zoom automático en iOS */
+    }
+  }
+  
+  /* Cards táctiles con mejor feedback */
+  .card-touch {
+    @apply transition-all duration-150 active:scale-[0.98];
+  }
+}

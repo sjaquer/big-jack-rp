@@ -122,7 +122,13 @@ export default function POSPage() {
             saleDate: serverTimestamp(),
             totalAmount: total,
             cashierId: user.uid,
+            cashierEmail: user.email || 'unknown',
             paymentMethod: paymentMethod,
+            itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
+            uniqueProductsCount: order.length,
+            source: 'pos',
+            deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
+            createdAt: Timestamp.now(),
           };
           transaction.set(newSaleRef, saleData);
 
@@ -163,11 +169,15 @@ export default function POSPage() {
             customerName: `POS Venta (${paymentMethod})`,
             status: 'processing',
             totalAmount: total,
+            paymentMethod: paymentMethod,
+            source: 'pos',
+            itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
             items: order.map(item => ({
                 productId: item.id,
                 productName: item.name,
                 quantity: item.quantity,
                 unitPrice: item.salePrice,
+                subtotal: item.salePrice * item.quantity,
             }))
         };
         await addDocumentNonBlocking(onlineOrderRef, newOrderData);
@@ -203,18 +213,18 @@ export default function POSPage() {
         />
       <div className="md:col-span-2">
         <Card className="h-full">
-          <CardContent className="p-4">
-            {isLoading && <p>Cargando productos...</p>}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <CardContent className="p-4 md:p-6">
+            {isLoading && <p className="text-center text-lg py-8">Cargando productos...</p>}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {products?.map((product) => (
                 <Card
                   key={product.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
+                  className="cursor-pointer hover:shadow-xl hover:scale-105 transition-all active:scale-95 relative overflow-hidden touch-manipulation"
                   onClick={() => addToOrder(product)}
                 >
                     {recentlyAdded === product.id && (
                        <div className="absolute inset-0 bg-primary/80 flex items-center justify-center z-10 animate-in fade-in-0 zoom-in-95">
-                           <CheckCircle className="h-8 w-8 text-primary-foreground" />
+                           <CheckCircle className="h-12 w-12 text-primary-foreground" />
                        </div>
                     )}
                   <CardContent className="p-0 flex flex-col items-center text-center">
@@ -225,13 +235,13 @@ export default function POSPage() {
                         recentlyAdded === product.id ? "scale-105" : ""
                       )}
                       data-ai-hint={product.imageHint}
-                      height="150"
+                      height="200"
                       src={getProductImage(product)}
-                      width="150"
+                      width="200"
                     />
-                    <div className="p-2">
-                      <p className="text-sm font-medium">{product.name}</p>
-                      <p className="text-xs font-semibold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                    <div className="p-3 sm:p-4 w-full">
+                      <p className="text-sm sm:text-base font-semibold line-clamp-2">{product.name}</p>
+                      <p className="text-base sm:text-lg font-bold text-primary mt-1">S/ {product.salePrice.toFixed(2)}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -248,19 +258,23 @@ export default function POSPage() {
             {order.length === 0 ? (
                 <p className="text-muted-foreground text-center mt-8">Selecciona productos para empezar un pedido.</p>
             ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {order.map((item) => (
-                <div key={item.id} className="flex items-center gap-4">
-                  <div className="flex-grow">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)}</p>
+                <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                  <div className="flex-grow min-w-0">
+                    <p className="font-semibold text-sm sm:text-base truncate">{item.name}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => updateQuantity(item.id, -1)}><Minus className="h-4 w-4" /></Button>
-                    <span>{item.quantity}</span>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => updateQuantity(item.id, 1)}><Plus className="h-4 w-4" /></Button>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Button size="icon" variant="outline" className="h-9 w-9 sm:h-10 sm:w-10 touch-manipulation" onClick={() => updateQuantity(item.id, -1)}>
+                      <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </Button>
+                    <span className="font-bold text-base sm:text-lg min-w-[2rem] text-center">{item.quantity}</span>
+                    <Button size="icon" variant="outline" className="h-9 w-9 sm:h-10 sm:w-10 touch-manipulation" onClick={() => updateQuantity(item.id, 1)}>
+                      <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </Button>
                   </div>
-                  <p className="font-semibold w-16 text-right">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
+                  <p className="font-bold text-sm sm:text-base w-16 sm:w-20 text-right">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
                 </div>
               ))}
             </div>
@@ -278,8 +292,8 @@ export default function POSPage() {
                         <span>S/ {total.toFixed(2)}</span>
                     </div>
                 </div>
-                <Button className="w-full" size="lg" onClick={() => setPaymentModalOpen(true)}>
-                    Pagar
+                <Button className="w-full h-14 sm:h-16 text-lg sm:text-xl font-bold" size="lg" onClick={() => setPaymentModalOpen(true)}>
+                    Procesar Pago
                 </Button>
             </div>
           )}

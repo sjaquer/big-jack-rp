@@ -25,6 +25,7 @@ interface PaymentModalProps {
 export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModalProps) {
   const [amountReceived, setAmountReceived] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
   const amount = parseFloat(amountReceived);
@@ -34,10 +35,13 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
     if (!isOpen) {
       setAmountReceived('');
       setPaymentMethod('cash');
+      setIsProcessing(false);
     }
   }, [isOpen]);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (isProcessing) return; // Prevenir doble clic
+    
     if (paymentMethod === 'cash' && (amount < total || !amount)) {
       toast({
         variant: "destructive",
@@ -46,11 +50,13 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
       });
       return;
     }
-    toast({
-      title: "Pago Exitoso",
-      description: "El pedido ha sido procesado.",
-    });
-    onSuccess(paymentMethod);
+    
+    setIsProcessing(true);
+    try {
+      await onSuccess(paymentMethod);
+    } catch (error) {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -64,33 +70,33 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
         </DialogHeader>
         <div className="grid gap-4 py-4">
 
-        <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="cash" id="cash" />
-            <Label htmlFor="cash">Efectivo</Label>
+        <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing}>
+          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+            <RadioGroupItem value="cash" id="cash" className="h-5 w-5" />
+            <Label htmlFor="cash" className="text-base font-medium cursor-pointer flex-1">Efectivo</Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="card" id="card" />
-            <Label htmlFor="card">Tarjeta</Label>
+          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+            <RadioGroupItem value="card" id="card" className="h-5 w-5" />
+            <Label htmlFor="card" className="text-base font-medium cursor-pointer flex-1">Tarjeta</Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="yape" id="yape" />
-            <Label htmlFor="yape">Yape</Label>
+          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+            <RadioGroupItem value="yape" id="yape" className="h-5 w-5" />
+            <Label htmlFor="yape" className="text-base font-medium cursor-pointer flex-1">Yape</Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="plin" id="plin" />
-            <Label htmlFor="plin">Plin</Label>
+          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+            <RadioGroupItem value="plin" id="plin" className="h-5 w-5" />
+            <Label htmlFor="plin" className="text-base font-medium cursor-pointer flex-1">Plin</Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="transfer" id="transfer" />
-            <Label htmlFor="transfer">Transferencia</Label>
+          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+            <RadioGroupItem value="transfer" id="transfer" className="h-5 w-5" />
+            <Label htmlFor="transfer" className="text-base font-medium cursor-pointer flex-1">Transferencia</Label>
           </div>
         </RadioGroup>
 
           {paymentMethod === 'cash' && (
             <>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">
+            <div className="space-y-2">
+                <Label htmlFor="amount" className="text-base font-medium">
                 Monto Recibido
                 </Label>
                 <Input
@@ -98,8 +104,9 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
                 type="number"
                 value={amountReceived}
                 onChange={(e) => setAmountReceived(e.target.value)}
-                className="col-span-3"
-                placeholder='e.g., 50.00'
+                className="h-14 text-lg"
+                placeholder='50.00'
+                disabled={isProcessing}
                 />
             </div>
             {amountReceived && amount >= total && (
@@ -112,10 +119,17 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
           )}
 
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handlePayment} disabled={paymentMethod === 'cash' && (!amountReceived || amount < total)}>
-            Confirmar Pago
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} disabled={isProcessing} size="lg" className="h-12 text-base">
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handlePayment} 
+            disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || amount < total))} 
+            size="lg" 
+            className="h-12 text-base"
+          >
+            {isProcessing ? 'Procesando...' : 'Confirmar Pago'}
           </Button>
         </DialogFooter>
       </DialogContent>
