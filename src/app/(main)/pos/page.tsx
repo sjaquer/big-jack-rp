@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import type { Product, Ingredient, Customer } from '@/lib/types';
-import { X, Plus, Minus, CheckCircle } from 'lucide-react';
+import { X, Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
 import { CustomerSelector } from '@/components/customers/customer-selector';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
@@ -15,7 +14,8 @@ import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { placeholderImages } from '@/lib/placeholder-images.json';
-
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface OrderItem extends Product {
   quantity: number;
@@ -55,7 +55,7 @@ export default function POSPage() {
         });
 
         setRecentlyAdded(product.id);
-        setTimeout(() => setRecentlyAdded(null), 1000);
+        setTimeout(() => setRecentlyAdded(null), 500);
     };
 
     const updateQuantity = (productId: string, amount: number) => {
@@ -68,6 +68,10 @@ export default function POSPage() {
                 return item;
             }).filter((item): item is OrderItem => item !== null);
         });
+    }
+
+    const removeFromOrder = (productId: string) => {
+        setOrder(prevOrder => prevOrder.filter(item => item.id !== productId));
     }
 
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
@@ -227,109 +231,171 @@ export default function POSPage() {
     }
 
   return (
-    <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-6rem)] gap-4 overflow-hidden">
         <PaymentModal 
             isOpen={isPaymentModalOpen}
             onClose={() => setPaymentModalOpen(false)}
             total={total}
             onSuccess={handleSuccessfulPayment}
         />
-      <div className="md:col-span-2">
-        <Card className="h-full">
-          <CardContent className="p-4 md:p-6">
-            {isLoading && <p className="text-center text-lg py-8">Cargando productos...</p>}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {products?.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:shadow-xl hover:scale-105 transition-all active:scale-95 relative overflow-hidden touch-manipulation"
-                  onClick={() => addToOrder(product)}
-                >
-                    {recentlyAdded === product.id && (
-                       <div className="absolute inset-0 bg-primary/80 flex items-center justify-center z-10 animate-in fade-in-0 zoom-in-95">
-                           <CheckCircle className="h-12 w-12 text-primary-foreground" />
-                       </div>
-                    )}
-                  <CardContent className="p-0 flex flex-col items-center text-center">
-                    <Image
-                      alt={product.name}
-                      className={cn(
-                        "aspect-square w-full rounded-t-lg object-cover transition-transform duration-300",
-                        recentlyAdded === product.id ? "scale-105" : ""
-                      )}
-                      data-ai-hint={product.imageHint}
-                      height="200"
-                      src={getProductImage(product)}
-                      width="200"
-                    />
-                    <div className="p-3 sm:p-4 w-full">
-                      <p className="text-sm sm:text-base font-semibold line-clamp-2">{product.name}</p>
-                      <p className="text-base sm:text-lg font-bold text-primary mt-1">S/ {product.salePrice.toFixed(2)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      
+      {/* Left Side: Product Grid */}
+      <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
+        <div className="p-4 border-b bg-muted/20">
+            <h2 className="text-xl font-headline font-bold">Productos</h2>
+        </div>
+        
+        <ScrollArea className="flex-1 p-4">
+            {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                    <p className="text-lg text-muted-foreground animate-pulse">Cargando productos...</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
+                {products?.map((product) => (
+                    <button
+                    key={product.id}
+                    className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
+                    onClick={() => addToOrder(product)}
+                    >
+                        {recentlyAdded === product.id && (
+                        <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
+                            <CheckCircle className="h-12 w-12 text-primary-foreground" />
+                        </div>
+                        )}
+                        <div className="relative w-full aspect-square overflow-hidden bg-muted">
+                            <Image
+                                alt={product.name}
+                                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                data-ai-hint={product.imageHint}
+                                fill
+                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                                src={getProductImage(product)}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        <div className="p-3 w-full flex flex-col flex-1 justify-between bg-card">
+                            <p className="font-semibold text-sm sm:text-base line-clamp-2 leading-tight mb-1">{product.name}</p>
+                            <p className="text-lg font-bold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                        </div>
+                    </button>
+                ))}
+                </div>
+            )}
+        </ScrollArea>
       </div>
 
-      <div className="md:col-span-1">
-        <Card className="h-full flex flex-col">
-          <CardContent className="p-4 flex-grow overflow-y-auto">
-            <h2 className="text-xl font-headline font-semibold mb-4">Pedido Actual</h2>
-            
-            {/* Selector de cliente */}
-            <div className="mb-4">
-              <CustomerSelector
-                selectedCustomer={selectedCustomer}
-                onSelectCustomer={setSelectedCustomer}
-              />
-            </div>
-
-            {order.length === 0 ? (
-                <p className="text-muted-foreground text-center mt-8">Selecciona productos para empezar un pedido.</p>
-            ) : (
-            <div className="space-y-3">
-              {order.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                  <div className="flex-grow min-w-0">
-                    <p className="font-semibold text-sm sm:text-base truncate">{item.name}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Button size="icon" variant="outline" className="h-9 w-9 sm:h-10 sm:w-10 touch-manipulation" onClick={() => updateQuantity(item.id, -1)}>
-                      <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                    <span className="font-bold text-base sm:text-lg min-w-[2rem] text-center">{item.quantity}</span>
-                    <Button size="icon" variant="outline" className="h-9 w-9 sm:h-10 sm:w-10 touch-manipulation" onClick={() => updateQuantity(item.id, 1)}>
-                      <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </div>
-                  <p className="font-bold text-sm sm:text-base w-16 sm:w-20 text-right">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
-                </div>
-              ))}
-            </div>
-            )}
-          </CardContent>
-          {order.length > 0 && (
-            <div className="p-4 border-t">
-                <div className="space-y-2 mb-4">
-                    <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>S/ {subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg">
-                        <span>Total:</span>
-                        <span>S/ {total.toFixed(2)}</span>
-                    </div>
-                </div>
-                <Button className="w-full h-14 sm:h-16 text-lg sm:text-xl font-bold" size="lg" onClick={() => setPaymentModalOpen(true)}>
-                    Procesar Pago
+      {/* Right Side: Order Summary */}
+      <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden h-[40vh] lg:h-auto flex-shrink-0">
+        {/* Customer Selector Header */}
+        <div className="p-4 border-b bg-muted/20 space-y-3">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-headline font-bold flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Pedido Actual
+                </h2>
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleResetOrder}
+                    className="text-muted-foreground hover:text-destructive"
+                    disabled={order.length === 0}
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar
                 </Button>
             </div>
-          )}
-        </Card>
+            <CustomerSelector
+                selectedCustomer={selectedCustomer}
+                onSelectCustomer={setSelectedCustomer}
+            />
+        </div>
+
+        {/* Order Items List */}
+        <ScrollArea className="flex-1 bg-muted/10">
+            {order.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted-foreground space-y-4">
+                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+                        <ShoppingCart className="h-10 w-10 opacity-20" />
+                    </div>
+                    <div>
+                        <p className="text-lg font-medium">El pedido está vacío</p>
+                        <p className="text-sm">Selecciona productos del menú para comenzar</p>
+                    </div>
+                </div>
+            ) : (
+                <div className="p-4 space-y-3">
+                    {order.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-lg border shadow-sm animate-in slide-in-from-left-5 duration-300">
+                            <div className="h-12 w-12 sm:h-14 sm:w-14 relative rounded-md overflow-hidden flex-shrink-0 bg-muted">
+                                <Image
+                                    src={getProductImage(item)}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm sm:text-base line-clamp-2 leading-tight">{item.name}</p>
+                                <p className="text-xs sm:text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
+                            </div>
+
+                            <div className="flex items-center gap-0.5 sm:gap-1 bg-muted/30 rounded-lg p-0.5 sm:p-1 flex-shrink-0">
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-md hover:bg-background hover:shadow-sm touch-manipulation" 
+                                    onClick={() => updateQuantity(item.id, -1)}
+                                >
+                                    <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
+                                </Button>
+                                <span className="font-bold text-base sm:text-lg w-6 sm:w-8 text-center tabular-nums">{item.quantity}</span>
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-md hover:bg-background hover:shadow-sm touch-manipulation" 
+                                    onClick={() => updateQuantity(item.id, 1)}
+                                >
+                                    <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                                </Button>
+                            </div>
+                            
+                            <div className="text-right min-w-[5rem] flex-shrink-0">
+                                <p className="font-bold text-sm sm:text-base whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </ScrollArea>
+
+        {/* Footer Totals & Action */}
+        <div className="p-4 bg-background border-t space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+            <div className="space-y-2">
+                <div className="flex justify-between text-sm sm:text-base text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span className="font-medium">S/ {subtotal.toFixed(2)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-end gap-2">
+                    <span className="text-base sm:text-lg font-semibold">Total a Pagar</span>
+                    <span className="text-2xl sm:text-3xl font-bold text-primary whitespace-nowrap">S/ {total.toFixed(2)}</span>
+                </div>
+            </div>
+            
+            <Button 
+                className="w-full h-16 text-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.98] touch-manipulation" 
+                size="lg" 
+                onClick={() => setPaymentModalOpen(true)}
+                disabled={order.length === 0}
+            >
+                Procesar Pago
+                <span className="ml-2 bg-primary-foreground/20 px-2 py-0.5 rounded text-sm">
+                    (S/ {total.toFixed(2)})
+                </span>
+            </Button>
+        </div>
       </div>
     </div>
   );
