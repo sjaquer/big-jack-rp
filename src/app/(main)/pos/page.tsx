@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 import type { Product, Ingredient, Customer } from '@/lib/types';
 import { X, Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
@@ -13,7 +12,6 @@ import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc 
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { placeholderImages } from '@/lib/placeholder-images.json';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -37,11 +35,7 @@ export default function POSPage() {
     }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
 
-    const getProductImage = (product: Product) => {
-      if (product.imageUrl) return product.imageUrl;
-      const placeholder = placeholderImages.find(p => p.imageHint === product.imageHint);
-      return placeholder?.imageUrl || 'https://picsum.photos/seed/placeholder/150/150';
-    }
+    // NOTE: removed image handling for touch-first POS. Products show large text + price.
 
     const addToOrder = (product: Product) => {
         setOrder((prevOrder) => {
@@ -263,20 +257,9 @@ export default function POSPage() {
                             <CheckCircle className="h-12 w-12 text-primary-foreground" />
                         </div>
                         )}
-                        <div className="relative w-full aspect-square overflow-hidden bg-muted">
-                            <Image
-                                alt={product.name}
-                                className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                data-ai-hint={product.imageHint}
-                                fill
-                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                                src={getProductImage(product)}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </div>
-                        <div className="p-3 w-full flex flex-col flex-1 justify-between bg-card">
-                            <p className="font-semibold text-sm sm:text-base line-clamp-2 leading-tight mb-1">{product.name}</p>
-                            <p className="text-lg font-bold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                        <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
+                          <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
+                          <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
                         </div>
                     </button>
                 ))}
@@ -327,19 +310,10 @@ export default function POSPage() {
                 <div className="p-4 space-y-3">
                     {order.map((item) => (
                         <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-lg border shadow-sm animate-in slide-in-from-left-5 duration-300">
-                            <div className="h-12 w-12 sm:h-14 sm:w-14 relative rounded-md overflow-hidden flex-shrink-0 bg-muted">
-                                <Image
-                                    src={getProductImage(item)}
-                                    alt={item.name}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm sm:text-base line-clamp-2 leading-tight">{item.name}</p>
-                                <p className="text-xs sm:text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
-                            </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base truncate">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
+                          </div>
 
                             <div className="flex items-center gap-0.5 sm:gap-1 bg-muted/30 rounded-lg p-0.5 sm:p-1 flex-shrink-0">
                                 <Button 
@@ -362,7 +336,7 @@ export default function POSPage() {
                             </div>
                             
                             <div className="text-right min-w-[5rem] flex-shrink-0">
-                                <p className="font-bold text-sm sm:text-base whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
+                              <p className="font-bold text-sm sm:text-base whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
                             </div>
                         </div>
                     ))}

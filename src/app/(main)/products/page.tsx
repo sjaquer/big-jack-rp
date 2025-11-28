@@ -13,13 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import Image from 'next/image';
+// Images removed for touch-first POS: product list shows text only
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Product, Supplier, Ingredient } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
-import { placeholderImages } from '@/lib/placeholder-images.json';
+// placeholderImages removed; images are no longer used in product listing
 
 export default function ProductsPage() {
   const firestore = useFirestore();
@@ -59,11 +59,7 @@ export default function ProductsPage() {
     setSelectedProduct(null);
   };
 
-  const getProductImage = (product: Product) => {
-      if (product.imageUrl) return product.imageUrl;
-      const placeholder = placeholderImages.find(p => p.imageHint === product.imageHint);
-      return placeholder?.imageUrl || 'https://picsum.photos/seed/placeholder/64/64';
-  }
+  // Image handling removed: products show textual info only.
   
   const calculateProducibleQuantity = (product: Product, allIngredients: Ingredient[]): number | string => {
     if (!product.ingredients || product.ingredients.length === 0) {
@@ -118,9 +114,6 @@ export default function ProductsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="hidden w-[100px] sm:table-cell">
-                  <span className="sr-only">Imagen</span>
-                </TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Precio de Venta</TableHead>
@@ -132,19 +125,9 @@ export default function ProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7}>Cargando...</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
               {products?.map((product) => (
                 <TableRow key={product.id}>
-                  <TableCell className="hidden sm:table-cell">
-                    <Image
-                      alt={product.name}
-                      className="aspect-square rounded-md object-cover"
-                      data-ai-hint={product.imageHint}
-                      height="64"
-                      src={getProductImage(product)}
-                      width="64"
-                    />
-                  </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{product.sku}</Badge>
