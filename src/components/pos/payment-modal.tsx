@@ -14,6 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
+import { CreditCard, Smartphone, Wallet, Banknote } from 'lucide-react';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -21,6 +23,14 @@ interface PaymentModalProps {
   total: number;
   onSuccess: (paymentMethod: string) => void;
 }
+
+const paymentOptions = [
+  { id: 'cash', label: 'Efectivo', description: 'Pago en caja', icon: Banknote },
+  { id: 'card', label: 'Tarjeta', description: 'POS / Tap', icon: CreditCard },
+  { id: 'yape', label: 'Yape', description: 'QR Yape', icon: Smartphone },
+  { id: 'plin', label: 'Plin', description: 'QR Plin', icon: Smartphone },
+  { id: 'transfer', label: 'Transferencia', description: 'Banco / app', icon: Wallet },
+];
 
 export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModalProps) {
   const [amountReceived, setAmountReceived] = useState<string>('');
@@ -68,37 +78,53 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-xl md:max-w-2xl p-0 overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="font-headline">Procesar Pago</DialogTitle>
-          <DialogDescription>
-            El total del pedido es <span className="font-bold text-primary">S/ {total.toFixed(2)}</span>.
-          </DialogDescription>
+          <div className="px-6 pt-6">
+            <DialogTitle className="font-headline text-xl sm:text-2xl">Procesar Pago</DialogTitle>
+            <DialogDescription className="text-base">
+              Total del pedido:
+              <span className="ml-2 font-semibold text-primary text-2xl">S/ {total.toFixed(2)}</span>
+            </DialogDescription>
+          </div>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-
-        <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing}>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-            <RadioGroupItem value="cash" id="cash" className="h-5 w-5" />
-            <Label htmlFor="cash" className="text-base font-medium cursor-pointer flex-1">Efectivo</Label>
+        <div className="space-y-6 p-6">
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Método de pago</Label>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={setPaymentMethod}
+              disabled={isProcessing}
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+            >
+              {paymentOptions.map((option) => {
+                const Icon = option.icon;
+                const isActive = paymentMethod === option.id;
+                return (
+                  <Label
+                    key={option.id}
+                    htmlFor={`payment-${option.id}`}
+                    className={cn(
+                      'flex flex-col rounded-2xl border-2 p-4 sm:p-5 cursor-pointer touch-manipulation transition-all h-24 sm:h-28',
+                      'focus-within:ring-2 focus-within:ring-primary/40 focus-visible:outline-none',
+                      isActive
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/40 bg-card'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-lg leading-tight">{option.label}</p>
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
+                      </div>
+                      <Icon className={cn('h-6 w-6', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                    </div>
+                    <RadioGroupItem value={option.id} id={`payment-${option.id}`} className="sr-only" />
+                  </Label>
+                );
+              })}
+            </RadioGroup>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-            <RadioGroupItem value="card" id="card" className="h-5 w-5" />
-            <Label htmlFor="card" className="text-base font-medium cursor-pointer flex-1">Tarjeta</Label>
-          </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-            <RadioGroupItem value="yape" id="yape" className="h-5 w-5" />
-            <Label htmlFor="yape" className="text-base font-medium cursor-pointer flex-1">Yape</Label>
-          </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-            <RadioGroupItem value="plin" id="plin" className="h-5 w-5" />
-            <Label htmlFor="plin" className="text-base font-medium cursor-pointer flex-1">Plin</Label>
-          </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-            <RadioGroupItem value="transfer" id="transfer" className="h-5 w-5" />
-            <Label htmlFor="transfer" className="text-base font-medium cursor-pointer flex-1">Transferencia</Label>
-          </div>
-        </RadioGroup>
 
           {paymentMethod === 'cash' && (
             <>
@@ -117,24 +143,24 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
                 />
             </div>
             {amountReceived && amount >= total && (
-                <div className="text-center p-4 bg-secondary rounded-md">
-                    <p className="text-lg">Vuelto:</p>
-                    <p className="text-3xl font-bold text-primary">S/ {change.toFixed(2)}</p>
-                </div>
+              <div className="text-center p-4 bg-secondary rounded-md">
+                <p className="text-lg">Vuelto:</p>
+                <p className="text-3xl font-bold text-primary">S/ {change.toFixed(2)}</p>
+              </div>
             )}
             </>
           )}
 
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing} size="lg" className="h-12 text-base">
+        <DialogFooter className="gap-2 sm:gap-0 px-6 pb-6">
+          <Button variant="outline" onClick={onClose} disabled={isProcessing} size="lg" className="h-12 text-base w-full sm:w-auto">
             Cancelar
           </Button>
           <Button 
             onClick={handlePayment} 
             disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || amount < total))} 
             size="lg" 
-            className="h-12 text-base"
+            className="h-12 text-base w-full sm:w-auto"
           >
             {isProcessing ? 'Procesando...' : 'Confirmar Pago'}
           </Button>
