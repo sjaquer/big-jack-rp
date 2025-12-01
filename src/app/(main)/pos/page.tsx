@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import type { Product, ProductCategory } from '@/lib/types';
+import type { Product, ProductCategory, Ingredient } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
@@ -62,6 +62,8 @@ export default function POSPage() {
 
     const sendSaleToSunat = async (saleId: string, payload: SunatBoletaPayload) => {
       if (!firestore || !saleId) return;
+      console.groupCollapsed('[SUNAT] Enviando boleta', saleId);
+      console.info('[SUNAT] Payload preparado', payload);
       try {
         const response = await fetch('/api/sunat/boletas', {
           method: 'POST',
@@ -69,6 +71,7 @@ export default function POSPage() {
           body: JSON.stringify(payload),
         });
         const result = await response.json().catch(() => ({}));
+        console.info('[SUNAT] Respuesta cruda', result);
         const saleRef = doc(firestore, 'sales', saleId);
 
         if (response.ok && (result.status === 'accepted' || result.status === 'queued' || result.status === 'sent')) {
@@ -83,6 +86,7 @@ export default function POSPage() {
             sunatStatus: 'rejected',
             sunatNote: result.message ?? 'No se pudo registrar la boleta.',
           });
+          console.warn('[SUNAT] Boleta rechazada', { saleId, message: result.message, details: result });
           toast({
             variant: 'destructive',
             title: 'SUNAT rechazó la boleta',
@@ -90,6 +94,7 @@ export default function POSPage() {
           });
         }
       } catch (error) {
+        console.error('[SUNAT] Error enviando boleta', error);
         const saleRef = doc(firestore, 'sales', saleId);
         await updateDoc(saleRef, {
           sunatStatus: 'rejected',
@@ -100,6 +105,8 @@ export default function POSPage() {
           title: 'Boleta pendiente',
           description: 'No se pudo contactar con SUNAT. Intenta reenviar más tarde.',
         });
+      } finally {
+        console.groupEnd();
       }
     };
 
@@ -191,6 +198,9 @@ export default function POSPage() {
 
       try {
         await runTransaction(firestore, async (transaction) => {
+          console.groupCollapsed('[POS] Iniciando transacción de venta');
+          console.info('[POS] Pedido actual', order);
+          console.info('[POS] Cliente normalizado', normalizedCustomer);
           const newSaleRef = doc(collection(firestore, 'sales'));
           createdSaleId = newSaleRef.id;
 
@@ -201,11 +211,6 @@ export default function POSPage() {
           generatedSerie = storedSerie || DEFAULT_SERIE_CODE;
           const nextCorrelativo = (storedCorrelativo ?? 0) + 1;
           generatedCorrelativo = nextCorrelativo;
-          transaction.set(seriesDocRef, {
-            serie: generatedSerie,
-            correlativo: nextCorrelativo,
-            updatedAt: Timestamp.now(),
-          });
 
           // --- READS first: gather all product and ingredient documents needed ---
           const productRefs = order.map(item => doc(firestore, 'products', item.id));
@@ -263,7 +268,15 @@ export default function POSPage() {
             boletaSerie: generatedSerie,
             boletaCorrelativo: generatedCorrelativo,
           };
+          console.info('[POS] Lecturas completadas — preparando escrituras');
+          console.info('[POS] Reservando correlativo', { serie: generatedSerie, correlativo: generatedCorrelativo });
+          transaction.set(seriesDocRef, {
+            serie: generatedSerie,
+            correlativo: nextCorrelativo,
+            updatedAt: Timestamp.now(),
+          });
           transaction.set(newSaleRef, saleData);
+          console.info('[POS] Venta guardada preliminarmente', saleData);
 
           for (const item of order) {
             const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
@@ -276,11 +289,13 @@ export default function POSPage() {
               profit: item.price ? (item.salePrice - item.price) * item.quantity : 0,
             };
             transaction.set(saleItemRef, saleItemData);
+            console.debug('[POS] Item registrado', saleItemData);
 
             // Update product stock
             const productRef = doc(firestore, 'products', item.id);
             const newProductStock = (productData.quantity ?? 0) - item.quantity;
             transaction.update(productRef, { quantity: newProductStock });
+            console.debug('[POS] Stock producto actualizado', { productId: item.id, stockAnterior: productData.quantity ?? 0, stockNuevo: newProductStock });
 
             // Update ingredient stocks (if any)
             if (productData.ingredients) {
@@ -289,9 +304,16 @@ export default function POSPage() {
                 const currentIngredient = ingredientMap.get(recipeIngredient.ingredientId)!;
                 const newIngredientStock = (currentIngredient.quantity ?? 0) - (recipeIngredient.quantity * item.quantity);
                 transaction.update(ingredientRef, { quantity: newIngredientStock });
+                console.debug('[POS] Stock ingrediente actualizado', {
+                  ingredientId: recipeIngredient.ingredientId,
+                  cantidadAnterior: currentIngredient.quantity ?? 0,
+                  cantidadNueva: newIngredientStock,
+                  usadoPor: item.id,
+                });
               }
             }
           }
+          console.groupEnd();
         });
         
         // Create a corresponding online_order for the kitchen
@@ -319,8 +341,10 @@ export default function POSPage() {
           customerDocumentNumber: normalizedCustomer.documentNumber,
         };
         await addDocumentNonBlocking(onlineOrderRef, newOrderData);
+        console.info('[POS] Pedido enviado a cocina', newOrderData);
 
         if (createdSaleId) {
+          console.info('[POS] Venta lista para SUNAT', { saleId: createdSaleId, serie: generatedSerie, correlativo: generatedCorrelativo });
           const sunatPayload: SunatBoletaPayload = {
             saleId: createdSaleId,
             total,
