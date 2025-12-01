@@ -326,6 +326,7 @@ Todos los componentes están optimizados para:
   - El payload a SUNAT incluye esos valores para que la boleta salga con DNI/RUC correcto.
 - **Configuración**:
   - Requiere `SUNAT_CLIENT_ID`, `SUNAT_CLIENT_SECRET` y opcionalmente `SUNAT_TOKEN_URL_BASE` (default `https://api-seguridad.sunat.gob.pe/v1/clientesextranet`).
+  - No sobreescribas `SUNAT_API_TOKEN_URL` a menos que la URL ya incluya tu `clientId`; si existe `clientId`, el sistema siempre arma `https://api-seguridad.sunat.gob.pe/v1/clientesextranet/{clientId}/oauth2/token/`.
   - URLs de envío REST/SOAP configurables: `SUNAT_API_BASE_URL`, `SUNAT_API_RECEIPT_URL`, `SUNAT_ENVIO_URL_PROD`, `SUNAT_ENVIO_URL_BETA`.
   - Scopes configurables con `SUNAT_SCOPE` (default `https://api-cpe.sunat.gob.pe`).
   - Cliente sin datos entrega por defecto boleta “Cliente Mostrador” DNI 00000000.

@@ -36,7 +36,9 @@ export const resolveSunatConfig = (): SunatConfig => {
 
   const tokenUrlBase = env('SUNAT_TOKEN_URL_BASE') ?? 'https://api-seguridad.sunat.gob.pe/v1/clientesextranet';
   const explicitTokenUrl = env('SUNAT_API_TOKEN_URL');
-  const tokenUrl = explicitTokenUrl ?? (clientId ? `${tokenUrlBase}/${clientId}/oauth2/token/` : tokenUrlBase);
+  const tokenUrl = clientId
+    ? `${tokenUrlBase.replace(/\/$/, '')}/${clientId}/oauth2/token/`
+    : (explicitTokenUrl ?? tokenUrlBase);
 
   const scope = env('SUNAT_SCOPE') ?? env('SUNAT_API_SCOPE') ?? 'https://api-cpe.sunat.gob.pe';
 
