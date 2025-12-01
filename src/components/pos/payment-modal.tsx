@@ -14,34 +14,74 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+export type DocumentType = '0' | '1' | '6';
+
+export interface PaymentCustomerPayload {
+  name: string;
+  documentType: DocumentType;
+  documentNumber: string;
+}
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   total: number;
-  onSuccess: (paymentMethod: string) => void;
+  onSuccess: (payload: {
+    paymentMethod: string;
+    customer: PaymentCustomerPayload;
+  }) => void | Promise<void>;
 }
+
+const DOCUMENT_OPTIONS: { label: string; value: DocumentType; description: string }[] = [
+  { label: 'Consumidor Final', value: '0', description: 'Sin documento / Cliente Mostrador' },
+  { label: 'DNI', value: '1', description: 'Personas naturales en Perú' },
+  { label: 'RUC', value: '6', description: 'Empresas o emisores de factura' },
+];
 
 export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModalProps) {
   const [amountReceived, setAmountReceived] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [documentType, setDocumentType] = useState<DocumentType>('0');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [customerName, setCustomerName] = useState('Cliente Mostrador');
   const { toast } = useToast();
 
   const amount = parseFloat(amountReceived);
   const change = amount >= total ? amount - total : 0;
+  const sanitizedDocument = documentNumber.replace(/\D/g, '');
+  const isCustomerNameRequired = documentType !== '0';
+
+  const documentError = (() => {
+    if (documentType === '0') {
+      return '';
+    }
+    if (documentType === '1' && sanitizedDocument.length !== 8) {
+      return 'El DNI debe tener 8 dígitos.';
+    }
+    if (documentType === '6' && sanitizedDocument.length !== 11) {
+      return 'El RUC debe tener 11 dígitos.';
+    }
+    return '';
+  })();
+  const isDocumentInvalid = Boolean(documentError || (isCustomerNameRequired && !customerName.trim()));
 
   useEffect(() => {
     if (!isOpen) {
       setAmountReceived('');
       setPaymentMethod('cash');
       setIsProcessing(false);
+      setDocumentType('0');
+      setDocumentNumber('');
+      setCustomerName('Cliente Mostrador');
     }
   }, [isOpen]);
 
   const handlePayment = async () => {
     if (isProcessing) return; // Prevenir doble clic
-    
+
     if (paymentMethod === 'cash' && (amount < total || !amount)) {
       toast({
         variant: "destructive",
@@ -50,10 +90,35 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
       });
       return;
     }
+
+    if (documentError) {
+      toast({
+        variant: 'destructive',
+        title: 'Documento inválido',
+        description: documentError,
+      });
+      return;
+    }
+
+    if (isCustomerNameRequired && !customerName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Nombre requerido',
+        description: 'Ingresa el nombre o razón social del cliente.',
+      });
+      return;
+    }
     
     setIsProcessing(true);
     try {
-      await onSuccess(paymentMethod);
+      await onSuccess({
+        paymentMethod,
+        customer: {
+          name: customerName.trim() || 'Cliente Mostrador',
+          documentType,
+          documentNumber: sanitizedDocument || (documentType === '0' ? '00000000' : ''),
+        },
+      });
       // Cerrar modal automáticamente después del éxito
       onClose();
     } catch (error) {
@@ -100,6 +165,56 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
           </div>
         </RadioGroup>
 
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Datos del cliente</Label>
+          <div className="grid gap-3">
+            <div className="grid gap-1">
+              <Label className="text-sm">Tipo de documento</Label>
+              <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)} disabled={isProcessing}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DOCUMENT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {documentType !== '0' && (
+              <div className="grid gap-1">
+                <Label className="text-sm">Número de documento</Label>
+                <Input
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  placeholder={documentType === '1' ? '12345678' : '12345678901'}
+                  inputMode="numeric"
+                  maxLength={documentType === '1' ? 8 : 11}
+                  disabled={isProcessing}
+                  className="h-11"
+                />
+                {documentError && (
+                  <p className="text-xs text-destructive">{documentError}</p>
+                )}
+              </div>
+            )}
+
+            <div className="grid gap-1">
+              <Label className="text-sm">Nombre / Razón social</Label>
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Cliente Mostrador"
+                disabled={isProcessing}
+                className="h-11"
+              />
+            </div>
+          </div>
+        </div>
+
           {paymentMethod === 'cash' && (
             <>
             <div className="space-y-2">
@@ -132,7 +247,7 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
           </Button>
           <Button 
             onClick={handlePayment} 
-            disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || amount < total))} 
+            disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || amount < total)) || isDocumentInvalid} 
             size="lg" 
             className="h-12 text-base"
           >

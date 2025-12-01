@@ -94,9 +94,13 @@ export interface Sale {
   deviceType?: string;
   customerId?: string | null;
   customerName?: string | null;
+  customerDocumentType?: '0' | '1' | '6';
+  customerDocumentNumber?: string | null;
   sunatStatus?: SunatStatus;
   sunatDocumentId?: string;
   sunatNote?: string;
+  boletaSerie?: string;
+  boletaCorrelativo?: number;
 }
 
 export interface SaleItem {
@@ -131,6 +135,8 @@ export interface OnlineOrder {
   completedAt?: Timestamp;
   source?: OrderSource;
   channelTag?: 'nuevo' | 'prioritario';
+  customerDocumentType?: '0' | '1' | '6';
+  customerDocumentNumber?: string | null;
 }
 
 export interface Customer {

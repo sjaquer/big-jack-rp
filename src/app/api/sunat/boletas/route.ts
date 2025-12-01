@@ -72,8 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serie = getEnv('SUNAT_BOLETA_SERIE') ?? 'B001';
-    const correlativo = `${Date.now()}`;
+    const serieEnv = getEnv('SUNAT_BOLETA_SERIE') ?? 'B001';
+    const serie = body.serie ?? serieEnv;
+    const correlativo = body.correlativo ?? Date.now();
     const customer = body.customer ?? {
       name: 'Cliente Mostrador',
       documentNumber: '00000000',

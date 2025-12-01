@@ -287,6 +287,10 @@ Todos los componentes están optimizados para:
   - Catálogo filtrado por categorías (`Productos`, `Hamburguesas`, `Bebidas`, etc.) usando `PRODUCT_CATEGORY_LABELS`.
   - Selección de clientes eliminada: todas las ventas se registran como "Cliente Mostrador".
   - Bloque informativo dentro del panel derecho con el paso a paso para cobrar por POS.
+- **Modal de Pago** (`src/components/pos/payment-modal.tsx`):
+  - Campos rápidos para capturar tipo de documento (Consumidor Final, DNI, RUC), número y nombre/razón social.
+  - Validaciones automáticas (DNI = 8 dígitos, RUC = 11 dígitos).
+  - Los datos ingresados viajan con la venta y alimentan la boleta electrónica.
 - **Tipos**: `Product` ahora incluye `category` (`src/lib/types.ts`).
 - **Formularios**: `src/components/products/product-form.tsx` permite elegir categoría al crear/editar.
 
@@ -313,7 +317,13 @@ Todos los componentes están optimizados para:
   - Expone `POST /api/sunat/boletas` que recibe la venta y la envía a SUNAT.
   - Lee `SUNAT_CLIENT_ID` y `SUNAT_CLIENT_SECRET` (fallback a `id_client` y `clave-sunat` del `.env`).
   - Genera token, envía el payload de boleta y devuelve `status`/`ticket`.
+- **Serie y correlativo**:
+  - Firestore mantiene `sunat_series/boletas` con la serie activa y el correlativo incremental.
+  - Cada venta POS reserva el siguiente correlativo dentro de la misma transacción y lo guarda en `sales.boletaSerie` y `sales.boletaCorrelativo`.
 - **POS**: tras registrar una venta, se envía automáticamente la boleta y se actualiza el documento `sales/{saleId}` con `sunatStatus`, `sunatDocumentId` y `sunatNote`.
+- **Datos del cliente**:
+  - Los campos capturados en el modal se guardan en `sales` (`customerDocumentType`, `customerDocumentNumber`) y `online_orders`.
+  - El payload a SUNAT incluye esos valores para que la boleta salga con DNI/RUC correcto.
 - **Configuración**:
   - Variables opcionales: `SUNAT_API_BASE_URL`, `SUNAT_API_TOKEN_URL`, `SUNAT_API_RECEIPT_URL`, `SUNAT_BOLETA_SERIE`.
   - Cliente sin datos entrega por defecto boleta “Cliente Mostrador” DNI 00000000.

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import type { Product, ProductCategory } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
-import { PaymentModal } from '@/components/pos/payment-modal';
+import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
@@ -23,11 +23,9 @@ interface SunatBoletaPayload {
   total: number;
   paymentMethod: string;
   issuedAt: string;
-  customer: {
-    name: string;
-    documentType: string;
-    documentNumber: string;
-  };
+  serie: string;
+  correlativo: number;
+  customer: PaymentCustomerPayload;
   items: Array<{
     productId: string;
     description: string;
@@ -37,6 +35,14 @@ interface SunatBoletaPayload {
 }
 
 const WALK_IN_CUSTOMER = 'Cliente Mostrador';
+const SUNAT_SERIES_COLLECTION = 'sunat_series';
+const DEFAULT_SERIES_DOC = 'boletas';
+const DEFAULT_SERIE_CODE = 'B001';
+
+interface PaymentResult {
+  paymentMethod: string;
+  customer: PaymentCustomerPayload;
+}
 
 export default function POSPage() {
     const firestore = useFirestore();
@@ -167,18 +173,39 @@ export default function POSPage() {
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
     const total = subtotal; // Assuming no tax for now
 
-    const handleSuccessfulPayment = async (paymentMethod: string) => {
+    const handleSuccessfulPayment = async ({ paymentMethod, customer }: PaymentResult) => {
       if (!firestore || !user) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos o no hay usuario."});
         return;
       }
 
       let createdSaleId = '';
+      let generatedSerie = DEFAULT_SERIE_CODE;
+      let generatedCorrelativo = 0;
+
+      const normalizedCustomer: PaymentCustomerPayload = {
+        name: customer.name?.trim() || WALK_IN_CUSTOMER,
+        documentType: customer.documentType,
+        documentNumber: customer.documentNumber || (customer.documentType === '0' ? '00000000' : ''),
+      };
 
       try {
         await runTransaction(firestore, async (transaction) => {
           const newSaleRef = doc(collection(firestore, 'sales'));
           createdSaleId = newSaleRef.id;
+
+          const seriesDocRef = doc(firestore, SUNAT_SERIES_COLLECTION, DEFAULT_SERIES_DOC);
+          const seriesDoc = await transaction.get(seriesDocRef);
+          const storedSerie = seriesDoc.exists() ? (seriesDoc.data()?.serie as string | undefined) : undefined;
+          const storedCorrelativo = seriesDoc.exists() ? (seriesDoc.data()?.correlativo as number | undefined) : undefined;
+          generatedSerie = storedSerie || DEFAULT_SERIE_CODE;
+          const nextCorrelativo = (storedCorrelativo ?? 0) + 1;
+          generatedCorrelativo = nextCorrelativo;
+          transaction.set(seriesDocRef, {
+            serie: generatedSerie,
+            correlativo: nextCorrelativo,
+            updatedAt: Timestamp.now(),
+          });
 
           // --- READS first: gather all product and ingredient documents needed ---
           const productRefs = order.map(item => doc(firestore, 'products', item.id));
@@ -229,8 +256,12 @@ export default function POSPage() {
             deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
             createdAt: Timestamp.now(),
             customerId: null,
-            customerName: WALK_IN_CUSTOMER,
+            customerName: normalizedCustomer.name,
+            customerDocumentType: normalizedCustomer.documentType,
+            customerDocumentNumber: normalizedCustomer.documentNumber,
             sunatStatus: 'pending',
+            boletaSerie: generatedSerie,
+            boletaCorrelativo: generatedCorrelativo,
           };
           transaction.set(newSaleRef, saleData);
 
@@ -275,7 +306,7 @@ export default function POSPage() {
         const newOrderData = {
             orderDate: Timestamp.now(),
             customerId: null,
-            customerName: WALK_IN_CUSTOMER,
+          customerName: normalizedCustomer.name,
             customerPhone: null,
             status: 'pending',
             totalAmount: total,
@@ -284,6 +315,8 @@ export default function POSPage() {
             itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
             items: orderItemsSnapshot,
             notes: null,
+          customerDocumentType: normalizedCustomer.documentType,
+          customerDocumentNumber: normalizedCustomer.documentNumber,
         };
         await addDocumentNonBlocking(onlineOrderRef, newOrderData);
 
@@ -293,16 +326,18 @@ export default function POSPage() {
             total,
             paymentMethod,
             issuedAt: new Date().toISOString(),
+            serie: generatedSerie,
+            correlativo: generatedCorrelativo,
             customer: {
-              name: WALK_IN_CUSTOMER,
-              documentType: 'DNI',
-              documentNumber: '00000000',
+              name: normalizedCustomer.name,
+              documentType: normalizedCustomer.documentType,
+              documentNumber: normalizedCustomer.documentNumber,
             },
-            items: order.map(item => ({
-              productId: item.id,
-              description: item.name,
+            items: orderItemsSnapshot.map(item => ({
+              productId: item.productId,
+              description: item.productName,
               quantity: item.quantity,
-              unitPrice: item.salePrice,
+              unitPrice: item.unitPrice,
             })),
           };
           void sendSaleToSunat(createdSaleId, sunatPayload);
