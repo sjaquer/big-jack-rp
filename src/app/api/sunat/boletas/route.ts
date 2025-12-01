@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSunatToken, resolveSunatConfig, SunatTokenError } from '@/lib/sunat';
 
 interface SunatRequestBody {
   saleId: string;
@@ -36,52 +37,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const clientId = getEnv('SUNAT_CLIENT_ID') ?? getEnv('id_client');
-    const clientSecret = getEnv('SUNAT_CLIENT_SECRET') ?? getEnv('clave_sunat') ?? getEnv('clave-sunat');
-    if (!clientId || !clientSecret) {
+    const sunatConfig = resolveSunatConfig();
+    if (!sunatConfig.clientId || !sunatConfig.clientSecret) {
       return NextResponse.json(
         { status: 'error', message: 'Credenciales de SUNAT no configuradas.' },
         { status: 500 }
       );
     }
 
-    const baseUrl = getEnv('SUNAT_API_BASE_URL') ?? 'https://api.sunat.gob.pe/v1/contribuyente/conectate';
-    const receiptUrl = getEnv('SUNAT_API_RECEIPT_URL') ?? `${baseUrl}/boleta`;
-    const scopeUrl = getEnv('SUNAT_API_SCOPE') ?? 'https://api.sunat.gob.pe/v1/contribuyente/contribuyente.api';
-
-    // Construir la URL de token con api-seguridad y el clientId (requerido por SUNAT)
-    const defaultTokenUrl = `https://api-seguridad.sunat.gob.pe/v1/clientesextranet/${clientId}/oauth2/token/`;
-    const tokenUrl = getEnv('SUNAT_API_TOKEN_URL') ?? defaultTokenUrl;
-
-    const tokenBody = new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: clientId,
-      client_secret: clientSecret,
-      scope: scopeUrl,
-    });
-
-    const tokenResponse = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: tokenBody.toString(),
-    });
-
-    const tokenJson = await tokenResponse.json().catch(() => ({}));
-
-    if (!tokenResponse.ok || !tokenJson?.access_token) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          message: 'No se pudo obtener el token de SUNAT.',
-          details: {
-            status: tokenResponse.status,
-            body: tokenJson,
+    let token: string;
+    try {
+      const tokenResult = await getSunatToken(sunatConfig);
+      token = tokenResult.token;
+    } catch (error) {
+      if (error instanceof SunatTokenError) {
+        return NextResponse.json(
+          {
+            status: 'error',
+            message: error.message,
+            details: {
+              status: error.status,
+              body: error.body,
+            },
           },
-        },
-        { status: 502 }
-      );
+          { status: 502 }
+        );
+      }
+      throw error;
     }
 
     const serieEnv = getEnv('SUNAT_BOLETA_SERIE') ?? 'B001';
@@ -116,11 +98,11 @@ export async function POST(request: NextRequest) {
       })),
     };
 
-    const receiptResponse = await fetch(receiptUrl, {
+    const receiptResponse = await fetch(sunatConfig.receiptUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${tokenJson.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(boletaPayload),
     });

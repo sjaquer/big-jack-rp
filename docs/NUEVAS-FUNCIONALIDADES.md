@@ -315,8 +315,8 @@ Todos los componentes están optimizados para:
 ### 7. 🧾 Boletas Electrónicas SUNAT
 - **API Interna**: `src/app/api/sunat/boletas/route.ts`
   - Expone `POST /api/sunat/boletas` que recibe la venta y la envía a SUNAT.
-  - Lee `SUNAT_CLIENT_ID` y `SUNAT_CLIENT_SECRET` (fallback a `id_client` y `clave-sunat` del `.env`).
-  - Genera token, envía el payload de boleta y devuelve `status`/`ticket`.
+  - Se apoya en `src/lib/sunat.ts` para construir la URL correcta de token (`api-seguridad.../{clientId}/oauth2/token/`), solicitar el access token y centralizar la configuración.
+  - Devuelve `status`/`ticket` y cualquier error de token con `details.status` + `details.body` para depuración.
 - **Serie y correlativo**:
   - Firestore mantiene `sunat_series/boletas` con la serie activa y el correlativo incremental.
   - Cada venta POS reserva el siguiente correlativo dentro de la misma transacción y lo guarda en `sales.boletaSerie` y `sales.boletaCorrelativo`.
@@ -325,8 +325,11 @@ Todos los componentes están optimizados para:
   - Los campos capturados en el modal se guardan en `sales` (`customerDocumentType`, `customerDocumentNumber`) y `online_orders`.
   - El payload a SUNAT incluye esos valores para que la boleta salga con DNI/RUC correcto.
 - **Configuración**:
-  - Variables opcionales: `SUNAT_API_BASE_URL`, `SUNAT_API_TOKEN_URL`, `SUNAT_API_RECEIPT_URL`, `SUNAT_BOLETA_SERIE`.
+  - Requiere `SUNAT_CLIENT_ID`, `SUNAT_CLIENT_SECRET` y opcionalmente `SUNAT_TOKEN_URL_BASE` (default `https://api-seguridad.sunat.gob.pe/v1/clientesextranet`).
+  - URLs de envío REST/SOAP configurables: `SUNAT_API_BASE_URL`, `SUNAT_API_RECEIPT_URL`, `SUNAT_ENVIO_URL_PROD`, `SUNAT_ENVIO_URL_BETA`.
+  - Scopes configurables con `SUNAT_SCOPE` (default `https://api-cpe.sunat.gob.pe`).
   - Cliente sin datos entrega por defecto boleta “Cliente Mostrador” DNI 00000000.
+- **Nota técnica**: el flujo actual usa la API REST (`conectate/boleta`). Para integrarse con el servicio SOAP tradicional (`billService`) se deben usar las URLs `SUNAT_ENVIO_URL_*` y credenciales SOL en el XML (no cubierto aún, pero preparado desde `src/lib/sunat.ts`).
 - **Estados posibles**: `pending`, `sent`, `accepted`, `rejected`. Se reflejan en el dashboard para cálculos de neto.
 
 ---
