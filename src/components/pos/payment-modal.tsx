@@ -142,26 +142,26 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
         </DialogHeader>
         <div className="grid gap-4 py-4">
 
-        <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing}>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+        <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing} className="space-y-3">
+          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
             <RadioGroupItem value="cash" id="cash" className="h-5 w-5" />
-            <Label htmlFor="cash" className="text-base font-medium cursor-pointer flex-1">Efectivo</Label>
+            <Label htmlFor="cash" className="text-lg font-semibold cursor-pointer flex-1">Efectivo</Label>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
             <RadioGroupItem value="card" id="card" className="h-5 w-5" />
-            <Label htmlFor="card" className="text-base font-medium cursor-pointer flex-1">Tarjeta</Label>
+            <Label htmlFor="card" className="text-lg font-semibold cursor-pointer flex-1">Tarjeta</Label>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
             <RadioGroupItem value="yape" id="yape" className="h-5 w-5" />
-            <Label htmlFor="yape" className="text-base font-medium cursor-pointer flex-1">Yape</Label>
+            <Label htmlFor="yape" className="text-lg font-semibold cursor-pointer flex-1">Yape</Label>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
             <RadioGroupItem value="plin" id="plin" className="h-5 w-5" />
-            <Label htmlFor="plin" className="text-base font-medium cursor-pointer flex-1">Plin</Label>
+            <Label htmlFor="plin" className="text-lg font-semibold cursor-pointer flex-1">Plin</Label>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
+          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
             <RadioGroupItem value="transfer" id="transfer" className="h-5 w-5" />
-            <Label htmlFor="transfer" className="text-base font-medium cursor-pointer flex-1">Transferencia</Label>
+            <Label htmlFor="transfer" className="text-lg font-semibold cursor-pointer flex-1">Transferencia</Label>
           </div>
         </RadioGroup>
 
