@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 export type DocumentType = '0' | '1' | '6';
 
@@ -31,6 +32,7 @@ interface PaymentModalProps {
   onSuccess: (payload: {
     paymentMethod: string;
     customer: PaymentCustomerPayload;
+    issueBoleta: boolean;
   }) => void | Promise<void>;
 }
 
@@ -47,6 +49,7 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
   const [documentType, setDocumentType] = useState<DocumentType>('0');
   const [documentNumber, setDocumentNumber] = useState('');
   const [customerName, setCustomerName] = useState('Cliente Mostrador');
+  const [shouldIssueBoleta, setShouldIssueBoleta] = useState(true);
   const { toast } = useToast();
 
   const amount = parseFloat(amountReceived);
@@ -76,6 +79,7 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
       setDocumentType('0');
       setDocumentNumber('');
       setCustomerName('Cliente Mostrador');
+      setShouldIssueBoleta(true);
     }
   }, [isOpen]);
 
@@ -118,6 +122,7 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
           documentType,
           documentNumber: sanitizedDocument || (documentType === '0' ? '00000000' : ''),
         },
+        issueBoleta: shouldIssueBoleta,
       });
       // Cerrar modal automáticamente después del éxito
       onClose();
@@ -213,6 +218,16 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
               />
             </div>
           </div>
+        </div>
+
+        <div className="flex items-start justify-between rounded-xl border p-4">
+          <div className="space-y-1 pr-4">
+            <p className="text-base font-semibold">Emitir boleta electrónica</p>
+            <p className="text-sm text-muted-foreground">
+              Si lo desactivas, solo se registrará la venta sin enviarla a SUNAT.
+            </p>
+          </div>
+          <Switch checked={shouldIssueBoleta} onCheckedChange={setShouldIssueBoleta} disabled={isProcessing} />
         </div>
 
           {paymentMethod === 'cash' && (

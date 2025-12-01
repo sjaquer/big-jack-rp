@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Buffer } from 'node:buffer';
 
 interface SunatRequestBody {
   saleId: string;
@@ -48,15 +49,22 @@ export async function POST(request: NextRequest) {
     const baseUrl = getEnv('SUNAT_API_BASE_URL') ?? 'https://api.sunat.gob.pe/v1/contribuyente/conectate';
     const tokenUrl = getEnv('SUNAT_API_TOKEN_URL') ?? `${baseUrl}/token`; 
     const receiptUrl = getEnv('SUNAT_API_RECEIPT_URL') ?? `${baseUrl}/boleta`; 
+    const scopeUrl = getEnv('SUNAT_API_SCOPE') ?? baseUrl;
+
+    const tokenBody = new URLSearchParams({
+      grant_type: 'client_credentials',
+      scope: scopeUrl,
+    });
+
+    const basicToken = Buffer.from(`${clientId}:${clientSecret}`, 'utf-8').toString('base64');
 
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'client_credentials',
-      }),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${basicToken}`,
+      },
+      body: tokenBody.toString(),
     });
 
     const tokenJson = await tokenResponse.json().catch(() => ({}));
@@ -66,7 +74,10 @@ export async function POST(request: NextRequest) {
         {
           status: 'error',
           message: 'No se pudo obtener el token de SUNAT.',
-          details: tokenJson,
+          details: {
+            status: tokenResponse.status,
+            body: tokenJson,
+          },
         },
         { status: 502 }
       );

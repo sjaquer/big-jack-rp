@@ -34,6 +34,118 @@ interface SunatBoletaPayload {
   }>;
 }
 
+interface ThermalPrintPayload {
+  serie: string;
+  correlativo: number;
+  issuedAt: string;
+  customer: PaymentCustomerPayload;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  total: number;
+  paymentMethod: string;
+  sunatStatus: string;
+  sunatNote?: string;
+  cashierEmail?: string | null;
+}
+
+type SunatDispatchResult = {
+  status: 'accepted' | 'sent' | 'queued' | 'rejected' | 'error';
+  message?: string;
+  documentId?: string | null;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const triggerThermalPrint = (payload: ThermalPrintPayload) => {
+  if (typeof window === 'undefined') {
+    console.info('[POS] Impresión omitida (entorno sin ventana)');
+    return;
+  }
+
+  try {
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!printWindow) {
+      console.warn('[POS] No se pudo abrir la ventana de impresión');
+      return;
+    }
+
+    const itemsHtml = payload.items
+      .map((item) => {
+        const safeName = escapeHtml(item.productName);
+        return `
+        <div class="line-item">
+          <div class="row"><span>${item.quantity} x ${safeName}</span><span>S/ ${item.unitPrice.toFixed(2)}</span></div>
+          <div class="row subtotal">Subtotal: S/ ${item.subtotal.toFixed(2)}</div>
+        </div>`;
+      })
+      .join('');
+
+    const safeCustomerName = escapeHtml(payload.customer.name);
+    const safeDocumentNumber = escapeHtml(payload.customer.documentNumber);
+    const safeCashier = payload.cashierEmail ? escapeHtml(payload.cashierEmail) : '---';
+    const safeSunatNote = payload.sunatNote ? escapeHtml(payload.sunatNote) : '';
+
+    const html = `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <title>Boleta ${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</title>
+        <style>
+          body { font-family: 'Courier New', Courier, monospace; width: 58mm; margin: 0; padding: 8px; font-size: 11px; }
+          .center { text-align: center; }
+          .section { margin-bottom: 10px; }
+          .line-item { border-bottom: 1px dashed #999; padding: 4px 0; }
+          .row { display: flex; justify-content: space-between; }
+          .total { font-size: 14px; font-weight: bold; }
+          h1 { font-size: 16px; margin: 4px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="section center">
+          <h1>BOLETA ELECTRÓNICA</h1>
+          <p>${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</p>
+          <p>${new Date(payload.issuedAt).toLocaleString()}</p>
+        </div>
+        <div class="section">
+          <p>Cliente: ${safeCustomerName}</p>
+          <p>Doc: ${payload.customer.documentType === '0' ? 'Sin documento' : safeDocumentNumber}</p>
+          <p>Atendió: ${safeCashier}</p>
+        </div>
+        <div class="section">
+          ${itemsHtml}
+        </div>
+        <div class="section">
+          <div class="row"><span>Medio de pago</span><span>${payload.paymentMethod}</span></div>
+          <div class="row total"><span>Total</span><span>S/ ${payload.total.toFixed(2)}</span></div>
+        </div>
+        <div class="section center">
+          <p>Estado SUNAT: ${payload.sunatStatus}</p>
+          ${safeSunatNote ? `<p>${safeSunatNote}</p>` : ''}
+          <p>Gracias por su compra</p>
+        </div>
+      </body>
+    </html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 300);
+  } catch (error) {
+    console.error('[POS] Error al preparar la impresión térmica', error);
+  }
+};
+
 const WALK_IN_CUSTOMER = 'Cliente Mostrador';
 const SUNAT_SERIES_COLLECTION = 'sunat_series';
 const DEFAULT_SERIES_DOC = 'boletas';
@@ -42,6 +154,7 @@ const DEFAULT_SERIE_CODE = 'B001';
 interface PaymentResult {
   paymentMethod: string;
   customer: PaymentCustomerPayload;
+  issueBoleta: boolean;
 }
 
 export default function POSPage() {
@@ -60,8 +173,10 @@ export default function POSPage() {
     }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
 
-    const sendSaleToSunat = async (saleId: string, payload: SunatBoletaPayload) => {
-      if (!firestore || !saleId) return;
+    const sendSaleToSunat = async (saleId: string, payload: SunatBoletaPayload): Promise<SunatDispatchResult> => {
+      if (!firestore || !saleId) {
+        return { status: 'error', message: 'Firestore no disponible' };
+      }
       console.groupCollapsed('[SUNAT] Enviando boleta', saleId);
       console.info('[SUNAT] Payload preparado', payload);
       try {
@@ -75,12 +190,18 @@ export default function POSPage() {
         const saleRef = doc(firestore, 'sales', saleId);
 
         if (response.ok && (result.status === 'accepted' || result.status === 'queued' || result.status === 'sent')) {
+          const normalizedStatus = result.status === 'accepted' ? 'accepted' : result.status === 'queued' ? 'queued' : 'sent';
           await updateDoc(saleRef, {
-            sunatStatus: result.status === 'accepted' ? 'accepted' : 'sent',
+            sunatStatus: normalizedStatus,
             sunatDocumentId: result.ticket ?? result.response?.numeroComprobante ?? null,
             sunatNote: result.message ?? 'Boleta enviada a SUNAT.',
           });
           toast({ title: 'Boleta electrónica enviada', description: 'SUNAT recibió la boleta.' });
+          return {
+            status: normalizedStatus,
+            documentId: result.ticket ?? result.response?.numeroComprobante ?? null,
+            message: result.message,
+          };
         } else {
           await updateDoc(saleRef, {
             sunatStatus: 'rejected',
@@ -92,6 +213,10 @@ export default function POSPage() {
             title: 'SUNAT rechazó la boleta',
             description: result.message ?? 'Revisa las credenciales configuradas.',
           });
+          return {
+            status: 'rejected',
+            message: result.message ?? 'SUNAT rechazó la boleta.',
+          };
         }
       } catch (error) {
         console.error('[SUNAT] Error enviando boleta', error);
@@ -105,9 +230,14 @@ export default function POSPage() {
           title: 'Boleta pendiente',
           description: 'No se pudo contactar con SUNAT. Intenta reenviar más tarde.',
         });
+        return {
+          status: 'error',
+          message: (error as Error).message,
+        };
       } finally {
         console.groupEnd();
       }
+      return { status: 'error', message: 'Respuesta desconocida de SUNAT.' };
     };
 
     const categoryKeys = useMemo(() => Object.keys(PRODUCT_CATEGORY_LABELS) as ProductCategory[], []);
@@ -180,7 +310,7 @@ export default function POSPage() {
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
     const total = subtotal; // Assuming no tax for now
 
-    const handleSuccessfulPayment = async ({ paymentMethod, customer }: PaymentResult) => {
+    const handleSuccessfulPayment = async ({ paymentMethod, customer, issueBoleta }: PaymentResult) => {
       if (!firestore || !user) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos o no hay usuario."});
         return;
@@ -264,7 +394,7 @@ export default function POSPage() {
             customerName: normalizedCustomer.name,
             customerDocumentType: normalizedCustomer.documentType,
             customerDocumentNumber: normalizedCustomer.documentNumber,
-            sunatStatus: 'pending',
+            sunatStatus: issueBoleta ? 'pending' : 'skipped',
             boletaSerie: generatedSerie,
             boletaCorrelativo: generatedCorrelativo,
           };
@@ -343,13 +473,15 @@ export default function POSPage() {
         await addDocumentNonBlocking(onlineOrderRef, newOrderData);
         console.info('[POS] Pedido enviado a cocina', newOrderData);
 
-        if (createdSaleId) {
+        const issuedAt = new Date().toISOString();
+
+        if (createdSaleId && issueBoleta) {
           console.info('[POS] Venta lista para SUNAT', { saleId: createdSaleId, serie: generatedSerie, correlativo: generatedCorrelativo });
           const sunatPayload: SunatBoletaPayload = {
             saleId: createdSaleId,
             total,
             paymentMethod,
-            issuedAt: new Date().toISOString(),
+            issuedAt,
             serie: generatedSerie,
             correlativo: generatedCorrelativo,
             customer: {
@@ -364,7 +496,19 @@ export default function POSPage() {
               unitPrice: item.unitPrice,
             })),
           };
-          void sendSaleToSunat(createdSaleId, sunatPayload);
+          const sunatResult = await sendSaleToSunat(createdSaleId, sunatPayload);
+          triggerThermalPrint({
+            serie: generatedSerie,
+            correlativo: generatedCorrelativo,
+            issuedAt,
+            customer: normalizedCustomer,
+            items: orderItemsSnapshot,
+            total,
+            paymentMethod,
+            sunatStatus: sunatResult.status,
+            sunatNote: sunatResult.message,
+            cashierEmail: user.email,
+          });
         }
 
         toast({
