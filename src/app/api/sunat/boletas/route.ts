@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Buffer } from 'node:buffer';
 
 interface SunatRequestBody {
   saleId: string;
@@ -47,22 +46,24 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = getEnv('SUNAT_API_BASE_URL') ?? 'https://api.sunat.gob.pe/v1/contribuyente/conectate';
-    const tokenUrl = getEnv('SUNAT_API_TOKEN_URL') ?? `${baseUrl}/token`; 
-    const receiptUrl = getEnv('SUNAT_API_RECEIPT_URL') ?? `${baseUrl}/boleta`; 
-    const scopeUrl = getEnv('SUNAT_API_SCOPE') ?? baseUrl;
+    const receiptUrl = getEnv('SUNAT_API_RECEIPT_URL') ?? `${baseUrl}/boleta`;
+    const scopeUrl = getEnv('SUNAT_API_SCOPE') ?? 'https://api.sunat.gob.pe/v1/contribuyente/contribuyente.api';
+
+    // Construir la URL de token con api-seguridad y el clientId (requerido por SUNAT)
+    const defaultTokenUrl = `https://api-seguridad.sunat.gob.pe/v1/clientesextranet/${clientId}/oauth2/token/`;
+    const tokenUrl = getEnv('SUNAT_API_TOKEN_URL') ?? defaultTokenUrl;
 
     const tokenBody = new URLSearchParams({
       grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
       scope: scopeUrl,
     });
-
-    const basicToken = Buffer.from(`${clientId}:${clientSecret}`, 'utf-8').toString('base64');
 
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${basicToken}`,
       },
       body: tokenBody.toString(),
     });
