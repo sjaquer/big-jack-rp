@@ -13,9 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, orderBy } from 'firebase/firestore';
-import type { OnlineOrder } from '@/lib/types';
+import type { OnlineOrder, OrderSource } from '@/lib/types';
 import { useMemoFirebase } from '@/firebase/provider';
-import { format } from 'date-fns';
+import { format, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { OrderDetailDialog } from '@/components/online-orders/order-detail-dialog';
 import { Clock, ChefHat, CheckCircle2, AlertCircle, Eye, ArrowRight } from 'lucide-react';
@@ -50,6 +50,31 @@ const statusConfig = {
   },
 };
 
+const orderSourceConfig: Record<OrderSource | 'otros', { label: string; className: string }> = {
+  pos: {
+    label: 'En tienda',
+    className: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/20',
+  },
+  pedidosya: {
+    label: 'Pedidos Ya',
+    className: 'bg-purple-500/15 text-purple-700 border-purple-500/20',
+  },
+  delivery: {
+    label: 'Delivery',
+    className: 'bg-blue-500/15 text-blue-700 border-blue-500/20',
+  },
+  web: {
+    label: 'Tienda Online',
+    className: 'bg-cyan-500/15 text-cyan-700 border-cyan-500/20',
+  },
+  otros: {
+    label: 'Otro canal',
+    className: 'bg-muted text-muted-foreground border-muted/60',
+  },
+};
+
+const NEW_ORDER_THRESHOLD_MINUTES = 5;
+
 export default function IncomingOrdersPage() {
   const firestore = useFirestore();
   const [selectedTab, setSelectedTab] = useState<OnlineOrder['status']>('pending');
@@ -77,6 +102,15 @@ export default function IncomingOrdersPage() {
       processing: onlineOrders.filter(o => o.status === 'processing').length,
       completed: onlineOrders.filter(o => o.status === 'completed').length,
     };
+  }, [onlineOrders]);
+
+  const newPendingCount = useMemo(() => {
+    if (!onlineOrders) return 0;
+    const now = new Date();
+    return onlineOrders.filter((order) => {
+      if (order.status !== 'pending' || !order.orderDate) return false;
+      return differenceInMinutes(now, order.orderDate.toDate()) <= NEW_ORDER_THRESHOLD_MINUTES;
+    }).length;
   }, [onlineOrders]);
 
   const handleStatusChange = (orderId: string, newStatus: OnlineOrder['status']) => {
@@ -129,6 +163,11 @@ export default function IncomingOrdersPage() {
                     {count}
                   </Badge>
                 )}
+                {status === 'pending' && newPendingCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 animate-pulse">
+                    +{newPendingCount} nuevos
+                  </Badge>
+                )}
               </TabsTrigger>
             );
           })}
@@ -158,6 +197,13 @@ export default function IncomingOrdersPage() {
                   {filteredOrders.map((order) => {
                     const currentConfig = statusConfig[order.status];
                     const StatusIcon = currentConfig.icon;
+                    const orderDate = order.orderDate ? order.orderDate.toDate() : null;
+                    const isNewOrder =
+                      order.status === 'pending' &&
+                      orderDate &&
+                      differenceInMinutes(new Date(), orderDate) <= NEW_ORDER_THRESHOLD_MINUTES;
+                    const sourceKey = (order.source ?? 'otros') as OrderSource | 'otros';
+                    const sourceInfo = orderSourceConfig[sourceKey] ?? orderSourceConfig.otros;
                     
                     return (
                       <Card
@@ -179,8 +225,18 @@ export default function IncomingOrdersPage() {
                                 </CardTitle>
                                 <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
                                   <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  {order.orderDate ? format(order.orderDate.toDate(), 'HH:mm', { locale: es }) : '--:--'}
+                                  {orderDate ? format(orderDate, 'HH:mm', { locale: es }) : '--:--'}
                                 </CardDescription>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <Badge className={cn('border text-xs sm:text-sm font-semibold', sourceInfo.className)}>
+                                    {sourceInfo.label}
+                                  </Badge>
+                                  {isNewOrder && (
+                                    <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40 animate-pulse text-[10px] sm:text-xs">
+                                      Nuevo ingreso
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>

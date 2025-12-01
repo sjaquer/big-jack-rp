@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import type { Product, Ingredient, ProductIngredient } from '@/lib/types';
+import type { Product, Ingredient, ProductIngredient, ProductCategory } from '@/lib/types';
+import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -27,6 +28,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   sku: z.string().optional(),
   salePrice: z.coerce.number().min(0, 'El precio de venta debe ser positivo.'),
+  category: z.string().min(1, 'La categoría es obligatoria.'),
   ingredients: z.array(ingredientSchema).optional(),
 });
 
@@ -40,6 +42,10 @@ interface ProductFormProps {
 }
 
 const ingredientUnits = ['g', 'ml', 'unidad'];
+const categoryOptions = Object.entries(PRODUCT_CATEGORY_LABELS) as Array<[
+  ProductCategory,
+  string
+]>;
 
 function generateProductSKU(name: string): string {
   if (!name) return '';
@@ -66,6 +72,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
       name: '',
       sku: '',
       salePrice: 0,
+      category: 'otros',
       ingredients: [],
     },
   });
@@ -97,6 +104,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
           name: product.name,
           sku: product.sku,
           salePrice: product.salePrice,
+          category: product.category ?? 'otros',
           ingredients: product.ingredients || [],
         });
         } else {
@@ -105,6 +113,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
             name: '',
             sku: defaultSKU,
             salePrice: 0,
+            category: 'otros',
             ingredients: [],
         });
         }
@@ -127,6 +136,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
       name: values.name,
       sku: values.sku || null,
       salePrice: values.salePrice,
+      category: values.category as ProductCategory,
       ingredients: values.ingredients || [],
       updatedAt: new Date().toISOString(),
     };
@@ -198,6 +208,30 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                             <Input className="h-11 sm:h-10 text-base" type="number" step="0.01" placeholder="e.g., 25.00" {...field} />
                           </FormControl>
                           <p className="text-xs text-muted-foreground mt-1">Precio que aparecerá en el menú para los clientes</p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm sm:text-base">Categoría</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-11 sm:h-10 text-base">
+                                <SelectValue placeholder="Selecciona una categoría" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categoryOptions.map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

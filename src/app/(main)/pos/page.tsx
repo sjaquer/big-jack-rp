@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import type { Product, Ingredient, Customer } from '@/lib/types';
-import { X, Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
+import type { Product, ProductCategory } from '@/lib/types';
+import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
+import { Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { PaymentModal } from '@/components/pos/payment-modal';
-import { CustomerSelector } from '@/components/customers/customer-selector';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
@@ -19,6 +18,26 @@ interface OrderItem extends Product {
   quantity: number;
 }
 
+interface SunatBoletaPayload {
+  saleId: string;
+  total: number;
+  paymentMethod: string;
+  issuedAt: string;
+  customer: {
+    name: string;
+    documentType: string;
+    documentNumber: string;
+  };
+  items: Array<{
+    productId: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
+const WALK_IN_CUSTOMER = 'Cliente Mostrador';
+
 export default function POSPage() {
     const firestore = useFirestore();
     const { user } = useUser();
@@ -27,13 +46,90 @@ export default function POSPage() {
     const [order, setOrder] = useState<OrderItem[]>([]);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
-    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       return collection(firestore, 'products');
     }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
+
+    const sendSaleToSunat = async (saleId: string, payload: SunatBoletaPayload) => {
+      if (!firestore || !saleId) return;
+      try {
+        const response = await fetch('/api/sunat/boletas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json().catch(() => ({}));
+        const saleRef = doc(firestore, 'sales', saleId);
+
+        if (response.ok && (result.status === 'accepted' || result.status === 'queued' || result.status === 'sent')) {
+          await updateDoc(saleRef, {
+            sunatStatus: result.status === 'accepted' ? 'accepted' : 'sent',
+            sunatDocumentId: result.ticket ?? result.response?.numeroComprobante ?? null,
+            sunatNote: result.message ?? 'Boleta enviada a SUNAT.',
+          });
+          toast({ title: 'Boleta electrónica enviada', description: 'SUNAT recibió la boleta.' });
+        } else {
+          await updateDoc(saleRef, {
+            sunatStatus: 'rejected',
+            sunatNote: result.message ?? 'No se pudo registrar la boleta.',
+          });
+          toast({
+            variant: 'destructive',
+            title: 'SUNAT rechazó la boleta',
+            description: result.message ?? 'Revisa las credenciales configuradas.',
+          });
+        }
+      } catch (error) {
+        const saleRef = doc(firestore, 'sales', saleId);
+        await updateDoc(saleRef, {
+          sunatStatus: 'rejected',
+          sunatNote: (error as Error).message,
+        });
+        toast({
+          variant: 'destructive',
+          title: 'Boleta pendiente',
+          description: 'No se pudo contactar con SUNAT. Intenta reenviar más tarde.',
+        });
+      }
+    };
+
+    const categoryKeys = useMemo(() => Object.keys(PRODUCT_CATEGORY_LABELS) as ProductCategory[], []);
+    const groupedProducts = useMemo(() => {
+      const groups: Record<ProductCategory, Product[]> = {
+        combos: [],
+        hamburguesas: [],
+        pollos: [],
+        bebidas: [],
+        acompanamientos: [],
+        postres: [],
+        otros: [],
+      };
+
+      (products ?? []).forEach((product) => {
+        const rawCategory = (product.category ?? 'otros') as ProductCategory;
+        const resolvedCategory = PRODUCT_CATEGORY_LABELS[rawCategory]
+          ? rawCategory
+          : 'otros';
+        groups[resolvedCategory].push(product);
+      });
+
+      categoryKeys.forEach((key) => {
+        groups[key].sort((a, b) => a.name.localeCompare(b.name));
+      });
+
+      return groups;
+    }, [products, categoryKeys]);
+
+    const filteredProducts = useMemo(() => {
+      if (categoryFilter === 'all') {
+        return null;
+      }
+      return groupedProducts[categoryFilter];
+    }, [categoryFilter, groupedProducts]);
 
     // NOTE: removed image handling for touch-first POS. Products show large text + price.
 
@@ -77,9 +173,12 @@ export default function POSPage() {
         return;
       }
 
+      let createdSaleId = '';
+
       try {
         await runTransaction(firestore, async (transaction) => {
           const newSaleRef = doc(collection(firestore, 'sales'));
+          createdSaleId = newSaleRef.id;
 
           // --- READS first: gather all product and ingredient documents needed ---
           const productRefs = order.map(item => doc(firestore, 'products', item.id));
@@ -129,8 +228,9 @@ export default function POSPage() {
             source: 'pos',
             deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
             createdAt: Timestamp.now(),
-            customerId: selectedCustomer?.id || null,
-            customerName: selectedCustomer ? (selectedCustomer.nickname || `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim()) : null,
+            customerId: null,
+            customerName: WALK_IN_CUSTOMER,
+            sunatStatus: 'pending',
           };
           transaction.set(newSaleRef, saleData);
 
@@ -165,46 +265,52 @@ export default function POSPage() {
         
         // Create a corresponding online_order for the kitchen
         const onlineOrderRef = collection(firestore, 'online_orders');
+        const orderItemsSnapshot = order.map(item => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.salePrice,
+          subtotal: item.salePrice * item.quantity,
+        }));
         const newOrderData = {
             orderDate: Timestamp.now(),
-            customerId: selectedCustomer?.id || user.uid,
-            customerName: selectedCustomer 
-              ? (selectedCustomer.nickname || `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim())
-              : `POS Venta (${paymentMethod})`,
-            customerPhone: selectedCustomer?.phone || null,
-            status: 'processing',
+            customerId: null,
+            customerName: WALK_IN_CUSTOMER,
+            customerPhone: null,
+            status: 'pending',
             totalAmount: total,
             paymentMethod: paymentMethod,
             source: 'pos',
             itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
-            items: order.map(item => ({
-                productId: item.id,
-                productName: item.name,
-                quantity: item.quantity,
-                unitPrice: item.salePrice,
-                subtotal: item.salePrice * item.quantity,
-            })),
-            notes: selectedCustomer?.preferences || null,
+            items: orderItemsSnapshot,
+            notes: null,
         };
         await addDocumentNonBlocking(onlineOrderRef, newOrderData);
 
-        // Update customer stats if a customer was selected
-        if (selectedCustomer && firestore) {
-          const customerRef = doc(firestore, 'customers', selectedCustomer.id);
-          const pointsEarned = Math.floor(total / 10); // 1 punto por cada S/ 10 gastados
-          await updateDoc(customerRef, {
-            totalVisits: (selectedCustomer.totalVisits || 0) + 1,
-            totalSpent: (selectedCustomer.totalSpent || 0) + total,
-            loyaltyPoints: (selectedCustomer.loyaltyPoints || 0) + pointsEarned,
-            lastVisit: Timestamp.now(),
-          });
+        if (createdSaleId) {
+          const sunatPayload: SunatBoletaPayload = {
+            saleId: createdSaleId,
+            total,
+            paymentMethod,
+            issuedAt: new Date().toISOString(),
+            customer: {
+              name: WALK_IN_CUSTOMER,
+              documentType: 'DNI',
+              documentNumber: '00000000',
+            },
+            items: order.map(item => ({
+              productId: item.id,
+              description: item.name,
+              quantity: item.quantity,
+              unitPrice: item.salePrice,
+            })),
+          };
+          void sendSaleToSunat(createdSaleId, sunatPayload);
         }
 
         toast({
           title: "Venta registrada",
-          description: selectedCustomer 
-            ? `Venta guardada. ${selectedCustomer.firstName} ganó ${Math.floor(total / 10)} puntos de lealtad.`
-            : "La venta se ha guardado, el stock se ha actualizado y el pedido fue enviado a cocina.",
+          description: "La venta se ha guardado, el stock se actualizó y el pedido fue enviado a cocina.",
         });
         handleResetOrder();
 
@@ -220,7 +326,6 @@ export default function POSPage() {
 
     const handleResetOrder = () => {
         setOrder([]);
-        setSelectedCustomer(null);
         setPaymentModalOpen(false);
     }
 
@@ -235,8 +340,34 @@ export default function POSPage() {
       
       {/* Left Side: Product Grid */}
       <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/20">
-            <h2 className="text-xl font-headline font-bold">Productos</h2>
+        <div className="p-4 border-b bg-muted/20 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-headline font-bold">Productos</h2>
+              <Button variant="ghost" size="sm" className="text-xs uppercase tracking-wide" onClick={() => setCategoryFilter('all')}>
+                Ver todo
+              </Button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <Button
+                variant={categoryFilter === 'all' ? 'default' : 'secondary'}
+                size="sm"
+                className="h-9 shrink-0"
+                onClick={() => setCategoryFilter('all')}
+              >
+                Todas
+              </Button>
+              {categoryKeys.map((key) => (
+                <Button
+                  key={key}
+                  variant={categoryFilter === key ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-9 shrink-0"
+                  onClick={() => setCategoryFilter(key)}
+                >
+                  {PRODUCT_CATEGORY_LABELS[key]}
+                </Button>
+              ))}
+            </div>
         </div>
         
         <ScrollArea className="flex-1 p-4">
@@ -245,24 +376,76 @@ export default function POSPage() {
                     <p className="text-lg text-muted-foreground animate-pulse">Cargando productos...</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
-                {products?.map((product) => (
-                    <button
-                    key={product.id}
-                    className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
-                    onClick={() => addToOrder(product)}
-                    >
-                        {recentlyAdded === product.id && (
-                        <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
-                            <CheckCircle className="h-12 w-12 text-primary-foreground" />
+                <div className="space-y-6 pb-20 lg:pb-0">
+                  {categoryFilter === 'all' ? (
+                    categoryKeys.map((key) => (
+                      groupedProducts[key].length > 0 && (
+                        <div key={key} className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-semibold">{PRODUCT_CATEGORY_LABELS[key]}</h3>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              {groupedProducts[key].length} productos
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {groupedProducts[key].map((product) => (
+                              <button
+                                key={product.id}
+                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
+                                onClick={() => addToOrder(product)}
+                              >
+                                {recentlyAdded === product.id && (
+                                  <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
+                                    <CheckCircle className="h-12 w-12 text-primary-foreground" />
+                                  </div>
+                                )}
+                                <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
+                                  <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
+                                  <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        )}
-                        <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
-                          <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
-                          <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                      )
+                    ))
+                  ) : (
+                    <>
+                      {filteredProducts && filteredProducts.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-semibold">{PRODUCT_CATEGORY_LABELS[categoryFilter]}</h3>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              {filteredProducts.length} productos
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {filteredProducts.map((product) => (
+                              <button
+                                key={product.id}
+                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
+                                onClick={() => addToOrder(product)}
+                              >
+                                {recentlyAdded === product.id && (
+                                  <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
+                                    <CheckCircle className="h-12 w-12 text-primary-foreground" />
+                                  </div>
+                                )}
+                                <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
+                                  <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
+                                  <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                    </button>
-                ))}
+                      ) : (
+                        <div className="text-center py-10 text-muted-foreground">
+                          No hay productos en esta categoría.
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
             )}
         </ScrollArea>
@@ -272,26 +455,31 @@ export default function POSPage() {
       <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden h-[40vh] lg:h-auto flex-shrink-0">
         {/* Customer Selector Header */}
         <div className="p-4 border-b bg-muted/20 space-y-3">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-headline font-bold flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5" />
-                    Pedido Actual
-                </h2>
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleResetOrder}
-                    className="text-muted-foreground hover:text-destructive"
-                    disabled={order.length === 0}
-                >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpiar
-                </Button>
-            </div>
-            <CustomerSelector
-                selectedCustomer={selectedCustomer}
-                onSelectCustomer={setSelectedCustomer}
-            />
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-headline font-bold flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Pedido Actual
+            </h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleResetOrder}
+              className="text-muted-foreground hover:text-destructive"
+              disabled={order.length === 0}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+          </div>
+          <div className="rounded-lg border bg-card p-3 text-sm leading-relaxed text-muted-foreground">
+            <p className="font-semibold text-foreground mb-2">Paso a paso para vender:</p>
+            <ol className="list-decimal list-inside space-y-1">
+            <li>Selecciona la categoría y añade productos al pedido.</li>
+            <li>Revisa cantidades y totales del pedido.</li>
+            <li>Presiona "Procesar Pago" y elige el método.</li>
+            <li>Entrega el comprobante al cliente y envía el ticket a cocina.</li>
+            </ol>
+          </div>
         </div>
 
         {/* Order Items List */}

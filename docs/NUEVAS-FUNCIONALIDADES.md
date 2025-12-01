@@ -279,6 +279,48 @@ Todos los componentes están optimizados para:
 
 ---
 
+## 🆕 Actualización 2025.12
+
+### 4. 🗂️ POS por Categorías y Guía Paso a Paso
+- **Ubicación**: `src/app/(main)/pos/page.tsx`
+- **Cambios Clave**:
+  - Catálogo filtrado por categorías (`Productos`, `Hamburguesas`, `Bebidas`, etc.) usando `PRODUCT_CATEGORY_LABELS`.
+  - Selección de clientes eliminada: todas las ventas se registran como "Cliente Mostrador".
+  - Bloque informativo dentro del panel derecho con el paso a paso para cobrar por POS.
+- **Tipos**: `Product` ahora incluye `category` (`src/lib/types.ts`).
+- **Formularios**: `src/components/products/product-form.tsx` permite elegir categoría al crear/editar.
+
+### 5. 📊 Dashboard Financiero y Flujo de Caja
+- **Dashboard** (`src/app/(main)/dashboard/page.tsx`):
+  - Tarjetas nuevas con ingresos diarios, neto diario, ingresos mensuales y cantidad de ventas.
+  - “Nodos” para Hoy / Semana / Mes con ingresos, costos, gastos y neto.
+  - Se integran los gastos del flujo de caja para calcular utilidades reales.
+- **Flujo de Caja** (`src/app/(main)/cash-flow/page.tsx`):
+  - Nuevo módulo en el menú (icono billetera) para registrar ingresos/gastos.
+  - Formulario rápido con tipo, categoría, monto, método y nota.
+  - Tabla con historial y resumen mensual (ingresos, gastos y neto).
+- **Tipos nuevos**: `CashFlowEntry`, `CashFlowSummary`, `order.source` y campos de SUNAT en `Sale`.
+
+### 6. 🍳 Pedidos de Cocina con Etiquetas
+- **Página**: `src/app/(main)/incoming-orders/page.tsx`
+- **Mejoras**:
+  - Etiquetas de origen para diferenciar pedidos de POS (En tienda) y Pedidos Ya.
+  - Contador y badge animado para destacar ingresos nuevos en la pestaña “Nuevos”.
+  - Cards muestran etiqueta “Nuevo ingreso” durante los primeros 5 minutos.
+
+### 7. 🧾 Boletas Electrónicas SUNAT
+- **API Interna**: `src/app/api/sunat/boletas/route.ts`
+  - Expone `POST /api/sunat/boletas` que recibe la venta y la envía a SUNAT.
+  - Lee `SUNAT_CLIENT_ID` y `SUNAT_CLIENT_SECRET` (fallback a `id_client` y `clave-sunat` del `.env`).
+  - Genera token, envía el payload de boleta y devuelve `status`/`ticket`.
+- **POS**: tras registrar una venta, se envía automáticamente la boleta y se actualiza el documento `sales/{saleId}` con `sunatStatus`, `sunatDocumentId` y `sunatNote`.
+- **Configuración**:
+  - Variables opcionales: `SUNAT_API_BASE_URL`, `SUNAT_API_TOKEN_URL`, `SUNAT_API_RECEIPT_URL`, `SUNAT_BOLETA_SERIE`.
+  - Cliente sin datos entrega por defecto boleta “Cliente Mostrador” DNI 00000000.
+- **Estados posibles**: `pending`, `sent`, `accepted`, `rejected`. Se reflejan en el dashboard para cálculos de neto.
+
+---
+
 ## 📄 Archivos Modificados/Creados
 
 ### Modificados:

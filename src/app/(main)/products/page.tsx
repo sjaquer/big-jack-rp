@@ -18,6 +18,7 @@ import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Product, Supplier, Ingredient } from '@/lib/types';
+import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
 // placeholderImages removed; images are no longer used in product listing
 
@@ -116,6 +117,7 @@ export default function ProductsPage() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>SKU</TableHead>
+                <TableHead>Categoría</TableHead>
                 <TableHead>Precio de Venta</TableHead>
                 <TableHead>Stock Actual</TableHead>
                 <TableHead>Stock Producible</TableHead>
@@ -131,6 +133,11 @@ export default function ProductsPage() {
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{product.sku}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {PRODUCT_CATEGORY_LABELS[product.category ?? 'otros']}
+                    </Badge>
                   </TableCell>
                   <TableCell>S/ {product.salePrice.toFixed(2)}</TableCell>
                   <TableCell>{product.quantity}</TableCell>

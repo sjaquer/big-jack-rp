@@ -11,14 +11,34 @@ import StatCard from '@/components/dashboard/stat-card';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 import { PopularItemsChart } from '@/components/dashboard/popular-items-chart';
 import { DailyOrdersBreakdown } from '@/components/dashboard/daily-orders-breakdown';
-import { DollarSign, ShoppingCart, BarChart } from 'lucide-react';
+import { DollarSign, ShoppingCart, BarChart, CalendarDays } from 'lucide-react';
 import { useCollection } from '@/firebase';
 import { collection, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Sale, Product, SaleItem } from '@/lib/types';
-import { startOfToday } from 'date-fns';
+import type { Sale, Product, SaleItem, CashFlowEntry } from '@/lib/types';
+import { startOfToday, startOfWeek, startOfMonth } from 'date-fns';
 import { useMemo } from 'react';
+
+type PeriodKey = 'daily' | 'weekly' | 'monthly';
+
+interface PeriodSummary {
+  label: string;
+  startDate: Date;
+  revenue: number;
+  cost: number;
+  margin: number;
+  incomes: number;
+  expenses: number;
+  net: number;
+  orders: number;
+}
+
+const currencyFormatter = new Intl.NumberFormat('es-PE', {
+  style: 'currency',
+  currency: 'PEN',
+  minimumFractionDigits: 2,
+});
 
 
 export default function DashboardPage() {
@@ -49,6 +69,12 @@ export default function DashboardPage() {
   }, [firestore]);
   const { data: saleItems, isLoading: saleItemsLoading } = useCollection<SaleItem>(saleItemsQuery);
 
+  const cashFlowQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'cash_flows');
+  }, [firestore]);
+  const { data: cashFlowEntries } = useCollection<CashFlowEntry>(cashFlowQuery);
+
   const todaySalesIds = useMemo(() => todaySalesData?.map(s => s.id) ?? [], [todaySalesData]);
   
   const todaySaleItems = useMemo(() => {
@@ -56,44 +82,131 @@ export default function DashboardPage() {
     return saleItems?.filter(item => todaySalesIds.includes(item.saleId)) ?? [];
   }, [saleItems, todaySalesIds]);
 
-  const { totalRevenue, totalProfit } = useMemo(() => {
-    if (!todaySaleItems || !productsData) return { totalRevenue: 0, totalProfit: 0 };
-    
-    let revenue = 0;
-    let profit = 0;
+  const productMap = useMemo(() => {
+    if (!productsData) return new Map<string, Product>();
+    return new Map(productsData.map((product) => [product.id, product]));
+  }, [productsData]);
 
-    todaySaleItems.forEach(item => {
-      const product = productsData.find(p => p.id === item.productId);
-      revenue += item.unitPrice * item.quantity;
-      if (product && product.price) {
-        // Calculate profit based on the difference between sale price and cost price
-        profit += (item.unitPrice - product.price) * item.quantity;
-      }
+  const saleItemTotals = useMemo(() => {
+    const totals = new Map<string, { cost: number; margin: number }>();
+    if (!saleItems) return totals;
+
+    saleItems.forEach((item) => {
+      const product = productMap.get(item.productId);
+      const costPerUnit = product?.price ?? 0;
+      const cost = costPerUnit * item.quantity;
+      const margin = (item.unitPrice - costPerUnit) * item.quantity;
+      const current = totals.get(item.saleId) ?? { cost: 0, margin: 0 };
+      current.cost += cost;
+      current.margin += margin;
+      totals.set(item.saleId, current);
     });
 
-    return { totalRevenue: revenue, totalProfit: profit };
-  }, [todaySaleItems, productsData]);
+    return totals;
+  }, [saleItems, productMap]);
 
+  const todayStart = startOfToday();
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const monthStart = startOfMonth(new Date());
 
-  const totalSales = todaySalesData?.length ?? 0;
+  const periodStats = useMemo(() => {
+    const summaries: Record<PeriodKey, PeriodSummary> = {
+      daily: {
+        label: 'Hoy',
+        startDate: todayStart,
+        revenue: 0,
+        cost: 0,
+        margin: 0,
+        incomes: 0,
+        expenses: 0,
+        net: 0,
+        orders: 0,
+      },
+      weekly: {
+        label: 'Semana',
+        startDate: weekStart,
+        revenue: 0,
+        cost: 0,
+        margin: 0,
+        incomes: 0,
+        expenses: 0,
+        net: 0,
+        orders: 0,
+      },
+      monthly: {
+        label: 'Mes',
+        startDate: monthStart,
+        revenue: 0,
+        cost: 0,
+        margin: 0,
+        incomes: 0,
+        expenses: 0,
+        net: 0,
+        orders: 0,
+      },
+    };
+
+    (Object.entries(summaries) as Array<[PeriodKey, PeriodSummary]>).forEach(([key, summary]) => {
+      const startDate = summary.startDate;
+
+      (salesData ?? []).forEach((sale) => {
+        if (!sale.saleDate) return;
+        const saleDate = sale.saleDate.toDate();
+        if (saleDate < startDate) return;
+        summary.revenue += sale.totalAmount ?? 0;
+        summary.orders += 1;
+        const saleTotals = saleItemTotals.get(sale.id);
+        if (saleTotals) {
+          summary.cost += saleTotals.cost;
+          summary.margin += saleTotals.margin;
+        }
+      });
+
+      (cashFlowEntries ?? []).forEach((entry) => {
+        if (!entry.entryDate) return;
+        const entryDate = entry.entryDate.toDate();
+        if (entryDate < startDate) return;
+        if (entry.type === 'expense') {
+          summary.expenses += entry.amount;
+        } else {
+          summary.incomes += entry.amount;
+        }
+      });
+
+      summary.net = summary.margin + summary.incomes - summary.expenses;
+    });
+
+    return summaries;
+  }, [salesData, saleItemTotals, cashFlowEntries, todayStart, weekStart, monthStart]);
+
+  const todaySummary = periodStats.daily;
+  const weeklySummary = periodStats.weekly;
+  const monthlySummary = periodStats.monthly;
+  const totalSales = todaySummary.orders;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-headline font-bold">Panel de Informes de Hoy</h1>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Ingresos de Hoy"
-          value={`S/ ${totalRevenue.toLocaleString('es-PE')}`}
+          value={currencyFormatter.format(todaySummary.revenue)}
           icon={DollarSign}
           description="Total de ingresos generados hoy"
         />
         <StatCard
-          title="Beneficio Neto de Hoy"
-          value={`S/ ${totalProfit.toLocaleString('es-PE')}`}
+          title="Neto de Hoy"
+          value={currencyFormatter.format(todaySummary.net)}
           icon={BarChart}
-          description="Beneficio total después de costos"
+          description="Margen después de costos y gastos"
+        />
+        <StatCard
+          title="Ingresos del Mes"
+          value={currencyFormatter.format(monthlySummary.revenue)}
+          icon={CalendarDays}
+          description="Total acumulado del mes en curso"
         />
         <StatCard
           title="Ventas de Hoy"
@@ -101,6 +214,45 @@ export default function DashboardPage() {
           icon={ShoppingCart}
           description="Número total de transacciones de hoy"
         />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {(['daily', 'weekly', 'monthly'] as PeriodKey[]).map((key) => {
+          const summary = periodStats[key];
+          return (
+            <Card key={key} className="border-primary/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="font-headline text-lg">{summary.label}</CardTitle>
+                    <CardDescription>Ingresos vs Gastos</CardDescription>
+                  </div>
+                  <div className="text-right text-sm">
+                    <p className="text-muted-foreground">Pedidos</p>
+                    <p className="text-2xl font-semibold">{summary.orders}</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Ingresos</span>
+                  <span className="text-base font-semibold">{currencyFormatter.format(summary.revenue)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Costos de producción</span>
+                  <span className="text-base font-semibold">{currencyFormatter.format(summary.cost)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Gastos registrados</span>
+                  <span className="text-base font-semibold">{currencyFormatter.format(summary.expenses)}</span>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">Neto</p>
+                  <p className="text-2xl font-bold text-primary">{currencyFormatter.format(summary.net)}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
