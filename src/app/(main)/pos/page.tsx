@@ -101,16 +101,18 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         <title>Boleta ${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</title>
         <style>
           @page { size: 58mm auto; margin: 0; }
-          html, body { width: 58mm; margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace; font-size: 11px; }
+          *, *:before, *:after { box-sizing: border-box; }
+          html, body { width: 58mm; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.15; }
           .center { text-align: center; }
-          .section { margin-bottom: 6px; }
-          .line-item { border-bottom: 1px dashed #999; padding: 3px 0; }
+          .section { margin-bottom: 4px; }
+          .line-item { border-bottom: 1px dashed #999; padding: 2px 0; }
           .row { display: flex; justify-content: space-between; }
-          .total { font-size: 13px; font-weight: bold; }
-          h1 { font-size: 14px; margin: 2px 0; }
-          /* Ensure no large white area: let content height determine page height */
+          .total { font-size: 12px; font-weight: bold; }
+          h1 { font-size: 12px; margin: 0 0 2px 0; }
+          /* Reduce whitespace and force content-driven height */
+          .receipt { display: inline-block; width: 58mm; padding: 4px 6px 6px 6px; }
           body { -webkit-print-color-adjust: exact; }
-          @media print { body { margin: 0; padding: 4px; } }
+          @media print { html, body { margin: 0; padding: 0; } .receipt { padding: 2px 4px 4px 4px; } }
         </style>
       </head>
       <body>
@@ -772,7 +774,7 @@ export default function POSPage() {
                 </span>
             </Button>
             <div className="mt-2 flex gap-2">
-              <Button
+                    <Button
                 variant="outline"
                 size="sm"
                 onClick={async () => {
@@ -838,9 +840,12 @@ export default function POSPage() {
                   }
                 }}
                 disabled={!firestore}
-              >
-                Imprimir última boleta
-              </Button>
+                    >
+                    Imprimir última boleta
+                  </Button>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Consejo: en el diálogo de impresión selecciona papel "Thermal Paper (58 x 210)", Márgenes "Ninguno"/"Mínimos" y desactiva "Encabezado y pie de página" para evitar áreas en blanco.
+                  </div>
             </div>
         </div>
       </div>
