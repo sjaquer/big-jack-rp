@@ -96,8 +96,10 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
 
     const safeCustomerName = escapeHtml(payload.customer.name);
     const safeDocumentNumber = escapeHtml(payload.customer.documentNumber);
-    const safeCashier = payload.cashierEmail ? escapeHtml(payload.cashierEmail) : '---';
-    const safeSunatNote = payload.sunatNote ? escapeHtml(payload.sunatNote) : '';
+    // const safeCashier = payload.cashierEmail ? escapeHtml(payload.cashierEmail) : '---'; // Removed in favor of hardcoded JACK
+    // const safeSunatNote = payload.sunatNote ? escapeHtml(payload.sunatNote) : ''; // Removed detailed note
+
+    const simpleSunatStatus = payload.sunatStatus === 'accepted' ? 'ACEPTADO' : 'NO REGISTRADO';
 
     const html = `<!DOCTYPE html>
     <html>
@@ -107,7 +109,7 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         <style>
           @page { size: 58mm auto; margin: 0; }
           *, *:before, *:after { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; width: 100%; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.1; background: #fff; }
+          html, body { margin: 0; padding: 0; width: 100%; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.1; background: #fff; font-weight: bold; }
           .receipt { width: 100%; max-width: 58mm; margin: 0; padding: 4px 2px; }
           .center { text-align: center; }
           .section { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #000; }
@@ -115,11 +117,11 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
           .line-item { margin-bottom: 4px; }
           .row { display: flex; justify-content: space-between; align-items: flex-start; }
           .item-row { gap: 4px; }
-          .item-row .left { flex: 1; word-break: break-all; font-weight: 600; }
+          .item-row .left { flex: 1; word-break: break-all; font-weight: 800; }
           .item-row .right { flex: 0 0 auto; text-align: right; white-space: nowrap; }
-          .subtotal { font-size: 9px; color: #333; margin-top: 1px; }
-          .total { font-size: 12px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px; }
-          h1 { font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; }
+          .subtotal { font-size: 9px; color: #000; margin-top: 1px; }
+          .total { font-size: 12px; font-weight: 900; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px; }
+          h1 { font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; font-weight: 900; }
           p { margin: 2px 0; }
           .small { font-size: 9px; }
         </style>
@@ -133,9 +135,9 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
           </div>
           
           <div class="section">
-            <p><strong>Cliente:</strong> ${safeCustomerName}</p>
-            <p><strong>Doc:</strong> ${payload.customer.documentType === '0' ? 'Sin documento' : safeDocumentNumber}</p>
-            <p class="small">Atendió: ${safeCashier}</p>
+            <p>Cliente: ${safeCustomerName}</p>
+            <p>Doc: ${payload.customer.documentType === '0' ? 'Sin documento' : safeDocumentNumber}</p>
+            <p class="small">Atendió: JACK</p>
           </div>
 
           <div class="section">
@@ -148,8 +150,7 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
           </div>
 
           <div class="section center">
-            <p class="small">Estado SUNAT: ${payload.sunatStatus}</p>
-            ${safeSunatNote ? `<p class="small">${safeSunatNote}</p>` : ''}
+            <p class="small">Estado SUNAT: ${simpleSunatStatus}</p>
             <p style="margin-top: 8px;">*** Gracias por su compra ***</p>
           </div>
         </div>
