@@ -53,11 +53,11 @@ const statusConfig = {
 const orderSourceConfig: Record<OrderSource | 'otros', { label: string; className: string }> = {
   pos: {
     label: 'En tienda',
-    className: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/20',
+    className: 'bg-orange-500/15 text-orange-700 border-orange-500/20',
   },
   pedidosya: {
     label: 'Pedidos Ya',
-    className: 'bg-purple-500/15 text-purple-700 border-purple-500/20',
+    className: 'bg-red-500/15 text-red-700 border-red-500/20',
   },
   delivery: {
     label: 'Delivery',
@@ -193,7 +193,7 @@ export default function IncomingOrdersPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                   {filteredOrders.map((order) => {
                     const currentConfig = statusConfig[order.status];
                     const StatusIcon = currentConfig.icon;
