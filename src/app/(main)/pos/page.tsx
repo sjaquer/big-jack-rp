@@ -7,7 +7,7 @@ import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -71,7 +71,8 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
   }
 
   try {
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    // Open a narrow window matching 58mm approx (at 96dpi ~ 220px). Use small chrome so print dialog is shown.
+    const printWindow = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=240,height=800');
     if (!printWindow) {
       console.warn('[POS] No se pudo abrir la ventana de impresión');
       return;
@@ -99,13 +100,17 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         <meta charSet="utf-8" />
         <title>Boleta ${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</title>
         <style>
-          body { font-family: 'Courier New', Courier, monospace; width: 58mm; margin: 0; padding: 8px; font-size: 11px; }
+          @page { size: 58mm auto; margin: 0; }
+          html, body { width: 58mm; margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace; font-size: 11px; }
           .center { text-align: center; }
-          .section { margin-bottom: 10px; }
-          .line-item { border-bottom: 1px dashed #999; padding: 4px 0; }
+          .section { margin-bottom: 6px; }
+          .line-item { border-bottom: 1px dashed #999; padding: 3px 0; }
           .row { display: flex; justify-content: space-between; }
-          .total { font-size: 14px; font-weight: bold; }
-          h1 { font-size: 16px; margin: 4px 0; }
+          .total { font-size: 13px; font-weight: bold; }
+          h1 { font-size: 14px; margin: 2px 0; }
+          /* Ensure no large white area: let content height determine page height */
+          body { -webkit-print-color-adjust: exact; }
+          @media print { body { margin: 0; padding: 4px; } }
         </style>
       </head>
       <body>
@@ -136,11 +141,17 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
 
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
+    // Wait for the content to layout before printing
+    printWindow.onload = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        console.warn('[POS] Error during print()', e);
+      }
+      // Close shortly after print dialog opened
+      setTimeout(() => printWindow.close(), 500);
+    };
   } catch (error) {
     console.error('[POS] Error al preparar la impresión térmica', error);
   }
@@ -760,6 +771,77 @@ export default function POSPage() {
                     (S/ {total.toFixed(2)})
                 </span>
             </Button>
+            <div className="mt-2 flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!firestore) return;
+                  try {
+                    // Query last sale
+                    const salesQuery = query(collection(firestore, 'sales'), orderBy('createdAt', 'desc'), limit(1));
+                    const snap = await getDocs(salesQuery);
+                    if (snap.empty) {
+                      toast({ title: 'No hay ventas', description: 'No se encontró ninguna venta para imprimir.' });
+                      return;
+                    }
+                    const saleDoc = snap.docs[0];
+                    const saleData = saleDoc.data() as any;
+                    const saleId = saleDoc.id;
+
+                    // Fetch sale items
+                    const itemsSnap = await getDocs(collection(firestore, `sales/${saleId}/sale_items`));
+                    const items = itemsSnap.docs.map(d => d.data() as any);
+
+                    // Collect unique productIds to fetch names
+                    const productIds = Array.from(new Set(items.map(i => i.productId)));
+                    const productMap = new Map<string, string>();
+                    await Promise.all(productIds.map(async (pid) => {
+                      try {
+                        const pDoc = await getDoc(doc(firestore, 'products', pid));
+                        if (pDoc.exists()) productMap.set(pid, (pDoc.data() as any).name || pid);
+                        else productMap.set(pid, pid);
+                      } catch (_) {
+                        productMap.set(pid, pid);
+                      }
+                    }));
+
+                    const printItems = items.map(i => ({
+                      productName: productMap.get(i.productId) ?? i.productId,
+                      quantity: i.quantity,
+                      unitPrice: i.unitPrice,
+                      subtotal: (i.unitPrice * i.quantity),
+                    }));
+
+                    const payload = {
+                      serie: saleData.boletaSerie ?? 'B001',
+                      correlativo: saleData.boletaCorrelativo ?? 0,
+                      issuedAt: (saleData.saleDate && (saleData.saleDate.toDate ? saleData.saleDate.toDate().toISOString() : new Date().toISOString())) || new Date().toISOString(),
+                      customer: {
+                        name: saleData.customerName ?? 'Cliente Mostrador',
+                        documentType: saleData.customerDocumentType ?? '0',
+                        documentNumber: saleData.customerDocumentNumber ?? '00000000',
+                      },
+                      items: printItems,
+                      total: saleData.totalAmount ?? 0,
+                      paymentMethod: saleData.paymentMethod ?? 'unknown',
+                      sunatStatus: saleData.sunatStatus ?? 'unknown',
+                      sunatNote: saleData.sunatNote ?? undefined,
+                      cashierEmail: saleData.cashierEmail ?? undefined,
+                    };
+
+                    // Reuse triggerThermalPrint from file scope
+                    triggerThermalPrint(payload as any);
+                  } catch (error) {
+                    console.error('Error imprimiendo última boleta', error);
+                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo imprimir la última boleta.' });
+                  }
+                }}
+                disabled={!firestore}
+              >
+                Imprimir última boleta
+              </Button>
+            </div>
         </div>
       </div>
     </div>
