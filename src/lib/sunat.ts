@@ -35,10 +35,15 @@ export const resolveSunatConfig = (): SunatConfig => {
   const clientSecret = env('SUNAT_CLIENT_SECRET') ?? env('clave_sunat') ?? env('clave-sunat') ?? null;
 
   const tokenUrlBase = env('SUNAT_TOKEN_URL_BASE') ?? 'https://api-seguridad.sunat.gob.pe/v1/clientesextranet';
-  const explicitTokenUrl = env('SUNAT_API_TOKEN_URL');
-  const tokenUrl = clientId
-    ? `${tokenUrlBase.replace(/\/$/, '')}/${clientId}/oauth2/token/`
-    : (explicitTokenUrl ?? tokenUrlBase);
+  
+  // CORRECCIÓN: Forzamos la construcción dinámica si tenemos el clientId, es más seguro.
+  // Solo usamos explicitTokenUrl si realmente sabemos lo que hacemos.
+  let tokenUrl = '';
+  if (clientId) {
+    tokenUrl = `${tokenUrlBase.replace(/\/$/, '')}/${clientId}/oauth2/token/`;
+  } else {
+    tokenUrl = env('SUNAT_API_TOKEN_URL') ?? tokenUrlBase;
+  }
 
   const scope = env('SUNAT_SCOPE') ?? env('SUNAT_API_SCOPE') ?? 'https://api-cpe.sunat.gob.pe';
 
