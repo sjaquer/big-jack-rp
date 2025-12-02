@@ -147,28 +147,31 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
         </DialogHeader>
         <div className="grid gap-4 py-4">
 
-        <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing} className="space-y-3">
-          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
-            <RadioGroupItem value="cash" id="cash" className="h-5 w-5" />
-            <Label htmlFor="cash" className="text-lg font-semibold cursor-pointer flex-1">Efectivo</Label>
-          </div>
-          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
-            <RadioGroupItem value="card" id="card" className="h-5 w-5" />
-            <Label htmlFor="card" className="text-lg font-semibold cursor-pointer flex-1">Tarjeta</Label>
-          </div>
-          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
-            <RadioGroupItem value="yape" id="yape" className="h-5 w-5" />
-            <Label htmlFor="yape" className="text-lg font-semibold cursor-pointer flex-1">Yape</Label>
-          </div>
-          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
-            <RadioGroupItem value="plin" id="plin" className="h-5 w-5" />
-            <Label htmlFor="plin" className="text-lg font-semibold cursor-pointer flex-1">Plin</Label>
-          </div>
-          <div className="flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border-2 hover:bg-accent cursor-pointer h-20 sm:h-24 text-lg font-semibold">
-            <RadioGroupItem value="transfer" id="transfer" className="h-5 w-5" />
-            <Label htmlFor="transfer" className="text-lg font-semibold cursor-pointer flex-1">Transferencia</Label>
-          </div>
-        </RadioGroup>
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Método de pago</Label>
+          <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
+              <RadioGroupItem value="cash" id="cash" className="h-4 w-4" />
+              <Label htmlFor="cash" className="text-base font-semibold cursor-pointer">Efectivo</Label>
+            </div>
+            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
+              <RadioGroupItem value="card" id="card" className="h-4 w-4" />
+              <Label htmlFor="card" className="text-base font-semibold cursor-pointer">Tarjeta</Label>
+            </div>
+            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
+              <RadioGroupItem value="yape" id="yape" className="h-4 w-4" />
+              <Label htmlFor="yape" className="text-base font-semibold cursor-pointer">Yape</Label>
+            </div>
+            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
+              <RadioGroupItem value="plin" id="plin" className="h-4 w-4" />
+              <Label htmlFor="plin" className="text-base font-semibold cursor-pointer">Plin</Label>
+            </div>
+            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation col-span-2 sm:col-span-1">
+              <RadioGroupItem value="transfer" id="transfer" className="h-4 w-4" />
+              <Label htmlFor="transfer" className="text-base font-semibold cursor-pointer">Transferencia</Label>
+            </div>
+          </RadioGroup>
+        </div>
 
         <div className="space-y-2">
           <Label className="text-base font-medium">Datos del cliente</Label>
