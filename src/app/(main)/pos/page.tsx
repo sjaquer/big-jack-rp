@@ -72,7 +72,7 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
 
   try {
     // Open a narrow window matching 58mm approx (at 96dpi ~ 220px). Use small chrome so print dialog is shown.
-    const printWindow = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=240,height=800');
+    const printWindow = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=720,height=800');
     if (!printWindow) {
       console.warn('[POS] No se pudo abrir la ventana de impresión');
       return;
@@ -83,8 +83,8 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         const safeName = escapeHtml(item.productName);
         return `
         <div class="line-item">
-          <div class="row"><span>${item.quantity} x ${safeName}</span><span>S/ ${item.unitPrice.toFixed(2)}</span></div>
-          <div class="row subtotal">Subtotal: S/ ${item.subtotal.toFixed(2)}</div>
+          <div class="row item-row"><span class="left">${item.quantity} x ${safeName}</span><span class="right">S/ ${item.unitPrice.toFixed(2)}</span></div>
+          <div class="row subtotal"><span class="left"></span><span class="right">Subtotal: S/ ${item.subtotal.toFixed(2)}</span></div>
         </div>`;
       })
       .join('');
@@ -102,17 +102,21 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         <style>
           @page { size: 58mm auto; margin: 0; }
           *, *:before, *:after { box-sizing: border-box; }
-          html, body { width: 58mm; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.15; }
+          html, body { width: 100%; height: 100%; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.15; display: flex; justify-content: center; }
           .center { text-align: center; }
           .section { margin-bottom: 4px; }
           .line-item { border-bottom: 1px dashed #999; padding: 2px 0; }
-          .row { display: flex; justify-content: space-between; }
+          .row { display: flex; justify-content: space-between; gap: 6px; align-items: flex-start; }
+          .item-row .left { flex: 1 1 auto; word-break: break-word; white-space: normal; }
+          .item-row .right { flex: 0 0 auto; text-align: right; min-width: 40px; }
+          .subtotal .left { flex: 1; }
+          .subtotal .right { flex: 0 0 auto; }
           .total { font-size: 12px; font-weight: bold; }
           h1 { font-size: 12px; margin: 0 0 2px 0; }
-          /* Reduce whitespace and force content-driven height */
-          .receipt { display: inline-block; width: 58mm; padding: 4px 6px 6px 6px; }
+          /* receipt container fixed to 58mm and centered horizontally */
+          .receipt { width: 58mm; max-width: 58mm; margin: 0; padding: 4px 6px; }
           body { -webkit-print-color-adjust: exact; }
-          @media print { html, body { margin: 0; padding: 0; } .receipt { padding: 2px 4px 4px 4px; } }
+          @media print { html, body { margin: 0; padding: 0; } .receipt { padding: 2px 4px; } }
         </style>
       </head>
       <body>
