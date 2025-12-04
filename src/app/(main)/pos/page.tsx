@@ -7,7 +7,7 @@ import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -71,7 +71,8 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
   }
 
   try {
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    // Open a narrow window matching 58mm approx (at 96dpi ~ 220px). Use small chrome so print dialog is shown.
+    const printWindow = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=720,height=800');
     if (!printWindow) {
       console.warn('[POS] No se pudo abrir la ventana de impresión');
       return;
@@ -80,18 +81,25 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
     const itemsHtml = payload.items
       .map((item) => {
         const safeName = escapeHtml(item.productName);
+        // Only show subtotal line if quantity > 1 to save space
+        const showSubtotal = item.quantity > 1;
         return `
         <div class="line-item">
-          <div class="row"><span>${item.quantity} x ${safeName}</span><span>S/ ${item.unitPrice.toFixed(2)}</span></div>
-          <div class="row subtotal">Subtotal: S/ ${item.subtotal.toFixed(2)}</div>
+          <div class="row item-row">
+            <span class="left">${item.quantity} x ${safeName}</span>
+            <span class="right">S/ ${item.unitPrice.toFixed(2)}</span>
+          </div>
+          ${showSubtotal ? `<div class="row subtotal"><span class="left"></span><span class="right">Subtotal: S/ ${item.subtotal.toFixed(2)}</span></div>` : ''}
         </div>`;
       })
       .join('');
 
     const safeCustomerName = escapeHtml(payload.customer.name);
     const safeDocumentNumber = escapeHtml(payload.customer.documentNumber);
-    const safeCashier = payload.cashierEmail ? escapeHtml(payload.cashierEmail) : '---';
-    const safeSunatNote = payload.sunatNote ? escapeHtml(payload.sunatNote) : '';
+    // const safeCashier = payload.cashierEmail ? escapeHtml(payload.cashierEmail) : '---'; // Removed in favor of hardcoded JACK
+    // const safeSunatNote = payload.sunatNote ? escapeHtml(payload.sunatNote) : ''; // Removed detailed note
+
+    const simpleSunatStatus = payload.sunatStatus === 'accepted' ? 'ACEPTADO' : 'NO REGISTRADO';
 
     const html = `<!DOCTYPE html>
     <html>
@@ -99,48 +107,69 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         <meta charSet="utf-8" />
         <title>Boleta ${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</title>
         <style>
-          body { font-family: 'Courier New', Courier, monospace; width: 58mm; margin: 0; padding: 8px; font-size: 11px; }
+          @page { size: 58mm auto; margin: 0; }
+          *, *:before, *:after { box-sizing: border-box; }
+          html, body { margin: 0; padding: 0; width: 100%; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.1; background: #fff; font-weight: bold; }
+          .receipt { width: 100%; max-width: 58mm; margin: 0; padding: 4px 2px; }
           .center { text-align: center; }
-          .section { margin-bottom: 10px; }
-          .line-item { border-bottom: 1px dashed #999; padding: 4px 0; }
-          .row { display: flex; justify-content: space-between; }
-          .total { font-size: 14px; font-weight: bold; }
-          h1 { font-size: 16px; margin: 4px 0; }
+          .section { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #000; }
+          .section:last-child { border-bottom: none; margin-bottom: 0; }
+          .line-item { margin-bottom: 4px; }
+          .row { display: flex; justify-content: space-between; align-items: flex-start; }
+          .item-row { gap: 4px; }
+          .item-row .left { flex: 1; word-break: break-all; font-weight: 800; }
+          .item-row .right { flex: 0 0 auto; text-align: right; white-space: nowrap; }
+          .subtotal { font-size: 9px; color: #000; margin-top: 1px; }
+          .total { font-size: 12px; font-weight: 900; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px; }
+          h1 { font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; font-weight: 900; }
+          p { margin: 2px 0; }
+          .small { font-size: 9px; }
         </style>
       </head>
       <body>
-        <div class="section center">
-          <h1>BOLETA ELECTRÓNICA</h1>
-          <p>${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</p>
-          <p>${new Date(payload.issuedAt).toLocaleString()}</p>
-        </div>
-        <div class="section">
-          <p>Cliente: ${safeCustomerName}</p>
-          <p>Doc: ${payload.customer.documentType === '0' ? 'Sin documento' : safeDocumentNumber}</p>
-          <p>Atendió: ${safeCashier}</p>
-        </div>
-        <div class="section">
-          ${itemsHtml}
-        </div>
-        <div class="section">
-          <div class="row"><span>Medio de pago</span><span>${payload.paymentMethod}</span></div>
-          <div class="row total"><span>Total</span><span>S/ ${payload.total.toFixed(2)}</span></div>
-        </div>
-        <div class="section center">
-          <p>Estado SUNAT: ${payload.sunatStatus}</p>
-          ${safeSunatNote ? `<p>${safeSunatNote}</p>` : ''}
-          <p>Gracias por su compra</p>
+        <div class="receipt">
+          <div class="section center">
+            <h1>Boleta Electrónica</h1>
+            <p class="small">${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</p>
+            <p class="small">${new Date(payload.issuedAt).toLocaleString()}</p>
+          </div>
+          
+          <div class="section">
+            <p>Cliente: ${safeCustomerName}</p>
+            <p>Doc: ${payload.customer.documentType === '0' ? 'Sin documento' : safeDocumentNumber}</p>
+            <p class="small">Atendió: JACK</p>
+          </div>
+
+          <div class="section">
+            ${itemsHtml}
+          </div>
+
+          <div class="section">
+            <div class="row"><span>Pago:</span><span>${payload.paymentMethod}</span></div>
+            <div class="row total"><span>TOTAL</span><span>S/ ${payload.total.toFixed(2)}</span></div>
+          </div>
+
+          <div class="section center">
+            <p class="small">Estado SUNAT: ${simpleSunatStatus}</p>
+            <p style="margin-top: 8px;">*** Gracias por su compra ***</p>
+          </div>
         </div>
       </body>
     </html>`;
 
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
+    // Wait for the content to layout before printing
+    printWindow.onload = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        console.warn('[POS] Error during print()', e);
+      }
+      // Close shortly after print dialog opened
+      setTimeout(() => printWindow.close(), 500);
+    };
   } catch (error) {
     console.error('[POS] Error al preparar la impresión térmica', error);
   }
@@ -760,6 +789,80 @@ export default function POSPage() {
                     (S/ {total.toFixed(2)})
                 </span>
             </Button>
+            <div className="mt-2 flex gap-2">
+                    <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!firestore) return;
+                  try {
+                    // Query last sale
+                    const salesQuery = query(collection(firestore, 'sales'), orderBy('createdAt', 'desc'), limit(1));
+                    const snap = await getDocs(salesQuery);
+                    if (snap.empty) {
+                      toast({ title: 'No hay ventas', description: 'No se encontró ninguna venta para imprimir.' });
+                      return;
+                    }
+                    const saleDoc = snap.docs[0];
+                    const saleData = saleDoc.data() as any;
+                    const saleId = saleDoc.id;
+
+                    // Fetch sale items
+                    const itemsSnap = await getDocs(collection(firestore, `sales/${saleId}/sale_items`));
+                    const items = itemsSnap.docs.map(d => d.data() as any);
+
+                    // Collect unique productIds to fetch names
+                    const productIds = Array.from(new Set(items.map(i => i.productId)));
+                    const productMap = new Map<string, string>();
+                    await Promise.all(productIds.map(async (pid) => {
+                      try {
+                        const pDoc = await getDoc(doc(firestore, 'products', pid));
+                        if (pDoc.exists()) productMap.set(pid, (pDoc.data() as any).name || pid);
+                        else productMap.set(pid, pid);
+                      } catch (_) {
+                        productMap.set(pid, pid);
+                      }
+                    }));
+
+                    const printItems = items.map(i => ({
+                      productName: productMap.get(i.productId) ?? i.productId,
+                      quantity: i.quantity,
+                      unitPrice: i.unitPrice,
+                      subtotal: (i.unitPrice * i.quantity),
+                    }));
+
+                    const payload = {
+                      serie: saleData.boletaSerie ?? 'B001',
+                      correlativo: saleData.boletaCorrelativo ?? 0,
+                      issuedAt: (saleData.saleDate && (saleData.saleDate.toDate ? saleData.saleDate.toDate().toISOString() : new Date().toISOString())) || new Date().toISOString(),
+                      customer: {
+                        name: saleData.customerName ?? 'Cliente Mostrador',
+                        documentType: saleData.customerDocumentType ?? '0',
+                        documentNumber: saleData.customerDocumentNumber ?? '00000000',
+                      },
+                      items: printItems,
+                      total: saleData.totalAmount ?? 0,
+                      paymentMethod: saleData.paymentMethod ?? 'unknown',
+                      sunatStatus: saleData.sunatStatus ?? 'unknown',
+                      sunatNote: saleData.sunatNote ?? undefined,
+                      cashierEmail: saleData.cashierEmail ?? undefined,
+                    };
+
+                    // Reuse triggerThermalPrint from file scope
+                    triggerThermalPrint(payload as any);
+                  } catch (error) {
+                    console.error('Error imprimiendo última boleta', error);
+                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo imprimir la última boleta.' });
+                  }
+                }}
+                disabled={!firestore}
+                    >
+                    Imprimir última boleta
+                  </Button>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Consejo: en el diálogo de impresión selecciona papel "Thermal Paper (58 x 210)", Márgenes "Ninguno"/"Mínimos" y desactiva "Encabezado y pie de página" para evitar áreas en blanco.
+                  </div>
+            </div>
         </div>
       </div>
     </div>
