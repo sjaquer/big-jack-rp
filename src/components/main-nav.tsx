@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button"
 import { BurgerIcon } from "@/components/icons"
 import { useUser, useAuth } from "@/firebase";
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 
 function UserMenu() {
     const { user } = useUser();
@@ -140,7 +142,67 @@ function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   )
 }
 
+function MobileBottomNav() {
+  const pathname = usePathname();
+  const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Panel' },
+    { href: '/pos', icon: Coins, label: 'POS' },
+    { href: '/incoming-orders', icon: Package, label: 'Pedidos' },
+    { href: '/products', icon: BurgerIcon, label: 'Productos' },
+    { href: '/inventory', icon: Warehouse, label: 'Inventario' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden">
+      <div className="flex items-center justify-around h-20 px-2">
+        {navItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg min-w-[72px] touch-manipulation transition-all active:scale-95",
+                isActive 
+                  ? "bg-primary text-primary-foreground shadow-lg" 
+                  : "text-muted-foreground hover:text-primary hover:bg-muted"
+              )}
+            >
+              <item.icon className={cn("h-6 w-6", isActive && "stroke-[2.5]")} />
+              <span className="text-[10px] font-medium leading-tight">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export function MainNav({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile();
+
+  // En móvil/tablet usamos bottom nav en vez de sidebar
+  if (isMobile) {
+    return (
+      <div className="flex flex-col min-h-screen pb-20">
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <BurgerIcon className="h-6 w-6 text-primary" />
+            <span className="font-semibold text-lg">Big Jack</span>
+          </Link>
+          <div className="ml-auto">
+            <UserMenu />
+          </div>
+        </header>
+        <main className="flex-1 p-4">
+          {children}
+        </main>
+        <MobileBottomNav />
+      </div>
+    );
+  }
+
+  // En desktop usamos sidebar colapsable
   return (
     <SidebarProvider>
       <AppSidebar />

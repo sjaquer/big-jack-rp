@@ -126,24 +126,24 @@ export default function IncomingOrdersPage() {
 
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header optimizado para tablet */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-headline font-bold">Pedidos de Cocina</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Gestión de pedidos en tiempo real</p>
+          <h1 className="text-2xl md:text-4xl font-headline font-bold">Pedidos de Cocina</h1>
+          <p className="text-base md:text-lg text-muted-foreground">Gestión de pedidos en tiempo real</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
-          <span className="text-sm sm:text-base font-medium">
+        <div className="flex items-center gap-3 bg-muted/50 px-4 py-3 rounded-xl">
+          <Clock className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+          <span className="text-xl md:text-2xl font-bold">
             {format(new Date(), 'HH:mm', { locale: es })}
           </span>
         </div>
       </div>
 
-      {/* Tabs de estado */}
+      {/* Tabs de estado - Optimizado para tablets */}
       <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as OnlineOrder['status'])} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto p-1 gap-1">
+        <TabsList className="grid w-full grid-cols-3 h-auto p-2 gap-2 md:gap-3 bg-muted/30">
           {Object.entries(statusConfig).map(([status, config]) => {
             const Icon = config.icon;
             const count = orderCounts[status as OnlineOrder['status']];
@@ -151,20 +151,19 @@ export default function IncomingOrdersPage() {
               <TabsTrigger
                 key={status}
                 value={status}
-                className="h-16 sm:h-20 flex flex-col gap-1 sm:gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-base touch-manipulation"
+                className="h-20 md:h-28 flex flex-col gap-2 md:gap-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-base md:text-xl touch-manipulation rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm data-[state=active]:shadow-lg"
               >
-                <div className="flex items-center gap-2">
-                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span className="font-semibold hidden sm:inline">{config.label}</span>
-                  <span className="font-semibold sm:hidden">{config.label.split(' ')[0]}</span>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <Icon className="h-7 w-7 md:h-9 md:w-9 stroke-[2]" />
+                  <span className="font-bold">{config.label}</span>
                 </div>
                 {count > 0 && (
-                  <Badge variant="secondary" className="text-xs sm:text-sm font-bold px-2 py-0.5">
+                  <Badge variant="secondary" className="text-sm md:text-base font-bold px-3 py-1 shadow-md">
                     {count}
                   </Badge>
                 )}
                 {status === 'pending' && newPendingCount > 0 && (
-                  <Badge variant="destructive" className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 animate-pulse">
+                  <Badge variant="destructive" className="text-xs md:text-sm font-bold px-3 py-1 animate-pulse shadow-lg">
                     +{newPendingCount} nuevos
                   </Badge>
                 )}
@@ -193,7 +192,7 @@ export default function IncomingOrdersPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                   {filteredOrders.map((order) => {
                     const currentConfig = statusConfig[order.status];
                     const StatusIcon = currentConfig.icon;
@@ -213,26 +212,26 @@ export default function IncomingOrdersPage() {
                           currentConfig.color
                         )}
                       >
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                <StatusIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                        <CardHeader className="pb-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                              <div className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <StatusIcon className="h-7 w-7 md:h-8 md:w-8 text-primary stroke-[2]" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <CardTitle className="font-headline text-lg sm:text-xl truncate">
+                                <CardTitle className="font-headline text-xl md:text-2xl truncate">
                                   Pedido #{order.id.slice(0, 6).toUpperCase()}
                                 </CardTitle>
-                                <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
-                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <CardDescription className="flex items-center gap-2 text-base md:text-lg mt-1">
+                                  <Clock className="h-5 w-5 md:h-6 md:w-6" />
                                   {orderDate ? format(orderDate, 'HH:mm', { locale: es }) : '--:--'}
                                 </CardDescription>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <Badge className={cn('border text-xs sm:text-sm font-semibold', sourceInfo.className)}>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <Badge className={cn('border text-sm md:text-base font-bold px-3 py-1', sourceInfo.className)}>
                                     {sourceInfo.label}
                                   </Badge>
                                   {isNewOrder && (
-                                    <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40 animate-pulse text-[10px] sm:text-xs">
+                                    <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40 animate-pulse text-xs md:text-sm font-bold px-3 py-1">
                                       Nuevo ingreso
                                     </Badge>
                                   )}
@@ -242,39 +241,39 @@ export default function IncomingOrdersPage() {
                           </div>
                         </CardHeader>
 
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 md:space-y-5">
                           {/* Cliente */}
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm font-medium text-muted-foreground">Cliente:</span>
-                            <span className="text-base font-semibold truncate ml-2">
+                          <div className="flex items-center justify-between p-4 md:p-5 rounded-xl bg-muted/50">
+                            <span className="text-base md:text-lg font-medium text-muted-foreground">Cliente:</span>
+                            <span className="text-lg md:text-xl font-bold truncate ml-2">
                               {order.customerName ?? 'Cliente POS'}
                             </span>
                           </div>
 
                           {/* Items del pedido - SIEMPRE VISIBLES */}
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                          <div className="space-y-3">
+                            <h4 className="font-bold text-lg md:text-xl flex items-center gap-2">
                               <span>Productos ({order.items.length})</span>
                             </h4>
-                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                            <div className="space-y-3 max-h-80 md:max-h-96 overflow-y-auto pr-2">
                               {order.items.map((item, idx) => (
                                 <div
                                   key={idx}
-                                  className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-card border-2 hover:border-primary transition-colors"
+                                  className="flex items-center gap-4 p-4 md:p-5 rounded-xl bg-card border-2 hover:border-primary transition-all hover:shadow-md"
                                 >
-                                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg sm:text-xl flex-shrink-0">
+                                  <div className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl md:text-2xl flex-shrink-0 shadow-lg">
                                     {item.quantity}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-base sm:text-lg leading-tight">
+                                    <p className="font-bold text-lg md:text-xl leading-tight">
                                       {item.productName}
                                     </p>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm md:text-base text-muted-foreground mt-1">
                                       S/ {item.unitPrice.toFixed(2)} c/u
                                     </p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-bold text-base sm:text-lg text-primary">
+                                    <p className="font-bold text-lg md:text-2xl text-primary">
                                       S/ {(item.quantity * item.unitPrice).toFixed(2)}
                                     </p>
                                   </div>
@@ -285,31 +284,31 @@ export default function IncomingOrdersPage() {
 
                           {/* Notas especiales */}
                           {order.notes && (
-                            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                              <p className="text-xs font-semibold text-yellow-700 mb-1">⚠️ NOTA ESPECIAL:</p>
-                              <p className="text-sm font-medium">{order.notes}</p>
+                            <div className="p-4 md:p-5 rounded-xl bg-yellow-500/10 border-2 border-yellow-500/30">
+                              <p className="text-sm md:text-base font-bold text-yellow-700 mb-2">⚠️ NOTA ESPECIAL:</p>
+                              <p className="text-base md:text-lg font-medium">{order.notes}</p>
                             </div>
                           )}
 
                           {/* Total */}
-                          <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border-2 border-primary/20">
-                            <span className="text-lg font-semibold">Total:</span>
-                            <span className="text-2xl font-bold text-primary">
+                          <div className="flex items-center justify-between p-5 md:p-6 rounded-xl bg-primary/10 border-2 border-primary/30 shadow-md">
+                            <span className="text-xl md:text-2xl font-bold">Total:</span>
+                            <span className="text-3xl md:text-4xl font-bold text-primary">
                               S/ {order.totalAmount.toFixed(2)}
                             </span>
                           </div>
                         </CardContent>
 
-                        <CardFooter className="flex flex-col gap-2 pt-4">
-                          {/* Botón de cambio de estado */}
+                        <CardFooter className="flex flex-col gap-3 md:gap-4 pt-4">
+                          {/* Botón de cambio de estado - ENORME para tablets */}
                           {currentConfig.nextStatus && (
                             <Button
                               onClick={() => handleStatusChange(order.id, currentConfig.nextStatus!)}
-                              className="w-full h-14 sm:h-16 text-base sm:text-lg font-bold touch-manipulation"
+                              className="w-full h-16 md:h-20 text-lg md:text-xl font-bold touch-manipulation shadow-lg hover:shadow-xl transition-all active:scale-95"
                               size="lg"
                             >
                               {currentConfig.nextLabel}
-                              <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
+                              <ArrowRight className="ml-3 h-6 w-6 md:h-7 md:w-7 stroke-[2.5]" />
                             </Button>
                           )}
 
@@ -317,9 +316,9 @@ export default function IncomingOrdersPage() {
                           <Button
                             variant="outline"
                             onClick={() => handleViewDetails(order)}
-                            className="w-full h-12 text-base touch-manipulation"
+                            className="w-full h-14 md:h-16 text-base md:text-lg font-semibold touch-manipulation hover:bg-muted transition-all active:scale-95"
                           >
-                            <Eye className="mr-2 h-5 w-5" />
+                            <Eye className="mr-2 h-5 w-5 md:h-6 md:w-6" />
                             Ver Detalles / Editar
                           </Button>
                         </CardFooter>

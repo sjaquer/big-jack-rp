@@ -541,20 +541,20 @@ export default function POSPage() {
             onSuccess={handleSuccessfulPayment}
         />
       
-      {/* Left Side: Product Grid */}
+      {/* Left Side: Product Grid - Optimizado para tablets */}
       <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/20 space-y-4">
+        <div className="p-4 md:p-6 border-b bg-muted/20 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-headline font-bold">Productos</h2>
-              <Button variant="ghost" size="sm" className="text-xs uppercase tracking-wide" onClick={() => setCategoryFilter('all')}>
+              <h2 className="text-2xl md:text-3xl font-headline font-bold">Productos</h2>
+              <Button variant="ghost" size="lg" className="text-base md:text-lg font-semibold h-12 md:h-14" onClick={() => setCategoryFilter('all')}>
                 Ver todo
               </Button>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2">
               <Button
                 variant={categoryFilter === 'all' ? 'default' : 'secondary'}
-                size="sm"
-                className="h-9 shrink-0"
+                size="lg"
+                className="h-12 md:h-14 text-base md:text-lg font-semibold shrink-0 px-6 touch-manipulation"
                 onClick={() => setCategoryFilter('all')}
               >
                 Todas
@@ -563,8 +563,8 @@ export default function POSPage() {
                 <Button
                   key={key}
                   variant={categoryFilter === key ? 'default' : 'outline'}
-                  size="sm"
-                  className="h-9 shrink-0"
+                  size="lg"
+                  className="h-12 md:h-14 text-base md:text-lg font-semibold shrink-0 px-6 touch-manipulation"
                   onClick={() => setCategoryFilter(key)}
                 >
                   {PRODUCT_CATEGORY_LABELS[key]}
@@ -590,21 +590,21 @@ export default function POSPage() {
                               {groupedProducts[key].length} productos
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
                             {groupedProducts[key].map((product) => (
                               <button
                                 key={product.id}
-                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
+                                className="group relative flex flex-col items-center text-center bg-card rounded-2xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-md hover:shadow-xl touch-manipulation"
                                 onClick={() => addToOrder(product)}
                               >
                                 {recentlyAdded === product.id && (
                                   <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
-                                    <CheckCircle className="h-12 w-12 text-primary-foreground" />
+                                    <CheckCircle className="h-16 w-16 md:h-20 md:w-20 text-primary-foreground" />
                                   </div>
                                 )}
-                                <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
-                                  <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
-                                  <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                <div className="w-full p-6 md:p-10 flex flex-col items-center justify-center bg-card min-h-[10rem] md:min-h-[12rem]">
+                                  <p className="text-xl md:text-3xl font-bold text-center leading-tight">{product.name}</p>
+                                  <p className="mt-3 text-lg md:text-2xl font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
                                 </div>
                               </button>
                             ))}
@@ -622,21 +622,21 @@ export default function POSPage() {
                               {filteredProducts.length} productos
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
                             {filteredProducts.map((product) => (
                               <button
                                 key={product.id}
-                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
+                                className="group relative flex flex-col items-center text-center bg-card rounded-2xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-md hover:shadow-xl touch-manipulation"
                                 onClick={() => addToOrder(product)}
                               >
                                 {recentlyAdded === product.id && (
                                   <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
-                                    <CheckCircle className="h-12 w-12 text-primary-foreground" />
+                                    <CheckCircle className="h-16 w-16 md:h-20 md:w-20 text-primary-foreground" />
                                   </div>
                                 )}
-                                <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
-                                  <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
-                                  <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                <div className="w-full p-6 md:p-10 flex flex-col items-center justify-center bg-card min-h-[10rem] md:min-h-[12rem]">
+                                  <p className="text-xl md:text-3xl font-bold text-center leading-tight">{product.name}</p>
+                                  <p className="mt-3 text-lg md:text-2xl font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
                                 </div>
                               </button>
                             ))}
@@ -654,23 +654,23 @@ export default function POSPage() {
         </ScrollArea>
       </div>
 
-      {/* Right Side: Order Summary */}
-      <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden h-[40vh] lg:h-auto flex-shrink-0">
+      {/* Right Side: Order Summary - Optimizado para tablets */}
+      <div className="w-full lg:w-[450px] xl:w-[500px] flex flex-col bg-background rounded-xl border shadow-lg overflow-hidden h-[40vh] lg:h-auto flex-shrink-0">
         {/* Customer Selector Header */}
-        <div className="p-4 border-b bg-muted/20 space-y-3">
+        <div className="p-4 md:p-6 border-b bg-muted/20 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-headline font-bold flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
+            <h2 className="text-2xl md:text-3xl font-headline font-bold flex items-center gap-3">
+              <ShoppingCart className="h-6 w-6 md:h-7 md:w-7" />
               Pedido Actual
             </h2>
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="lg" 
               onClick={handleResetOrder}
-              className="text-muted-foreground hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive h-12 md:h-14 text-base md:text-lg font-semibold"
               disabled={order.length === 0}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-5 w-5 md:h-6 md:w-6 mr-2" />
               Limpiar
             </Button>
           </div>
@@ -700,34 +700,34 @@ export default function POSPage() {
             ) : (
                 <div className="p-4 space-y-3">
                     {order.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-lg border shadow-sm animate-in slide-in-from-left-5 duration-300">
+                        <div key={item.id} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-card rounded-xl border shadow-sm animate-in slide-in-from-left-5 duration-300">
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base truncate">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
+                            <p className="font-bold text-lg md:text-xl truncate">{item.name}</p>
+                            <p className="text-base md:text-lg text-muted-foreground mt-1">S/ {item.salePrice.toFixed(2)} c/u</p>
                           </div>
 
-                            <div className="flex items-center gap-0.5 sm:gap-1 bg-muted/30 rounded-lg p-0.5 sm:p-1 flex-shrink-0">
+                            <div className="flex items-center gap-1 md:gap-2 bg-muted/30 rounded-lg p-1 flex-shrink-0">
                                 <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-md hover:bg-background hover:shadow-sm touch-manipulation" 
+                                    className="h-12 w-12 md:h-14 md:w-14 rounded-lg hover:bg-background hover:shadow-md touch-manipulation transition-all active:scale-90" 
                                     onClick={() => updateQuantity(item.id, -1)}
                                 >
-                                    <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
+                                    <Minus className="h-6 w-6 md:h-7 md:w-7 stroke-[2.5]" />
                                 </Button>
-                                <span className="font-bold text-base sm:text-lg w-6 sm:w-8 text-center tabular-nums">{item.quantity}</span>
+                                <span className="font-bold text-xl md:text-2xl w-10 md:w-12 text-center tabular-nums">{item.quantity}</span>
                                 <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-md hover:bg-background hover:shadow-sm touch-manipulation" 
+                                    className="h-12 w-12 md:h-14 md:w-14 rounded-lg hover:bg-background hover:shadow-md touch-manipulation transition-all active:scale-90" 
                                     onClick={() => updateQuantity(item.id, 1)}
                                 >
-                                    <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                                    <Plus className="h-6 w-6 md:h-7 md:w-7 stroke-[2.5]" />
                                 </Button>
                             </div>
                             
-                            <div className="text-right min-w-[5rem] flex-shrink-0">
-                              <p className="font-bold text-sm sm:text-base whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
+                            <div className="text-right min-w-[6rem] flex-shrink-0">
+                              <p className="font-bold text-lg md:text-2xl text-primary whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
                             </div>
                         </div>
                     ))}
@@ -735,28 +735,28 @@ export default function POSPage() {
             )}
         </ScrollArea>
 
-        {/* Footer Totals & Action */}
-        <div className="p-4 bg-background border-t space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-            <div className="space-y-2">
-                <div className="flex justify-between text-sm sm:text-base text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span className="font-medium">S/ {subtotal.toFixed(2)}</span>
+        {/* Footer Totals & Action - Optimizado para tablets */}
+        <div className="p-4 md:p-6 bg-background border-t space-y-4 md:space-y-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+            <div className="space-y-3">
+                <div className="flex justify-between text-base md:text-lg text-muted-foreground">
+                    <span className="font-medium">Subtotal</span>
+                    <span className="font-semibold">S/ {subtotal.toFixed(2)}</span>
                 </div>
-                <Separator />
+                <Separator className="my-2" />
                 <div className="flex justify-between items-end gap-2">
-                    <span className="text-base sm:text-lg font-semibold">Total a Pagar</span>
-                    <span className="text-2xl sm:text-3xl font-bold text-primary whitespace-nowrap">S/ {total.toFixed(2)}</span>
+                    <span className="text-xl md:text-2xl font-bold">Total a Pagar</span>
+                    <span className="text-3xl md:text-5xl font-bold text-primary whitespace-nowrap">S/ {total.toFixed(2)}</span>
                 </div>
             </div>
             
             <Button 
-                className="w-full h-16 text-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.98] touch-manipulation" 
+                className="w-full h-16 md:h-20 text-xl md:text-2xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation" 
                 size="lg" 
                 onClick={() => setPaymentModalOpen(true)}
                 disabled={order.length === 0}
             >
                 Procesar Pago
-                <span className="ml-2 bg-primary-foreground/20 px-2 py-0.5 rounded text-sm">
+                <span className="ml-3 bg-primary-foreground/20 px-3 py-1 rounded text-base md:text-lg">
                     (S/ {total.toFixed(2)})
                 </span>
             </Button>
