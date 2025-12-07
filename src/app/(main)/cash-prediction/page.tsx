@@ -15,16 +15,18 @@ export default function CashPredictionPage() {
             </p>
           </div>
           <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Ingresar Datos para Predicción</CardTitle>
-          <CardDescription>
-            Completa los siguientes campos para obtener una predicción del saldo de caja al final del día.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PredictionForm />
-        </CardContent>
-      </Card>
+            <CardHeader>
+              <CardTitle className="font-headline">Ingresar Datos para Predicción</CardTitle>
+              <CardDescription>
+                Completa los siguientes campos para obtener una predicción del saldo de caja al final del día.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PredictionForm />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
