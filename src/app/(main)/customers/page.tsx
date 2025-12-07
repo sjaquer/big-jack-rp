@@ -76,27 +76,29 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Gestión de Clientes</h1>
-          <p className="text-muted-foreground">Sistema de lealtad y base de datos de clientes</p>
+          <h1 className="text-2xl lg:text-3xl font-headline font-bold">Gestión de Clientes</h1>
+          <p className="text-sm text-muted-foreground">Sistema de lealtad y base de datos de clientes</p>
         </div>
         <Button
           onClick={() => {
             setSelectedCustomer(null);
             setShowCustomerForm(true);
           }}
-          className="h-11 sm:h-10 text-base w-full sm:w-auto touch-manipulation"
+          className="h-9 text-sm w-full sm:w-auto touch-manipulation"
         >
-          <UserPlus className="mr-2 h-5 w-5" />
+          <UserPlus className="mr-2 h-4 w-4" />
           Nuevo Cliente
         </Button>
       </div>
 
-      {/* Estadísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-4 pb-2">
+          {/* Estadísticas */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>

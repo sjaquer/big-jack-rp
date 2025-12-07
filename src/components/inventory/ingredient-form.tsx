@@ -29,6 +29,7 @@ const ingredientCategories = [
   { value: 'dairy', label: 'Lácteos', prefix: 'LAC' },
   { value: 'sauce', label: 'Salsas y Aderezos', prefix: 'SAL' },
   { value: 'bakery', label: 'Panadería', prefix: 'PAN' },
+  { value: 'additional', label: 'Adicionales', prefix: 'ADD' },
   { value: 'other', label: 'Otros', prefix: 'OTR' },
 ];
 
@@ -49,7 +50,7 @@ function generateSKU(name: string, category?: string): string {
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   sku: z.string().optional(),
-  category: z.enum(['protein', 'vegetable', 'dairy', 'sauce', 'bakery', 'other']).optional(),
+  category: z.enum(['protein', 'vegetable', 'dairy', 'sauce', 'bakery', 'additional', 'other']).optional(),
   quantity: z.coerce.number().min(0, 'La cantidad debe ser un número positivo.'),
   unit: z.string().min(1, 'La unidad es requerida.'),
   cost: z.coerce.number().min(0, 'El costo debe ser un número positivo.'),
@@ -101,7 +102,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
         const currentName = form.getValues('name');
         const currentCategory = form.getValues('category');
         
-        if (currentName && (!currentSKU || currentSKU === '' || currentSKU.startsWith('ING-') || currentSKU.startsWith('PRO-') || currentSKU.startsWith('VEG-') || currentSKU.startsWith('LAC-') || currentSKU.startsWith('SAL-') || currentSKU.startsWith('PAN-') || currentSKU.startsWith('OTR-'))) {
+        if (currentName && (!currentSKU || currentSKU === '' || currentSKU.startsWith('ING-') || currentSKU.startsWith('PRO-') || currentSKU.startsWith('VEG-') || currentSKU.startsWith('LAC-') || currentSKU.startsWith('SAL-') || currentSKU.startsWith('PAN-') || currentSKU.startsWith('ADD-') || currentSKU.startsWith('OTR-'))) {
           const newSKU = generateSKU(currentName, currentCategory);
           form.setValue('sku', newSKU, { shouldValidate: false });
         }

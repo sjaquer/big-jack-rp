@@ -126,24 +126,24 @@ export default function IncomingOrdersPage() {
 
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* Header optimizado para tablet */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex-shrink-0 flex items-center justify-between gap-3 pb-3">
         <div>
-          <h1 className="text-2xl md:text-4xl font-headline font-bold">Pedidos de Cocina</h1>
-          <p className="text-base md:text-lg text-muted-foreground">Gestión de pedidos en tiempo real</p>
+          <h1 className="text-xl md:text-3xl font-headline font-bold">Pedidos de Cocina</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gestión de pedidos en tiempo real</p>
         </div>
-        <div className="flex items-center gap-3 bg-muted/50 px-4 py-3 rounded-xl">
-          <Clock className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-          <span className="text-xl md:text-2xl font-bold">
+        <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
+          <Clock className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+          <span className="text-lg md:text-xl font-bold">
             {format(new Date(), 'HH:mm', { locale: es })}
           </span>
         </div>
       </div>
 
       {/* Tabs de estado - Optimizado para tablets */}
-      <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as OnlineOrder['status'])} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto p-2 gap-2 md:gap-3 bg-muted/30">
+      <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as OnlineOrder['status'])} className="flex-1 flex flex-col overflow-hidden">
+        <TabsList className="flex-shrink-0 grid w-full grid-cols-3 h-auto p-1.5 gap-2 bg-muted/30">
           {Object.entries(statusConfig).map(([status, config]) => {
             const Icon = config.icon;
             const count = orderCounts[status as OnlineOrder['status']];
@@ -151,20 +151,20 @@ export default function IncomingOrdersPage() {
               <TabsTrigger
                 key={status}
                 value={status}
-                className="h-20 md:h-28 flex flex-col gap-2 md:gap-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-base md:text-xl touch-manipulation rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm data-[state=active]:shadow-lg"
+                className="h-16 md:h-20 flex flex-col gap-1 md:gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm md:text-base touch-manipulation rounded-lg transition-all active:scale-95 shadow-sm data-[state=active]:shadow-lg"
               >
-                <div className="flex items-center gap-2 md:gap-3">
-                  <Icon className="h-7 w-7 md:h-9 md:w-9 stroke-[2]" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Icon className="h-5 w-5 md:h-6 md:w-6 stroke-[2]" />
                   <span className="font-bold">{config.label}</span>
                 </div>
                 {count > 0 && (
-                  <Badge variant="secondary" className="text-sm md:text-base font-bold px-3 py-1 shadow-md">
+                  <Badge variant="secondary" className="text-xs md:text-sm font-bold px-2 py-0.5">
                     {count}
                   </Badge>
                 )}
                 {status === 'pending' && newPendingCount > 0 && (
-                  <Badge variant="destructive" className="text-xs md:text-sm font-bold px-3 py-1 animate-pulse shadow-lg">
-                    +{newPendingCount} nuevos
+                  <Badge variant="destructive" className="text-xs font-bold px-2 py-0.5 animate-pulse">
+                    +{newPendingCount}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -178,7 +178,7 @@ export default function IncomingOrdersPage() {
           </div>
         ) : (
           Object.entries(statusConfig).map(([status, config]) => (
-            <TabsContent key={status} value={status} className="mt-6">
+            <TabsContent key={status} value={status} className="flex-1 overflow-y-auto mt-3">
               {filteredOrders.length === 0 ? (
                 <Card className="border-2 border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
@@ -192,7 +192,7 @@ export default function IncomingOrdersPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 pb-2">
                   {filteredOrders.map((order) => {
                     const currentConfig = statusConfig[order.status];
                     const StatusIcon = currentConfig.icon;

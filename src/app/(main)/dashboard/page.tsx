@@ -185,38 +185,41 @@ export default function DashboardPage() {
   const totalSales = todaySummary.orders;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-headline font-bold">Panel de Informes de Hoy</h1>
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 pb-3">
+        <h1 className="text-2xl lg:text-3xl font-headline font-bold">Panel de Control</h1>
+        <p className="text-sm text-muted-foreground">Vista general del rendimiento de ventas y estadísticas clave.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Ingresos de Hoy"
-          value={currencyFormatter.format(todaySummary.revenue)}
-          icon={DollarSign}
-          description="Total de ingresos generados hoy"
-        />
-        <StatCard
-          title="Neto de Hoy"
-          value={currencyFormatter.format(todaySummary.net)}
-          icon={BarChart}
-          description="Margen después de costos y gastos"
-        />
-        <StatCard
-          title="Ingresos del Mes"
-          value={currencyFormatter.format(monthlySummary.revenue)}
-          icon={CalendarDays}
-          description="Total acumulado del mes en curso"
-        />
-        <StatCard
-          title="Ventas de Hoy"
-          value={`+${totalSales}`}
-          icon={ShoppingCart}
-          description="Número total de transacciones de hoy"
-        />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        {(['daily', 'weekly', 'monthly'] as PeriodKey[]).map((key) => {
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-4 pb-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Ingresos de Hoy"
+              value={currencyFormatter.format(todaySummary.revenue)}
+              icon={DollarSign}
+              description="Total de ventas del día actual"
+            />
+            <StatCard
+              title="Neto de Hoy"
+              value={currencyFormatter.format(todaySummary.net)}
+              icon={BarChart}
+              description="Margen después de costos y gastos"
+            />
+            <StatCard
+              title="Ingresos del Mes"
+              value={currencyFormatter.format(monthlySummary.revenue)}
+              icon={CalendarDays}
+              description="Total acumulado del mes en curso"
+            />
+            <StatCard
+              title="Ventas de Hoy"
+              value={`+${totalSales}`}
+              icon={ShoppingCart}
+              description="Número total de transacciones de hoy"
+            />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {(['daily', 'weekly', 'monthly'] as PeriodKey[]).map((key) => {
           const summary = periodStats[key];
           return (
             <Card key={key} className="border-primary/10">
@@ -251,45 +254,47 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle className="font-headline">Ventas de los Últimos 7 Días</CardTitle>
-            <CardDescription>Resumen de los ingresos diarios.</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <SalesChart data={salesData ?? []} isLoading={salesLoading} />
-          </CardContent>
-        </Card>
-        <Card className="col-span-4 lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="font-headline">Los 5 Artículos Más Vendidos</CardTitle>
-            <CardDescription>Los productos más vendidos históricamente.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PopularItemsChart products={productsData ?? []} saleItems={saleItems ?? []} isLoading={productsLoading || saleItemsLoading} />
-          </CardContent>
-        </Card>
-      </div>
+              );
+            })}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle className="font-headline">Ventas de los Últimos 7 Días</CardTitle>
+                <CardDescription>Resumen de los ingresos diarios.</CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <SalesChart data={salesData ?? []} isLoading={salesLoading} />
+              </CardContent>
+            </Card>
+            <Card className="col-span-4 lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="font-headline">Los 5 Artículos Más Vendidos</CardTitle>
+                <CardDescription>Los productos más vendidos históricamente.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PopularItemsChart products={productsData ?? []} saleItems={saleItems ?? []} isLoading={productsLoading || saleItemsLoading} />
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Desglose de pedidos diarios */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Desglose de Pedidos de Hoy</CardTitle>
-          <CardDescription>Detalle completo de todas las ventas realizadas hoy.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DailyOrdersBreakdown 
-            sales={todaySalesData ?? []} 
-            saleItems={todaySaleItems ?? []} 
-            products={productsData ?? []} 
-            isLoading={todaySalesLoading || saleItemsLoading || productsLoading}
-          />
-        </CardContent>
-      </Card>
+          {/* Desglose de pedidos diarios */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-headline">Desglose de Pedidos de Hoy</CardTitle>
+              <CardDescription>Detalle completo de todas las ventas realizadas hoy.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DailyOrdersBreakdown 
+                sales={todaySalesData ?? []} 
+                saleItems={todaySaleItems ?? []} 
+                products={productsData ?? []} 
+                isLoading={todaySalesLoading || saleItemsLoading || productsLoading}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

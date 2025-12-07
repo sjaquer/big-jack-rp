@@ -271,26 +271,26 @@ export default function POSPage() {
 
     const categoryKeys = useMemo(() => Object.keys(PRODUCT_CATEGORY_LABELS) as ProductCategory[], []);
     const groupedProducts = useMemo(() => {
-      const groups: Record<ProductCategory, Product[]> = {
-        combos: [],
-        hamburguesas: [],
-        pollos: [],
-        bebidas: [],
-        acompanamientos: [],
-        postres: [],
-        otros: [],
-      };
+      // Initialize groups from the current category keys so newly added categories are present
+      const groups = categoryKeys.reduce((acc, k) => {
+        acc[k] = [] as Product[];
+        return acc;
+      }, {} as Record<ProductCategory, Product[]>);
 
       (products ?? []).forEach((product) => {
         const rawCategory = (product.category ?? 'otros') as ProductCategory;
         const resolvedCategory = PRODUCT_CATEGORY_LABELS[rawCategory]
           ? rawCategory
-          : 'otros';
+          : ('otros' as ProductCategory);
+        // Ensure the group exists (defensive) before pushing
+        if (!groups[resolvedCategory]) groups[resolvedCategory] = [];
         groups[resolvedCategory].push(product);
       });
 
       categoryKeys.forEach((key) => {
-        groups[key].sort((a, b) => a.name.localeCompare(b.name));
+        const list = groups[key] ?? [];
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        groups[key] = list;
       });
 
       return groups;
@@ -562,7 +562,7 @@ export default function POSPage() {
     }
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] gap-3 lg:gap-4 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-full w-full gap-3 lg:gap-4 overflow-hidden">
         <PaymentModal 
             isOpen={isPaymentModalOpen}
             onClose={() => setPaymentModalOpen(false)}

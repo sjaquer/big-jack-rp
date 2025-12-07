@@ -126,13 +126,16 @@ export default function CashFlowPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold">Flujo de Caja</h1>
-        <p className="text-muted-foreground">Control de ingresos y gastos operativos de la empresa.</p>
+    <>
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 pb-3">
+        <h1 className="text-2xl lg:text-3xl font-headline font-bold">Flujo de Caja</h1>
+        <p className="text-sm text-muted-foreground">Control de ingresos y gastos operativos de la empresa.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-4 pb-2">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Ingresos del Mes</CardTitle>
@@ -349,5 +352,6 @@ export default function CashFlowPage() {
         </Card>
       </div>
     </div>
+    </>
   );
 }

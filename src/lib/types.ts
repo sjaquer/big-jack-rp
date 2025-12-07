@@ -4,6 +4,9 @@ import { Timestamp } from 'firebase/firestore';
 export type ProductCategory =
   | 'combos'
   | 'hamburguesas'
+  | 'salchipapas'
+  | 'choripanes'
+  | 'adicionales'
   | 'pollos'
   | 'bebidas'
   | 'acompanamientos'
@@ -13,6 +16,9 @@ export type ProductCategory =
 export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
   combos: 'Combos',
   hamburguesas: 'Hamburguesas',
+  salchipapas: 'Salchipapas',
+  choripanes: 'Choripanes',
+  adicionales: 'Adicionales',
   pollos: 'Pollos & Parrilla',
   bebidas: 'Bebidas',
   acompanamientos: 'Acompañamientos',
@@ -41,7 +47,7 @@ export interface Product {
   imageHint?: string;
 }
 
-export type IngredientCategory = 'protein' | 'vegetable' | 'dairy' | 'sauce' | 'bakery' | 'other';
+export type IngredientCategory = 'protein' | 'vegetable' | 'dairy' | 'sauce' | 'bakery' | 'additional' | 'other';
 
 export interface IngredientProvider {
   name: string;

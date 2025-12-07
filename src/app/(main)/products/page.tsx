@@ -91,28 +91,29 @@ export default function ProductsPage() {
   const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
 
   return (
-    <>
+    <div className="h-full w-full flex flex-col overflow-hidden">
       <ProductForm 
         isOpen={isFormOpen}
         onClose={handleFormClose}
         product={selectedProduct}
         ingredients={ingredients ?? []}
       />
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <Card className="flex-1 flex flex-col overflow-hidden">
+        <CardHeader className="flex-shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
               <div>
                   <CardTitle className="font-headline text-lg sm:text-xl">Registro de Productos</CardTitle>
                   <CardDescription className="text-sm">Gestiona todos los productos de tu inventario.</CardDescription>
               </div>
-              <Button onClick={handleAddProduct} size="default" className="h-11 sm:h-10 text-base w-full sm:w-auto touch-manipulation">
-                  <PlusCircle className="mr-2 h-5 w-5" />
+              <Button onClick={handleAddProduct} size="default" className="h-10 text-sm sm:text-base w-full sm:w-auto touch-manipulation">
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   Añadir Producto
               </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
+        <CardContent className="flex-1 overflow-y-auto p-0">
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
@@ -153,8 +154,9 @@ export default function ProductsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }
