@@ -12,10 +12,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 // Images removed for touch-first POS: product list shows text only
 import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { deleteDoc, doc, collection } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Product, Supplier, Ingredient } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
@@ -58,6 +59,26 @@ export default function ProductsPage() {
   const handleFormClose = () => {
     setFormOpen(false);
     setSelectedProduct(null);
+  };
+
+  const { toast } = useToast();
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firestore no disponible' });
+      return;
+    }
+
+    const confirmed = confirm('¿Eliminar este producto? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(firestore, 'products', productId));
+      toast({ title: 'Producto eliminado', description: 'El producto se eliminó correctamente.' });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el producto.' });
+    }
   };
 
   // Image handling removed: products show textual info only.
@@ -145,9 +166,12 @@ export default function ProductsPage() {
                   <TableCell>
                     {calculateProducibleQuantity(product, ingredients ?? [])}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-2">
                     <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>
                       Editar
+                    </Button>
+                    <Button size="default" variant="destructive" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleDeleteProduct(product.id)}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
