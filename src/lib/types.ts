@@ -152,6 +152,9 @@ export interface Customer {
   nickname?: string;
   phone?: string;
   email?: string;
+  documentType?: '0' | '1' | '6'; // 0: Sin doc, 1: DNI, 6: RUC
+  documentNumber?: string;
+  address?: string;
   allergies?: string[];
   preferences?: string;
   notes?: string;

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { Product, ProductCategory, Ingredient } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
-import { Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, CheckCircle, Trash2, ShoppingCart, Banknote, CreditCard, Smartphone, ArrowRightLeft } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc } from 'firebase/firestore';
@@ -195,6 +195,7 @@ export default function POSPage() {
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -567,6 +568,7 @@ export default function POSPage() {
             isOpen={isPaymentModalOpen}
             onClose={() => setPaymentModalOpen(false)}
             total={total}
+            defaultPaymentMethod={selectedPaymentMethod}
             onSuccess={handleSuccessfulPayment}
         />
       
@@ -579,11 +581,11 @@ export default function POSPage() {
                 Ver todo
               </Button>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin lg:flex-wrap">
               <Button
                 variant={categoryFilter === 'all' ? 'default' : 'secondary'}
                 size="sm"
-                className="h-9 lg:h-10 text-sm lg:text-base font-semibold shrink-0 px-4 lg:px-5 touch-manipulation"
+                className="h-9 lg:h-10 text-sm lg:text-base font-semibold shrink-0 px-4 lg:px-5 touch-manipulation transition-all hover:scale-105 shadow-sm"
                 onClick={() => setCategoryFilter('all')}
               >
                 Todas
@@ -593,7 +595,7 @@ export default function POSPage() {
                   key={key}
                   variant={categoryFilter === key ? 'default' : 'outline'}
                   size="sm"
-                  className="h-9 lg:h-10 text-sm lg:text-base font-semibold shrink-0 px-4 lg:px-5 touch-manipulation"
+                  className="h-9 lg:h-10 text-sm lg:text-base font-semibold shrink-0 px-4 lg:px-5 touch-manipulation transition-all hover:scale-105 shadow-sm"
                   onClick={() => setCategoryFilter(key)}
                 >
                   {PRODUCT_CATEGORY_LABELS[key]}
@@ -619,11 +621,11 @@ export default function POSPage() {
                               {groupedProducts[key].length}
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-3">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4">
                             {groupedProducts[key].map((product) => (
                               <button
                                 key={product.id}
-                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-lg touch-manipulation"
+                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-xl touch-manipulation h-full"
                                 onClick={() => addToOrder(product)}
                               >
                                 {recentlyAdded === product.id && (
@@ -631,9 +633,11 @@ export default function POSPage() {
                                     <CheckCircle className="h-12 w-12 lg:h-14 lg:w-14 text-primary-foreground" />
                                   </div>
                                 )}
-                                <div className="w-full p-3 lg:p-4 flex flex-col items-center justify-center bg-card min-h-[7rem] lg:min-h-[8rem]">
-                                  <p className="text-base lg:text-xl font-bold text-center leading-tight">{product.name}</p>
-                                  <p className="mt-2 text-sm lg:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                <div className="w-full p-3 lg:p-4 flex flex-col items-center justify-between bg-card h-full min-h-[7rem] lg:min-h-[9rem]">
+                                  <p className="text-sm lg:text-base font-bold text-center leading-tight line-clamp-2 group-hover:text-primary transition-colors">{product.name}</p>
+                                  <div className="mt-2 bg-muted/50 rounded-full px-3 py-1 group-hover:bg-primary/10 transition-colors">
+                                    <p className="text-sm lg:text-base font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                  </div>
                                 </div>
                               </button>
                             ))}
@@ -651,11 +655,11 @@ export default function POSPage() {
                               {filteredProducts.length}
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-3">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4">
                             {filteredProducts.map((product) => (
                               <button
                                 key={product.id}
-                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-lg touch-manipulation"
+                                className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-xl touch-manipulation h-full"
                                 onClick={() => addToOrder(product)}
                               >
                                 {recentlyAdded === product.id && (
@@ -663,9 +667,11 @@ export default function POSPage() {
                                     <CheckCircle className="h-12 w-12 lg:h-14 lg:w-14 text-primary-foreground" />
                                   </div>
                                 )}
-                                <div className="w-full p-3 lg:p-4 flex flex-col items-center justify-center bg-card min-h-[7rem] lg:min-h-[8rem]">
-                                  <p className="text-base lg:text-xl font-bold text-center leading-tight">{product.name}</p>
-                                  <p className="mt-2 text-sm lg:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                <div className="w-full p-3 lg:p-4 flex flex-col items-center justify-between bg-card h-full min-h-[7rem] lg:min-h-[9rem]">
+                                  <p className="text-sm lg:text-base font-bold text-center leading-tight line-clamp-2 group-hover:text-primary transition-colors">{product.name}</p>
+                                  <div className="mt-2 bg-muted/50 rounded-full px-3 py-1 group-hover:bg-primary/10 transition-colors">
+                                    <p className="text-sm lg:text-base font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                  </div>
                                 </div>
                               </button>
                             ))}
@@ -778,6 +784,73 @@ export default function POSPage() {
                 </div>
             </div>
             
+            {/* Payment Method Quick Select */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Método de pago:</p>
+              <div className="grid grid-cols-5 gap-1.5">
+                <button
+                  onClick={() => setSelectedPaymentMethod('cash')}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all touch-manipulation",
+                    selectedPaymentMethod === 'cash' 
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-muted bg-muted/20 text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  <Banknote className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Efectivo</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPaymentMethod('card')}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all touch-manipulation",
+                    selectedPaymentMethod === 'card' 
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-muted bg-muted/20 text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  <CreditCard className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Tarjeta</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPaymentMethod('yape')}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all touch-manipulation",
+                    selectedPaymentMethod === 'yape' 
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-muted bg-muted/20 text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  <Smartphone className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Yape</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPaymentMethod('plin')}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all touch-manipulation",
+                    selectedPaymentMethod === 'plin' 
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-muted bg-muted/20 text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  <Smartphone className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Plin</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPaymentMethod('transfer')}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all touch-manipulation",
+                    selectedPaymentMethod === 'transfer' 
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-muted bg-muted/20 text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  <ArrowRightLeft className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Transf.</span>
+                </button>
+              </div>
+            </div>
+            
             <Button 
                 className="w-full h-12 lg:h-14 text-base lg:text-lg font-bold shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation" 
                 size="lg" 
@@ -789,11 +862,11 @@ export default function POSPage() {
                     S/ {total.toFixed(2)}
                 </span>
             </Button>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 pt-1">
                     <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground w-full"
                 onClick={async () => {
                   if (!firestore) return;
                   try {

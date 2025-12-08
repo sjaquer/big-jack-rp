@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, User, CreditCard, Banknote, Smartphone, ArrowRightLeft, Check, UserPlus } from 'lucide-react';
+import { useCollection, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
+import type { Customer } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export type DocumentType = '0' | '1' | '6';
 
@@ -29,6 +37,7 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   total: number;
+  defaultPaymentMethod?: string;
   onSuccess: (payload: {
     paymentMethod: string;
     customer: PaymentCustomerPayload;
@@ -42,20 +51,54 @@ const DOCUMENT_OPTIONS: { label: string; value: DocumentType; description: strin
   { label: 'RUC', value: '6', description: 'Empresas o emisores de factura' },
 ];
 
-export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'cash', onSuccess }: PaymentModalProps) {
   const [amountReceived, setAmountReceived] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState(defaultPaymentMethod);
   const [isProcessing, setIsProcessing] = useState(false);
   const [documentType, setDocumentType] = useState<DocumentType>('0');
   const [documentNumber, setDocumentNumber] = useState('');
   const [customerName, setCustomerName] = useState('Cliente Mostrador');
   const [shouldIssueBoleta, setShouldIssueBoleta] = useState(true);
+  
+  // Customer Search State
+  const [customerSearchMode, setCustomerSearchMode] = useState<'search' | 'manual'>('manual');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [saveCustomer, setSaveCustomer] = useState(false);
+
   const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const customersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'customers');
+  }, [firestore]);
+  const { data: customers } = useCollection<Customer>(customersQuery);
 
   const amount = parseFloat(amountReceived);
   const change = amount >= total ? amount - total : 0;
   const sanitizedDocument = documentNumber.replace(/\D/g, '');
   const isCustomerNameRequired = documentType !== '0';
+
+  const filteredCustomers = useMemo(() => {
+    if (!customers || !searchTerm) return [];
+    const lowerTerm = searchTerm.toLowerCase();
+    return customers.filter(c => 
+      c.firstName.toLowerCase().includes(lowerTerm) || 
+      c.lastName?.toLowerCase().includes(lowerTerm) ||
+      c.phone?.includes(lowerTerm) ||
+      c.documentNumber?.includes(searchTerm) // Search by document number too
+    ).slice(0, 5);
+  }, [customers, searchTerm]);
+
+  // Check if customer with same document already exists
+  const existingCustomerWithDocument = useMemo(() => {
+    if (!customers || documentType === '0' || !sanitizedDocument) return null;
+    return customers.find(c => 
+      c.documentType === documentType && 
+      c.documentNumber === sanitizedDocument
+    );
+  }, [customers, documentType, sanitizedDocument]);
 
   const documentError = (() => {
     if (documentType === '0') {
@@ -72,19 +115,41 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
   const isDocumentInvalid = Boolean(documentError || (isCustomerNameRequired && !customerName.trim()));
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Set payment method from prop when modal opens
+      setPaymentMethod(defaultPaymentMethod);
+    } else {
       setAmountReceived('');
-      setPaymentMethod('cash');
+      setPaymentMethod(defaultPaymentMethod);
       setIsProcessing(false);
       setDocumentType('0');
       setDocumentNumber('');
       setCustomerName('Cliente Mostrador');
       setShouldIssueBoleta(true);
+      setCustomerSearchMode('manual');
+      setSearchTerm('');
+      setSelectedCustomerId(null);
+      setSaveCustomer(false);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultPaymentMethod]);
+
+  const handleSelectCustomer = (customer: Customer) => {
+    setCustomerName(`${customer.firstName} ${customer.lastName || ''}`.trim());
+    // Use customer's document info if available
+    if (customer.documentType && customer.documentNumber) {
+      setDocumentType(customer.documentType);
+      setDocumentNumber(customer.documentNumber);
+    } else {
+      setDocumentType('1'); // Default to DNI for registered customers
+      setDocumentNumber('');
+    }
+    setSelectedCustomerId(customer.id);
+    setSaveCustomer(false); // Already saved
+    setCustomerSearchMode('manual'); // Switch to manual view to verify/edit details
+  };
 
   const handlePayment = async () => {
-    if (isProcessing) return; // Prevenir doble clic
+    if (isProcessing) return;
 
     if (paymentMethod === 'cash' && (amount < total || !amount)) {
       toast({
@@ -115,6 +180,30 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
     
     setIsProcessing(true);
     try {
+      // Save customer if requested and has valid document
+      if (saveCustomer && firestore && documentType !== '0' && !documentError && customerName.trim()) {
+        const nameParts = customerName.trim().split(' ');
+        const firstName = nameParts[0] || customerName.trim();
+        const lastName = nameParts.slice(1).join(' ') || undefined;
+        
+        const newCustomer = {
+          firstName,
+          lastName,
+          documentType,
+          documentNumber: sanitizedDocument,
+          registrationDate: serverTimestamp(),
+          totalVisits: 1,
+          totalSpent: total,
+          loyaltyPoints: 0,
+        };
+        
+        addDocumentNonBlocking(collection(firestore, 'customers'), newCustomer);
+        toast({
+          title: 'Cliente guardado',
+          description: `${customerName.trim()} fue añadido a tu lista de clientes.`,
+        });
+      }
+
       await onSuccess({
         paymentMethod,
         customer: {
@@ -124,7 +213,6 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
         },
         issueBoleta: shouldIssueBoleta,
       });
-      // Cerrar modal automáticamente después del éxito
       onClose();
     } catch (error) {
       setIsProcessing(false);
@@ -138,138 +226,210 @@ export function PaymentModal({ isOpen, onClose, total, onSuccess }: PaymentModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="font-headline">Procesar Pago</DialogTitle>
-          <DialogDescription>
-            El total del pedido es <span className="font-bold text-primary">S/ {total.toFixed(2)}</span>.
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-5 py-3 flex-shrink-0 border-b">
+          <DialogTitle className="font-headline text-xl">Procesar Pago</DialogTitle>
+          <DialogDescription className="text-sm">
+            Total a cobrar: <span className="font-bold text-primary text-lg">S/ {total.toFixed(2)}</span>
+            {' • '}
+            <span className="capitalize">{paymentMethod === 'cash' ? 'Efectivo' : paymentMethod === 'card' ? 'Tarjeta' : paymentMethod === 'yape' ? 'Yape' : paymentMethod === 'plin' ? 'Plin' : 'Transferencia'}</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        
+        <ScrollArea className="flex-1 px-5 py-3">
+          <div className="grid gap-4 pb-4">
 
-        <div className="space-y-2">
-          <Label className="text-base font-medium">Método de pago</Label>
-          <RadioGroup defaultValue="cash" onValueChange={setPaymentMethod} disabled={isProcessing} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
-              <RadioGroupItem value="cash" id="cash" className="h-4 w-4" />
-              <Label htmlFor="cash" className="text-base font-semibold cursor-pointer">Efectivo</Label>
-            </div>
-            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
-              <RadioGroupItem value="card" id="card" className="h-4 w-4" />
-              <Label htmlFor="card" className="text-base font-semibold cursor-pointer">Tarjeta</Label>
-            </div>
-            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
-              <RadioGroupItem value="yape" id="yape" className="h-4 w-4" />
-              <Label htmlFor="yape" className="text-base font-semibold cursor-pointer">Yape</Label>
-            </div>
-            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation">
-              <RadioGroupItem value="plin" id="plin" className="h-4 w-4" />
-              <Label htmlFor="plin" className="text-base font-semibold cursor-pointer">Plin</Label>
-            </div>
-            <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border-2 hover:bg-accent cursor-pointer h-16 text-base font-semibold touch-manipulation col-span-2 sm:col-span-1">
-              <RadioGroupItem value="transfer" id="transfer" className="h-4 w-4" />
-              <Label htmlFor="transfer" className="text-base font-semibold cursor-pointer">Transferencia</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-base font-medium">Datos del cliente</Label>
-          <div className="grid gap-3">
-            <div className="grid gap-1">
-              <Label className="text-sm">Tipo de documento</Label>
-              <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)} disabled={isProcessing}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOCUMENT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {documentType !== '0' && (
-              <div className="grid gap-1">
-                <Label className="text-sm">Número de documento</Label>
-                <Input
-                  value={documentNumber}
-                  onChange={(e) => setDocumentNumber(e.target.value)}
-                  placeholder={documentType === '1' ? '12345678' : '12345678901'}
-                  inputMode="numeric"
-                  maxLength={documentType === '1' ? 8 : 11}
-                  disabled={isProcessing}
-                  className="h-11"
-                />
-                {documentError && (
-                  <p className="text-xs text-destructive">{documentError}</p>
+            {/* Cash Amount Section - Show first if cash */}
+            {paymentMethod === 'cash' && (
+              <div className="space-y-2 animate-in slide-in-from-top-4 fade-in">
+                <Label htmlFor="amount" className="text-sm font-medium">
+                  Monto Recibido
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">S/</span>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={amountReceived}
+                    onChange={(e) => setAmountReceived(e.target.value)}
+                    className="h-12 pl-9 text-xl font-bold"
+                    placeholder='0.00'
+                    disabled={isProcessing}
+                    autoFocus
+                  />
+                </div>
+                {amountReceived && (
+                  <div className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border-2 transition-colors",
+                    amount >= total ? "bg-green-500/10 border-green-500/20" : "bg-destructive/10 border-destructive/20"
+                  )}>
+                    <span className="font-medium text-sm">Vuelto:</span>
+                    <span className={cn(
+                      "text-xl font-bold",
+                      amount >= total ? "text-green-600" : "text-destructive"
+                    )}>
+                      {amount >= total ? `S/ ${change.toFixed(2)}` : 'Falta dinero'}
+                    </span>
+                  </div>
                 )}
               </div>
             )}
 
-            <div className="grid gap-1">
-              <Label className="text-sm">Nombre / Razón social</Label>
-              <Input
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Cliente Mostrador"
-                disabled={isProcessing}
-                className="h-11"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-start justify-between rounded-xl border p-4">
-          <div className="space-y-1 pr-4">
-            <p className="text-base font-semibold">Emitir boleta electrónica</p>
-            <p className="text-sm text-muted-foreground">
-              Si lo desactivas, solo se registrará la venta sin enviarla a SUNAT.
-            </p>
-          </div>
-          <Switch checked={shouldIssueBoleta} onCheckedChange={setShouldIssueBoleta} disabled={isProcessing} />
-        </div>
-
-          {paymentMethod === 'cash' && (
-            <>
+            {/* Customer Section */}
             <div className="space-y-2">
-                <Label htmlFor="amount" className="text-base font-medium">
-                Monto Recibido
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <User className="h-4 w-4" /> Datos del cliente
                 </Label>
-                <Input
-                id="amount"
-                type="number"
-                value={amountReceived}
-                onChange={(e) => setAmountReceived(e.target.value)}
-                className="h-14 text-lg"
-                placeholder='50.00'
-                disabled={isProcessing}
-                />
-            </div>
-            {amountReceived && amount >= total && (
-                <div className="text-center p-4 bg-secondary rounded-md">
-                    <p className="text-lg">Vuelto:</p>
-                    <p className="text-3xl font-bold text-primary">S/ {change.toFixed(2)}</p>
-                </div>
-            )}
-            </>
-          )}
+                <Tabs value={customerSearchMode} onValueChange={(v) => setCustomerSearchMode(v as 'search' | 'manual')} className="w-auto">
+                  <TabsList className="h-7">
+                    <TabsTrigger value="manual" className="text-xs h-5 px-2">Manual</TabsTrigger>
+                    <TabsTrigger value="search" className="text-xs h-5 px-2">Buscar</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
 
-        </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing} size="lg" className="h-12 text-base">
+              {customerSearchMode === 'search' ? (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Nombre, DNI o RUC..." 
+                      className="pl-9 h-9"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  {searchTerm && (
+                    <div className="rounded-md border bg-popover text-popover-foreground shadow-md max-h-32 overflow-auto">
+                      {filteredCustomers.length > 0 ? (
+                        <div className="p-1">
+                          {filteredCustomers.map((customer) => (
+                            <div 
+                              key={customer.id}
+                              className="flex items-center justify-between p-2 hover:bg-accent rounded-sm cursor-pointer"
+                              onClick={() => handleSelectCustomer(customer)}
+                            >
+                              <div>
+                                <p className="font-medium text-sm">{customer.firstName} {customer.lastName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {customer.documentNumber ? `${customer.documentType === '1' ? 'DNI' : 'RUC'}: ${customer.documentNumber}` : (customer.phone || 'Sin documento')}
+                                </p>
+                              </div>
+                              <Check className={cn("h-4 w-4 opacity-0", selectedCustomerId === customer.id && "opacity-100")} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 text-center text-sm text-muted-foreground">
+                          No se encontraron clientes.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-3 p-3 border rounded-lg bg-muted/10 animate-in fade-in slide-in-from-top-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-muted-foreground">Tipo Doc.</Label>
+                      <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)} disabled={isProcessing}>
+                        <SelectTrigger className="h-9 bg-background text-sm">
+                          <SelectValue placeholder="Selecciona" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DOCUMENT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {documentType !== '0' && (
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-muted-foreground">Número</Label>
+                        <Input
+                          value={documentNumber}
+                          onChange={(e) => setDocumentNumber(e.target.value)}
+                          placeholder={documentType === '1' ? 'DNI (8)' : 'RUC (11)'}
+                          inputMode="numeric"
+                          maxLength={documentType === '1' ? 8 : 11}
+                          disabled={isProcessing}
+                          className="h-9 bg-background"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-muted-foreground">Nombre / Razón Social</Label>
+                    <Input
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Nombre del cliente"
+                      disabled={isProcessing}
+                      className="h-9 bg-background"
+                    />
+                  </div>
+                  {documentError && (
+                    <p className="text-xs text-destructive font-medium flex items-center gap-1">
+                      ⚠️ {documentError}
+                    </p>
+                  )}
+                  
+                  {/* Save Customer Option */}
+                  {documentType !== '0' && !documentError && sanitizedDocument && customerName.trim() && !selectedCustomerId && (
+                    existingCustomerWithDocument ? (
+                      <div className="flex items-center gap-2 p-2 rounded-md bg-blue-500/10 border border-blue-500/20 text-xs">
+                        <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                        <span className="text-blue-600">Este cliente ya está guardado: <strong>{existingCustomerWithDocument.firstName} {existingCustomerWithDocument.lastName}</strong></span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs font-medium">Guardar como cliente</span>
+                        </div>
+                        <Switch 
+                          checked={saveCustomer} 
+                          onCheckedChange={setSaveCustomer} 
+                          disabled={isProcessing}
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Options Section */}
+            <div className="flex items-center justify-between rounded-lg border p-3 bg-card shadow-sm">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-semibold">Boleta Electrónica</Label>
+                <p className="text-xs text-muted-foreground">
+                  Enviar comprobante a SUNAT
+                </p>
+              </div>
+              <Switch checked={shouldIssueBoleta} onCheckedChange={setShouldIssueBoleta} disabled={isProcessing} />
+            </div>
+
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="px-5 py-3 border-t bg-background flex-shrink-0 gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} disabled={isProcessing} size="default" className="h-10 text-sm w-full sm:w-auto">
             Cancelar
           </Button>
           <Button 
             onClick={handlePayment} 
             disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || amount < total)) || isDocumentInvalid} 
-            size="lg" 
-            className="h-12 text-base"
+            size="default" 
+            className="h-10 text-sm w-full sm:w-auto font-bold shadow-md"
           >
-            {isProcessing ? 'Procesando...' : 'Confirmar Pago'}
+            {isProcessing ? 'Procesando...' : `Cobrar S/ ${total.toFixed(2)}`}
           </Button>
         </DialogFooter>
       </DialogContent>
