@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 interface OrderItem extends Product {
   quantity: number;
@@ -563,7 +564,7 @@ export default function POSPage() {
     }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full gap-3 lg:gap-4 overflow-hidden">
+    <ResizablePanelGroup direction="horizontal" className="h-full w-full gap-3 lg:gap-4">
         <PaymentModal 
             isOpen={isPaymentModalOpen}
             onClose={() => setPaymentModalOpen(false)}
@@ -573,7 +574,8 @@ export default function POSPage() {
         />
       
       {/* Left Side: Product Grid - Optimizado para tablets */}
-      <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
+      <ResizablePanel defaultSize={65} minSize={40}>
+      <div className="h-full flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden">
         <div className="p-3 lg:p-4 border-b bg-muted/20 space-y-2 lg:space-y-3 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-xl lg:text-2xl font-headline font-bold">Productos</h2>
@@ -688,9 +690,14 @@ export default function POSPage() {
             )}
         </ScrollArea>
       </div>
+      </ResizablePanel>
+
+      {/* Divider Handle - Draggable */}
+      <ResizableHandle withHandle />
 
       {/* Right Side: Order Summary - Optimizado para tablets */}
-      <div className="w-full lg:w-[380px] xl:w-[420px] flex flex-col bg-background rounded-xl border shadow-lg overflow-hidden h-[40vh] lg:h-auto flex-shrink-0">
+      <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+      <div className="h-full flex flex-col bg-background rounded-xl border shadow-lg overflow-hidden">
         {/* Customer Selector Header */}
         <div className="p-3 lg:p-4 border-b bg-muted/20 space-y-2 lg:space-y-3 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -846,7 +853,7 @@ export default function POSPage() {
                   )}
                 >
                   <ArrowRightLeft className="h-4 w-4 lg:h-5 lg:w-5" />
-                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Transf.</span>
+                  <span className="text-[10px] lg:text-xs font-medium mt-0.5">Pedidos Ya</span>
                 </button>
               </div>
             </div>
@@ -939,6 +946,7 @@ export default function POSPage() {
             </div>
         </div>
       </div>
-    </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }

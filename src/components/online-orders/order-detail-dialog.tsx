@@ -35,7 +35,7 @@ const paymentMethodLabels: { [key: string]: string } = {
   card: 'Tarjeta',
   yape: 'Yape',
   plin: 'Plin',
-  transfer: 'Transferencia',
+  transfer: 'Pedidos Ya',
 };
 
 export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDialogProps) {

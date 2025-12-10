@@ -232,7 +232,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
           <DialogDescription className="text-sm">
             Total a cobrar: <span className="font-bold text-primary text-lg">S/ {total.toFixed(2)}</span>
             {' • '}
-            <span className="capitalize">{paymentMethod === 'cash' ? 'Efectivo' : paymentMethod === 'card' ? 'Tarjeta' : paymentMethod === 'yape' ? 'Yape' : paymentMethod === 'plin' ? 'Plin' : 'Transferencia'}</span>
+            <span className="capitalize">{paymentMethod === 'cash' ? 'Efectivo' : paymentMethod === 'card' ? 'Tarjeta' : paymentMethod === 'yape' ? 'Yape' : paymentMethod === 'plin' ? 'Plin' : 'Pedidos Ya'}</span>
           </DialogDescription>
         </DialogHeader>
         

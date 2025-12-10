@@ -88,19 +88,20 @@ export default function IncomingOrdersPage() {
 
   const { data: onlineOrders, isLoading } = useCollection<OnlineOrder>(ordersQuery);
 
-  // Filtrar pedidos por estado
+  // Filtrar pedidos por estado (excluir pedidos de POS/local)
   const filteredOrders = useMemo(() => {
     if (!onlineOrders) return [];
-    return onlineOrders.filter(order => order.status === selectedTab);
+    return onlineOrders.filter(order => order.status === selectedTab && order.source !== 'pos');
   }, [onlineOrders, selectedTab]);
 
-  // Contar pedidos por estado
+  // Contar pedidos por estado (excluir pedidos de POS/local)
   const orderCounts = useMemo(() => {
     if (!onlineOrders) return { pending: 0, processing: 0, completed: 0 };
+    const onlineOnlyOrders = onlineOrders.filter(o => o.source !== 'pos');
     return {
-      pending: onlineOrders.filter(o => o.status === 'pending').length,
-      processing: onlineOrders.filter(o => o.status === 'processing').length,
-      completed: onlineOrders.filter(o => o.status === 'completed').length,
+      pending: onlineOnlyOrders.filter(o => o.status === 'pending').length,
+      processing: onlineOnlyOrders.filter(o => o.status === 'processing').length,
+      completed: onlineOnlyOrders.filter(o => o.status === 'completed').length,
     };
   }, [onlineOrders]);
 
@@ -108,7 +109,7 @@ export default function IncomingOrdersPage() {
     if (!onlineOrders) return 0;
     const now = new Date();
     return onlineOrders.filter((order) => {
-      if (order.status !== 'pending' || !order.orderDate) return false;
+      if (order.status !== 'pending' || !order.orderDate || order.source === 'pos') return false;
       return differenceInMinutes(now, order.orderDate.toDate()) <= NEW_ORDER_THRESHOLD_MINUTES;
     }).length;
   }, [onlineOrders]);
