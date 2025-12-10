@@ -12,7 +12,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, query, orderBy, where, Timestamp } from 'firebase/firestore';
+import { subDays } from 'date-fns';
 import type { OnlineOrder, OrderSource } from '@/lib/types';
 import { useMemoFirebase } from '@/firebase/provider';
 import { format, differenceInMinutes } from 'date-fns';
@@ -81,9 +82,15 @@ export default function IncomingOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<OnlineOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
+  // Solo cargar pedidos de las últimas 24 horas para mejor rendimiento
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'online_orders'), orderBy('orderDate', 'desc'));
+    const yesterday = Timestamp.fromDate(subDays(new Date(), 1));
+    return query(
+      collection(firestore, 'online_orders'), 
+      where('orderDate', '>=', yesterday),
+      orderBy('orderDate', 'desc')
+    );
   }, [firestore]);
 
   const { data: onlineOrders, isLoading } = useCollection<OnlineOrder>(ordersQuery);

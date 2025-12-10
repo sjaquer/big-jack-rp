@@ -6,8 +6,8 @@ import type { Product, ProductCategory, Ingredient } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { Plus, Minus, CheckCircle, Trash2, ShoppingCart, Banknote, CreditCard, Smartphone, ArrowRightLeft } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
-import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc, writeBatch, increment } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -341,12 +341,172 @@ export default function POSPage() {
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
     const total = subtotal; // Assuming no tax for now
 
+    // === FUNCIONES DE BACKGROUND (NO BLOQUEANTES) ===
+    
+    /**
+     * Actualiza el stock de productos e ingredientes en background
+     * Usa batched writes para eficiencia
+     */
+    const updateStocksInBackground = async (orderItems: OrderItem[]) => {
+      if (!firestore) return;
+      
+      try {
+        const batch = writeBatch(firestore);
+        
+        // Actualizar stock de productos usando increment (atómico)
+        for (const item of orderItems) {
+          const productRef = doc(firestore, 'products', item.id);
+          batch.update(productRef, { 
+            quantity: increment(-item.quantity) 
+          });
+        }
+        
+        // Obtener ingredientes y actualizarlos
+        const productDocs = await Promise.all(
+          orderItems.map(item => getDoc(doc(firestore, 'products', item.id)))
+        );
+        
+        const ingredientUpdates = new Map<string, number>();
+        
+        productDocs.forEach((pDoc, idx) => {
+          if (!pDoc.exists()) return;
+          const productData = pDoc.data() as Product;
+          const orderItem = orderItems[idx];
+          
+          if (productData.ingredients) {
+            for (const ing of productData.ingredients) {
+              const currentDecrement = ingredientUpdates.get(ing.ingredientId) || 0;
+              ingredientUpdates.set(
+                ing.ingredientId, 
+                currentDecrement + (ing.quantity * orderItem.quantity)
+              );
+            }
+          }
+        });
+        
+        // Actualizar ingredientes
+        for (const [ingredientId, decrementAmount] of ingredientUpdates) {
+          const ingredientRef = doc(firestore, 'ingredients', ingredientId);
+          batch.update(ingredientRef, {
+            quantity: increment(-decrementAmount)
+          });
+        }
+        
+        await batch.commit();
+        console.info('[POS-BG] Stock actualizado correctamente');
+      } catch (error) {
+        console.error('[POS-BG] Error actualizando stock:', error);
+        // Aquí podrías crear una alerta o notificación para revisión manual
+      }
+    };
+
+    /**
+     * Crea la orden de cocina en background
+     */
+    const createKitchenOrderInBackground = (
+      orderItems: OrderItem[],
+      normalizedCustomer: PaymentCustomerPayload,
+      paymentMethod: string,
+      totalAmount: number
+    ) => {
+      if (!firestore) return;
+      
+      const orderItemsSnapshot = orderItems.map(item => ({
+        productId: item.id,
+        productName: item.name,
+        quantity: item.quantity,
+        unitPrice: item.salePrice,
+        subtotal: item.salePrice * item.quantity,
+      }));
+      
+      const newOrderData = {
+        orderDate: Timestamp.now(),
+        customerId: null,
+        customerName: normalizedCustomer.name,
+        customerPhone: null,
+        status: 'pending',
+        totalAmount,
+        paymentMethod,
+        source: 'pos',
+        itemsCount: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+        items: orderItemsSnapshot,
+        notes: null,
+        customerDocumentType: normalizedCustomer.documentType,
+        customerDocumentNumber: normalizedCustomer.documentNumber,
+      };
+      
+      addDocumentNonBlocking(collection(firestore, 'online_orders'), newOrderData);
+      console.info('[POS-BG] Pedido enviado a cocina');
+    };
+
+    /**
+     * Envía la boleta a SUNAT y actualiza el estado en background
+     */
+    const sendToSunatInBackground = async (
+      saleId: string,
+      serie: string,
+      correlativo: number,
+      customer: PaymentCustomerPayload,
+      orderItems: OrderItem[],
+      totalAmount: number,
+      paymentMethod: string
+    ) => {
+      if (!firestore) return;
+      
+      const issuedAt = new Date().toISOString();
+      const orderItemsSnapshot = orderItems.map(item => ({
+        productId: item.id,
+        productName: item.name,
+        quantity: item.quantity,
+        unitPrice: item.salePrice,
+        subtotal: item.salePrice * item.quantity,
+      }));
+      
+      const sunatPayload: SunatBoletaPayload = {
+        saleId,
+        total: totalAmount,
+        paymentMethod,
+        issuedAt,
+        serie,
+        correlativo,
+        customer: {
+          name: customer.name,
+          documentType: customer.documentType,
+          documentNumber: customer.documentNumber,
+        },
+        items: orderItemsSnapshot.map(item => ({
+          productId: item.productId,
+          description: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+      };
+      
+      const sunatResult = await sendSaleToSunat(saleId, sunatPayload);
+      
+      // Imprimir ticket
+      triggerThermalPrint({
+        serie,
+        correlativo,
+        issuedAt,
+        customer,
+        items: orderItemsSnapshot,
+        total: totalAmount,
+        paymentMethod,
+        sunatStatus: sunatResult.status,
+        sunatNote: sunatResult.message,
+        cashierEmail: user?.email || null,
+      });
+    };
+
+    // === FUNCIÓN PRINCIPAL DE PAGO (OPTIMIZADA) ===
     const handleSuccessfulPayment = async ({ paymentMethod, customer, issueBoleta }: PaymentResult) => {
       if (!firestore || !user) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos o no hay usuario."});
         return;
       }
 
+      const startTime = performance.now();
       let createdSaleId = '';
       let generatedSerie = DEFAULT_SERIE_CODE;
       let generatedCorrelativo = 0;
@@ -357,14 +517,21 @@ export default function POSPage() {
         documentNumber: customer.documentNumber || (customer.documentType === '0' ? '00000000' : ''),
       };
 
-      try {
-        await runTransaction(firestore, async (transaction) => {
-          console.groupCollapsed('[POS] Iniciando transacción de venta');
-          console.info('[POS] Pedido actual', order);
-          console.info('[POS] Cliente normalizado', normalizedCustomer);
-          const newSaleRef = doc(collection(firestore, 'sales'));
-          createdSaleId = newSaleRef.id;
+      // Guardar copia del pedido antes de limpiar
+      const orderSnapshot = [...order];
 
+      try {
+        // === TRANSACCIÓN MÍNIMA: Solo lo crítico ===
+        // Esta transacción solo hace:
+        // 1. Leer/actualizar el correlativo de series
+        // 2. Crear el documento de venta
+        // 3. Crear los sale_items
+        // NO actualiza stocks (eso se hace en background)
+        
+        await runTransaction(firestore, async (transaction) => {
+          console.groupCollapsed('[POS] Transacción rápida de venta');
+          
+          // 1. Leer y actualizar series (1 lectura, 1 escritura)
           const seriesDocRef = doc(firestore, SUNAT_SERIES_COLLECTION, DEFAULT_SERIES_DOC);
           const seriesDoc = await transaction.get(seriesDocRef);
           const storedSerie = seriesDoc.exists() ? (seriesDoc.data()?.serie as string | undefined) : undefined;
@@ -373,51 +540,24 @@ export default function POSPage() {
           const nextCorrelativo = (storedCorrelativo ?? 0) + 1;
           generatedCorrelativo = nextCorrelativo;
 
-          // --- READS first: gather all product and ingredient documents needed ---
-          const productRefs = order.map(item => doc(firestore, 'products', item.id));
-          const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
-
-          // Verify products exist and build a map
-          const productsMap = new Map<string, Product>();
-          productDocs.forEach((pDoc, idx) => {
-            if (!pDoc.exists()) {
-              const missing = order[idx];
-              throw new Error(`Producto ${missing?.name || missing?.id || productRefs[idx].id} no encontrado.`);
-            }
-            productsMap.set(productRefs[idx].id, pDoc.data() as Product);
+          transaction.set(seriesDocRef, {
+            serie: generatedSerie,
+            correlativo: nextCorrelativo,
+            updatedAt: Timestamp.now(),
           });
 
-          // Collect unique ingredient ids that will be touched
-          const ingredientIdSet = new Set<string>();
-          productsMap.forEach((prod) => {
-            if (prod.ingredients) {
-              for (const ri of prod.ingredients) {
-                if (ri?.ingredientId) ingredientIdSet.add(ri.ingredientId);
-              }
-            }
-          });
+          // 2. Crear documento de venta (1 escritura)
+          const newSaleRef = doc(collection(firestore, 'sales'));
+          createdSaleId = newSaleRef.id;
 
-          const ingredientIds = Array.from(ingredientIdSet);
-          const ingredientRefs = ingredientIds.map(id => doc(firestore, 'ingredients', id));
-          const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
-
-          const ingredientMap = new Map<string, Ingredient>();
-          ingredientDocs.forEach((iDoc, idx) => {
-            if (!iDoc.exists()) {
-              throw new Error(`Ingrediente con ID ${ingredientIds[idx]} no encontrado.`);
-            }
-            ingredientMap.set(ingredientIds[idx], iDoc.data() as Ingredient);
-          });
-
-          // --- All reads done. Perform writes now ---
           const saleData = {
             saleDate: serverTimestamp(),
             totalAmount: total,
             cashierId: user.uid,
             cashierEmail: user.email || 'unknown',
             paymentMethod: paymentMethod,
-            itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
-            uniqueProductsCount: order.length,
+            itemsCount: orderSnapshot.reduce((sum, item) => sum + item.quantity, 0),
+            uniqueProductsCount: orderSnapshot.length,
             source: 'pos',
             deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
             createdAt: Timestamp.now(),
@@ -429,124 +569,63 @@ export default function POSPage() {
             boletaSerie: generatedSerie,
             boletaCorrelativo: generatedCorrelativo,
           };
-          console.info('[POS] Lecturas completadas — preparando escrituras');
-          console.info('[POS] Reservando correlativo', { serie: generatedSerie, correlativo: generatedCorrelativo });
-          transaction.set(seriesDocRef, {
-            serie: generatedSerie,
-            correlativo: nextCorrelativo,
-            updatedAt: Timestamp.now(),
-          });
+          
           transaction.set(newSaleRef, saleData);
-          console.info('[POS] Venta guardada preliminarmente', saleData);
+          console.info('[POS] Venta creada', { saleId: createdSaleId, serie: generatedSerie, correlativo: generatedCorrelativo });
 
-          for (const item of order) {
+          // 3. Crear sale_items (N escrituras, sin lecturas adicionales)
+          for (const item of orderSnapshot) {
             const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
-            const productData = productsMap.get(item.id)!;
             const saleItemData = {
               saleId: newSaleRef.id,
               productId: item.id,
+              productName: item.name, // Ya tenemos el nombre en memoria
               quantity: item.quantity,
               unitPrice: item.salePrice,
               profit: item.price ? (item.salePrice - item.price) * item.quantity : 0,
             };
             transaction.set(saleItemRef, saleItemData);
-            console.debug('[POS] Item registrado', saleItemData);
-
-            // Update product stock
-            const productRef = doc(firestore, 'products', item.id);
-            const newProductStock = (productData.quantity ?? 0) - item.quantity;
-            transaction.update(productRef, { quantity: newProductStock });
-            console.debug('[POS] Stock producto actualizado', { productId: item.id, stockAnterior: productData.quantity ?? 0, stockNuevo: newProductStock });
-
-            // Update ingredient stocks (if any)
-            if (productData.ingredients) {
-              for (const recipeIngredient of productData.ingredients) {
-                const ingredientRef = doc(firestore, 'ingredients', recipeIngredient.ingredientId);
-                const currentIngredient = ingredientMap.get(recipeIngredient.ingredientId)!;
-                const newIngredientStock = (currentIngredient.quantity ?? 0) - (recipeIngredient.quantity * item.quantity);
-                transaction.update(ingredientRef, { quantity: newIngredientStock });
-                console.debug('[POS] Stock ingrediente actualizado', {
-                  ingredientId: recipeIngredient.ingredientId,
-                  cantidadAnterior: currentIngredient.quantity ?? 0,
-                  cantidadNueva: newIngredientStock,
-                  usadoPor: item.id,
-                });
-              }
-            }
           }
+          
           console.groupEnd();
         });
         
-        // Create a corresponding online_order for the kitchen
-        const onlineOrderRef = collection(firestore, 'online_orders');
-        const orderItemsSnapshot = order.map(item => ({
-          productId: item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          unitPrice: item.salePrice,
-          subtotal: item.salePrice * item.quantity,
-        }));
-        const newOrderData = {
-            orderDate: Timestamp.now(),
-            customerId: null,
-          customerName: normalizedCustomer.name,
-            customerPhone: null,
-            status: 'pending',
-            totalAmount: total,
-            paymentMethod: paymentMethod,
-            source: 'pos',
-            itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
-            items: orderItemsSnapshot,
-            notes: null,
-          customerDocumentType: normalizedCustomer.documentType,
-          customerDocumentNumber: normalizedCustomer.documentNumber,
-        };
-        await addDocumentNonBlocking(onlineOrderRef, newOrderData);
-        console.info('[POS] Pedido enviado a cocina', newOrderData);
+        const transactionTime = performance.now() - startTime;
+        console.info(`[POS] ✅ Transacción completada en ${transactionTime.toFixed(0)}ms`);
 
-        const issuedAt = new Date().toISOString();
+        // === FEEDBACK INMEDIATO AL USUARIO ===
+        toast({
+          title: "✅ Venta registrada",
+          description: `Boleta ${generatedSerie}-${String(generatedCorrelativo).padStart(8, '0')} • S/ ${total.toFixed(2)}`,
+        });
+        
+        // Limpiar pedido INMEDIATAMENTE
+        handleResetOrder();
 
-        if (createdSaleId && issueBoleta) {
-          console.info('[POS] Venta lista para SUNAT', { saleId: createdSaleId, serie: generatedSerie, correlativo: generatedCorrelativo });
-          const sunatPayload: SunatBoletaPayload = {
-            saleId: createdSaleId,
+        // === TAREAS EN BACKGROUND (no bloqueantes) ===
+        // El usuario ya puede seguir trabajando mientras esto se procesa
+        
+        // 1. Actualizar stocks (productos e ingredientes)
+        updateStocksInBackground(orderSnapshot);
+        
+        // 2. Crear orden de cocina
+        createKitchenOrderInBackground(orderSnapshot, normalizedCustomer, paymentMethod, total);
+        
+        // 3. Enviar a SUNAT e imprimir (solo si se solicitó boleta)
+        if (issueBoleta && createdSaleId) {
+          sendToSunatInBackground(
+            createdSaleId,
+            generatedSerie,
+            generatedCorrelativo,
+            normalizedCustomer,
+            orderSnapshot,
             total,
-            paymentMethod,
-            issuedAt,
-            serie: generatedSerie,
-            correlativo: generatedCorrelativo,
-            customer: {
-              name: normalizedCustomer.name,
-              documentType: normalizedCustomer.documentType,
-              documentNumber: normalizedCustomer.documentNumber,
-            },
-            items: orderItemsSnapshot.map(item => ({
-              productId: item.productId,
-              description: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-            })),
-          };
-          const sunatResult = await sendSaleToSunat(createdSaleId, sunatPayload);
-          triggerThermalPrint({
-            serie: generatedSerie,
-            correlativo: generatedCorrelativo,
-            issuedAt,
-            customer: normalizedCustomer,
-            items: orderItemsSnapshot,
-            total,
-            paymentMethod,
-            sunatStatus: sunatResult.status,
-            sunatNote: sunatResult.message,
-            cashierEmail: user.email,
-          });
+            paymentMethod
+          );
         }
 
-        toast({
-          title: "Venta registrada",
-          description: "La venta se ha guardado, el stock se actualizó y el pedido fue enviado a cocina.",
-        });
-        handleResetOrder();
+        const totalTime = performance.now() - startTime;
+        console.info(`[POS] 🚀 Flujo completo iniciado en ${totalTime.toFixed(0)}ms (tareas de background en proceso)`);
 
       } catch (error) {
         console.error("Error creating sale:", error);

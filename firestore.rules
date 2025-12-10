@@ -2,10 +2,76 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Regla global: si el usuario ha iniciado sesión, puede leer y escribir en cualquier documento.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    
+    // === FUNCIÓN HELPER ===
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // === PRODUCTOS ===
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // === INGREDIENTES ===
+    match /ingredients/{ingredientId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // === VENTAS ===
+    match /sales/{saleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() 
+        && (request.resource.data.keys().hasOnly(['sunatStatus', 'sunatNote', 'sunatDocumentId'])
+            || request.auth.uid == resource.data.cashierId);
+      allow delete: if false; // Las ventas no se borran
+      
+      // Subcolección sale_items
+      match /sale_items/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if false; // Los items no se modifican después de crear
+      }
+    }
+    
+    // === PEDIDOS ONLINE / COCINA ===
+    match /online_orders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() 
+        && request.resource.data.keys().hasOnly(['status', 'completedAt']);
+      allow delete: if false;
+    }
+    
+    // === CLIENTES ===
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+    
+    // === FLUJO DE CAJA ===
+    match /cash_flows/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+    
+    // === SERIES SUNAT ===
+    match /sunat_series/{seriesId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // === OTROS ITEMS DE INVENTARIO ===
+    match /other_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
   }
 }
