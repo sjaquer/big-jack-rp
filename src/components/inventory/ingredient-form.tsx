@@ -178,14 +178,14 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[100vw] h-[100dvh] sm:h-[75vh] sm:max-w-2xl p-0 flex flex-col overflow-hidden">
+      <DialogContent className="w-full max-w-[100vw] h-[100dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-2xl p-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
           <DialogTitle className="font-headline text-lg sm:text-xl">{ingredient ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</DialogTitle>
           <DialogDescription className="text-sm">
             {ingredient ? 'Actualiza los detalles del ingrediente.' : 'Completa los detalles para añadir un nuevo ingrediente.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden min-h-0 sm:min-h-[200px]">
+        <div className="flex-1 overflow-hidden min-h-0">
           <ScrollArea className="h-full px-4 sm:px-6" type="always">
             <ScrollBar className="z-50" />
             <Form {...form}>
