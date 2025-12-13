@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { Product, ProductCategory, Ingredient } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
-import { Plus, Minus, CheckCircle, Trash2, ShoppingCart, Banknote, CreditCard, Smartphone, ArrowRightLeft } from 'lucide-react';
+import { Plus, Minus, CheckCircle, Trash2, ShoppingCart, Banknote, CreditCard, Smartphone, ArrowRightLeft, Receipt } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
+import { RecentSalesDialog } from '@/components/pos/recent-sales-dialog';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc, writeBatch, increment } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
@@ -194,6 +195,7 @@ export default function POSPage() {
     
     const [order, setOrder] = useState<OrderItem[]>([]);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [isRecentSalesOpen, setRecentSalesOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
@@ -651,16 +653,31 @@ export default function POSPage() {
             defaultPaymentMethod={selectedPaymentMethod}
             onSuccess={handleSuccessfulPayment}
         />
+        <RecentSalesDialog 
+            isOpen={isRecentSalesOpen}
+            onClose={() => setRecentSalesOpen(false)}
+        />
       
       {/* Left Side: Product Grid - Optimizado para tablets */}
       <ResizablePanel defaultSize={65} minSize={40}>
       <div className="h-full flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden">
         <div className="p-3 lg:p-4 border-b bg-muted/20 space-y-2 lg:space-y-3 flex-shrink-0">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-xl lg:text-2xl font-headline font-bold">Productos</h2>
-              <Button variant="ghost" size="sm" className="text-sm lg:text-base font-semibold h-9 lg:h-10" onClick={() => setCategoryFilter('all')}>
-                Ver todo
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-sm font-semibold h-9 touch-manipulation"
+                  onClick={() => setRecentSalesOpen(true)}
+                >
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Ventas
+                </Button>
+                <Button variant="ghost" size="sm" className="text-sm lg:text-base font-semibold h-9 lg:h-10" onClick={() => setCategoryFilter('all')}>
+                  Ver todo
+                </Button>
+              </div>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin lg:flex-wrap">
               <Button
