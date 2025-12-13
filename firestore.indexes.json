@@ -20,6 +20,14 @@
       "collectionGroup": "sales",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "source", "order": "ASCENDING" },
+        { "fieldPath": "saleDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sales",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "sunatStatus", "order": "ASCENDING" },
         { "fieldPath": "saleDate", "order": "DESCENDING" }
       ]

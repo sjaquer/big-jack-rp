@@ -27,14 +27,15 @@ service cloud.firestore {
       allow update: if isAuthenticated() 
         && (request.resource.data.keys().hasOnly(['sunatStatus', 'sunatNote', 'sunatDocumentId'])
             || request.auth.uid == resource.data.cashierId);
-      allow delete: if false; // Las ventas no se borran
-      
-      // Subcolección sale_items
-      match /sale_items/{itemId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update, delete: if false; // Los items no se modifican después de crear
-      }
+      allow delete: if isAuthenticated(); // Permitir cancelación de ventas
+    }
+    
+    // === ITEMS DE VENTA ===
+    match /sale_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated(); // Permitir eliminación al cancelar venta
     }
     
     // === PEDIDOS ONLINE / COCINA ===
@@ -72,6 +73,19 @@ service cloud.firestore {
     match /other_items/{itemId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+    
+    // === INVENTARIO ITEMS ===
+    match /inventory_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // === MOVIMIENTOS DE INVENTARIO ===
+    match /inventory_movements/{movementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
     }
   }
 }
