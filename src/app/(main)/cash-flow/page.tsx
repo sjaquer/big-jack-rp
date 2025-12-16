@@ -217,6 +217,7 @@ export default function CashFlowPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </ScrollArea>
               </CardContent>
             </Card>
