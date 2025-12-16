@@ -172,10 +172,11 @@ export default function CashFlowPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[420px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[600px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Categoría</TableHead>
                         <TableHead>Monto</TableHead>

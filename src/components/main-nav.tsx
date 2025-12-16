@@ -139,8 +139,8 @@ function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-      <div className="flex items-center h-full px-4 gap-1 justify-between mx-auto w-full max-w-md">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-center h-16 px-4 gap-1 justify-between mx-auto w-full max-w-md">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
@@ -167,10 +167,10 @@ function MobileBottomNav() {
 export function MainNav({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex min-h-[100dvh] w-full bg-background">
         <AppSidebar />
         
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-screen">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-[100dvh]">
              {/* Mobile Header */}
              <header className="md:hidden flex-none h-14 flex items-center gap-4 border-b bg-background/95 backdrop-blur px-4 z-40 sticky top-0">
                 <Link href="/dashboard" className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                 </div>
              </header>
 
-            <main className="flex-1 overflow-auto p-2 md:p-6 pb-20 md:pb-6">
+            <main className="flex-1 overflow-auto p-2 md:p-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
                 {children}
             </main>
 

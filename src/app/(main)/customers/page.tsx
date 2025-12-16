@@ -82,9 +82,9 @@ export default function CustomersPage() {
             setSelectedCustomer(null);
             setShowCustomerForm(true);
           }}
-          className="h-9 text-sm w-full sm:w-auto touch-manipulation"
+          className="h-11 text-sm w-full sm:w-auto touch-manipulation font-medium"
         >
-          <UserPlus className="mr-2 h-4 w-4" />
+          <UserPlus className="mr-2 h-5 w-5" />
           Nuevo Cliente
         </Button>
       </div>
@@ -167,8 +167,8 @@ export default function CustomersPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-md border">
-                    <Table>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table className="min-w-[600px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Cliente</TableHead>

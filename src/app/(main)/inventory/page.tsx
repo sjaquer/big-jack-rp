@@ -152,14 +152,14 @@ export default function InventoryPage() {
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Materias primas para tus productos.</CardDescription>
               </div>
-              <Button onClick={handleAddIngredient} size="default" className="h-9 text-sm w-full sm:w-auto touch-manipulation">
-                <PlusCircle className="h-4 w-4 mr-2" />
+              <Button onClick={handleAddIngredient} size="default" className="h-11 text-sm w-full sm:w-auto touch-manipulation font-medium">
+                <PlusCircle className="h-5 w-5 mr-2" />
                 Nuevo Ingrediente
               </Button>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre</TableHead>
@@ -226,7 +226,7 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre</TableHead>
@@ -275,14 +275,14 @@ export default function InventoryPage() {
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Empaques, utensilios, etc.</CardDescription>
               </div>
-              <Button onClick={handleAddOtherItem} size="default" className="h-9 text-sm w-full sm:w-auto touch-manipulation">
-                <PlusCircle className="h-4 w-4 mr-2" />
+              <Button onClick={handleAddOtherItem} size="default" className="h-11 text-sm w-full sm:w-auto touch-manipulation font-medium">
+                <PlusCircle className="h-5 w-5 mr-2" />
                 Nuevo Artículo
               </Button>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre</TableHead>

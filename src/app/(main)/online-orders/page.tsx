@@ -101,13 +101,13 @@ export default function IncomingOrdersPage() {
               <Button
                 variant="outline"
                 onClick={() => handleViewDetails(order)}
-                className="w-full h-11 text-base touch-manipulation"
+                className="w-full h-12 text-base touch-manipulation"
               >
                 <Eye className="mr-2 h-5 w-5" />
                 Ver Detalles
               </Button>
               <Select defaultValue={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus as OnlineOrder['status'])}>
-                <SelectTrigger className="h-12 text-base font-medium touch-manipulation">
+                <SelectTrigger className="h-14 text-base font-medium touch-manipulation">
                   <SelectValue placeholder="Cambiar estado" />
                 </SelectTrigger>
                 <SelectContent>

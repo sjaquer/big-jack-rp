@@ -35,7 +35,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
+    <div className="flex items-center justify-center min-h-[100dvh] bg-muted/40">
         <div className="w-full max-w-md space-y-4 text-center">
             <div className="flex justify-center items-center gap-2 font-headline text-2xl font-semibold text-primary mb-4">
                  <BurgerIcon className="h-8 w-8 text-primary" />
@@ -51,14 +51,14 @@ export default function LoginPage() {
                 <CardContent className="space-y-4">
                 <div className="space-y-2 text-left">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="manager@bigjack.com" required value={email} onChange={e => setEmail(e.target.value)}/>
+                    <Input id="email" type="email" className="h-12 text-base" placeholder="manager@bigjack.com" required value={email} onChange={e => setEmail(e.target.value)}/>
                 </div>
                 <div className="space-y-2 text-left">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+                    <Input id="password" type="password" className="h-12 text-base" required value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-                <Button type="submit" className="w-full" onClick={handleSignIn}>
+                <Button type="submit" className="w-full h-12 text-base font-medium" onClick={handleSignIn}>
                     Iniciar Sesión
                 </Button>
                 </CardContent>

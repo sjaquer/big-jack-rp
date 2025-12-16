@@ -407,10 +407,10 @@ export default function DashboardPage() {
 
           {/* Tabs para diferentes vistas */}
           <Tabs defaultValue="turno" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-              <TabsTrigger value="turno">Turno Actual</TabsTrigger>
-              <TabsTrigger value="tendencias">Tendencias</TabsTrigger>
-              <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 lg:w-[400px] h-12">
+              <TabsTrigger value="turno" className="h-full">Turno Actual</TabsTrigger>
+              <TabsTrigger value="tendencias" className="h-full">Tendencias</TabsTrigger>
+              <TabsTrigger value="resumen" className="h-full">Resumen</TabsTrigger>
             </TabsList>
 
             <TabsContent value="turno" className="space-y-4">

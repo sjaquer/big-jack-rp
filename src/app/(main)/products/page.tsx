@@ -126,15 +126,15 @@ export default function ProductsPage() {
                   <CardTitle className="font-headline text-lg sm:text-xl">Registro de Productos</CardTitle>
                   <CardDescription className="text-sm">Gestiona todos los productos de tu inventario.</CardDescription>
               </div>
-              <Button onClick={handleAddProduct} size="default" className="h-10 text-sm sm:text-base w-full sm:w-auto touch-manipulation">
-                  <PlusCircle className="mr-2 h-4 w-4" />
+              <Button onClick={handleAddProduct} size="default" className="h-11 text-sm sm:text-base w-full sm:w-auto touch-manipulation font-medium">
+                  <PlusCircle className="mr-2 h-5 w-5" />
                   Añadir Producto
               </Button>
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto p-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
