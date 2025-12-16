@@ -28,15 +28,20 @@ service cloud.firestore {
         && (request.resource.data.keys().hasOnly(['sunatStatus', 'sunatNote', 'sunatDocumentId'])
             || request.auth.uid == resource.data.cashierId);
       allow delete: if isAuthenticated(); // Permitir cancelación de ventas
+      
+      // Subcolección de items
+      match /sale_items/{itemId} {
+        allow read, write: if isAuthenticated();
+      }
     }
     
-    // === ITEMS DE VENTA ===
-    match /sale_items/{itemId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated(); // Permitir eliminación al cancelar venta
-    }
+    // === ITEMS DE VENTA (Legacy - Remover si ya no se usa root collection) ===
+    // match /sale_items/{itemId} {
+    //   allow read: if isAuthenticated();
+    //   allow create: if isAuthenticated();
+    //   allow update: if isAuthenticated();
+    //   allow delete: if isAuthenticated(); 
+    // }
     
     // === PEDIDOS ONLINE / COCINA ===
     match /online_orders/{orderId} {

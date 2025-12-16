@@ -139,8 +139,8 @@ function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden flex-none h-16 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 overflow-x-auto">
-      <div className="flex items-center h-full px-4 gap-1 justify-between min-w-max mx-auto w-full">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+      <div className="flex items-center h-full px-4 gap-1 justify-between mx-auto w-full max-w-md">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
@@ -172,7 +172,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-screen">
              {/* Mobile Header */}
-             <header className="md:hidden flex-none h-14 flex items-center gap-4 border-b bg-background/95 backdrop-blur px-4 z-40">
+             <header className="md:hidden flex-none h-14 flex items-center gap-4 border-b bg-background/95 backdrop-blur px-4 z-40 sticky top-0">
                 <Link href="/dashboard" className="flex items-center gap-2">
                   <BurgerIcon className="h-6 w-6 text-primary" />
                   <span className="font-semibold text-lg">Big Jack</span>
@@ -182,7 +182,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                 </div>
              </header>
 
-            <main className="flex-1 overflow-auto p-2 md:p-6">
+            <main className="flex-1 overflow-auto p-2 md:p-6 pb-20 md:pb-6">
                 {children}
             </main>
 

@@ -64,7 +64,6 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
 
       const salesQuery = query(
         collection(firestore, 'sales'),
-        where('source', '==', 'pos'),
         where('saleDate', '>=', Timestamp.fromDate(twentyFourHoursAgo)),
         orderBy('saleDate', 'desc'),
         limit(50)
@@ -76,10 +75,9 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
       for (const saleDoc of salesSnapshot.docs) {
         const saleData = { id: saleDoc.id, ...saleDoc.data() } as Sale;
 
-        // Obtener los items de esta venta
+        // Obtener los items de esta venta (Subcolección)
         const itemsQuery = query(
-          collection(firestore, 'sale_items'),
-          where('saleId', '==', saleDoc.id)
+          collection(firestore, 'sales', saleDoc.id, 'sale_items')
         );
         const itemsSnapshot = await getDocs(itemsQuery);
         const items = itemsSnapshot.docs.map(itemDoc => ({
@@ -148,7 +146,7 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
 
       // 2. Eliminar los items de la venta
       for (const item of saleToCancel.items) {
-        const itemRef = doc(firestore, 'sale_items', item.id);
+        const itemRef = doc(firestore, 'sales', saleToCancel.id, 'sale_items', item.id);
         batch.delete(itemRef);
       }
 
@@ -267,7 +265,7 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
                             <ul className="space-y-0.5">
                               {sale.items.map((item, idx) => (
                                 <li key={idx}>
-                                  • {item.quantity}x - S/ {item.unitPrice.toFixed(2)}
+                                  • {item.quantity}x {item.productName || 'Producto'} - S/ {item.unitPrice.toFixed(2)}
                                 </li>
                               ))}
                             </ul>
