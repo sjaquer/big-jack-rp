@@ -17,6 +17,7 @@ import { CategorySalesChart } from '@/components/dashboard/category-sales-chart'
 import { ShiftMetrics } from '@/components/dashboard/shift-metrics';
 import { SalesTrendChart } from '@/components/dashboard/sales-trend-chart';
 import { DailyComparison } from '@/components/dashboard/daily-comparison';
+import { SalesList } from '@/components/dashboard/sales-list';
 import { LiveClock } from '@/components/dashboard/live-clock';
 import { 
   DollarSign, 
@@ -407,10 +408,11 @@ export default function DashboardPage() {
 
           {/* Tabs para diferentes vistas */}
           <Tabs defaultValue="turno" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 lg:w-[400px] h-12">
+            <TabsList className="grid w-full grid-cols-4 lg:w-[500px] h-12">
               <TabsTrigger value="turno" className="h-full">Turno Actual</TabsTrigger>
               <TabsTrigger value="tendencias" className="h-full">Tendencias</TabsTrigger>
               <TabsTrigger value="resumen" className="h-full">Resumen</TabsTrigger>
+              <TabsTrigger value="ventas" className="h-full">Ventas</TabsTrigger>
             </TabsList>
 
             <TabsContent value="turno" className="space-y-4">
@@ -607,6 +609,10 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="ventas" className="space-y-4">
+              <SalesList allSaleItems={saleItems ?? []} />
             </TabsContent>
           </Tabs>
         </div>

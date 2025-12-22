@@ -191,7 +191,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                         <FormItem>
                           <FormLabel className="text-sm sm:text-base">Código SKU</FormLabel>
                           <FormControl>
-                            <Input className="h-11 sm:h-10 text-base bg-muted" placeholder="e.g., PRD-BIG-A1B2" {...field} disabled />
+                            <Input className="h-11 sm:h-10 text-base bg-muted" placeholder="e.g., PRD-BIG-A1B2" {...field} readOnly />
                           </FormControl>
                           <p className="text-xs text-muted-foreground mt-1">Generado automáticamente al escribir el nombre</p>
                           <FormMessage />
