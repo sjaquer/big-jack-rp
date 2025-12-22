@@ -18,6 +18,10 @@ import { ShiftMetrics } from '@/components/dashboard/shift-metrics';
 import { SalesTrendChart } from '@/components/dashboard/sales-trend-chart';
 import { DailyComparison } from '@/components/dashboard/daily-comparison';
 import { SalesList } from '@/components/dashboard/sales-list';
+import { WeekdaySalesChart } from '@/components/dashboard/weekday-sales-chart';
+import { SalesSourceChart } from '@/components/dashboard/sales-source-chart';
+import { TopProductsTable } from '@/components/dashboard/top-products-table';
+import { HourlyPerformanceChart } from '@/components/dashboard/hourly-performance-chart';
 import { LiveClock } from '@/components/dashboard/live-clock';
 import { 
   DollarSign, 
@@ -477,7 +481,7 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="tendencias" className="space-y-4">
-              {/* Gráfico de tendencias */}
+              {/* Gráfico de tendencias principales */}
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline">Tendencia de Ventas</CardTitle>
@@ -492,27 +496,90 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
+              {/* Análisis por día de la semana y fuente */}
               <div className="grid gap-3 md:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="font-headline">Ventas de los Últimos 7 Días</CardTitle>
-                    <CardDescription>Resumen de los ingresos diarios.</CardDescription>
+                    <CardTitle className="font-headline">Ventas por Día de la Semana</CardTitle>
+                    <CardDescription>Identifica los días con más ventas.</CardDescription>
                   </CardHeader>
-                  <CardContent className="pl-2">
-                    <SalesChart data={salesData ?? []} isLoading={salesLoading} />
+                  <CardContent>
+                    <WeekdaySalesChart 
+                      data={salesData ?? []} 
+                      isLoading={salesLoading} 
+                    />
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="font-headline">Top 5 Productos</CardTitle>
-                    <CardDescription>Los productos más vendidos históricamente.</CardDescription>
+                    <CardTitle className="font-headline">Ventas por Canal</CardTitle>
+                    <CardDescription>Distribución de ventas por fuente.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <PopularItemsChart 
+                    <SalesSourceChart 
+                      data={salesData ?? []} 
+                      isLoading={salesLoading} 
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Rendimiento por hora */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Rendimiento por Hora</CardTitle>
+                  <CardDescription>Identifica las horas pico para optimizar personal y producción.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <HourlyPerformanceChart 
+                    data={salesData ?? []} 
+                    isLoading={salesLoading} 
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Top productos detallado */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Top 10 Productos Más Vendidos</CardTitle>
+                  <CardDescription>Análisis detallado de los productos con mejor desempeño.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TopProductsTable 
+                    products={productsData ?? []} 
+                    saleItems={saleItems ?? []} 
+                    isLoading={productsLoading || saleItemsLoading}
+                    limit={10}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Gráficos adicionales */}
+              <div className="grid gap-3 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-headline">Ventas por Categoría</CardTitle>
+                    <CardDescription>Distribución de ventas por tipo de producto.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <CategorySalesChart 
                       products={productsData ?? []} 
                       saleItems={saleItems ?? []} 
-                      isLoading={productsLoading || saleItemsLoading} 
+                      isLoading={productsLoading || saleItemsLoading}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-headline">Métodos de Pago</CardTitle>
+                    <CardDescription>Preferencias de pago de los clientes.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <PaymentMethodsChart 
+                      data={salesData ?? []} 
+                      isLoading={salesLoading} 
                     />
                   </CardContent>
                 </Card>
