@@ -22,6 +22,8 @@ import { Textarea } from '../ui/textarea';
   const providerSchema = z.object({
     name: z.string().min(1, 'El nombre del proveedor es requerido.'),
     pricePerUnit: z.coerce.number().min(0, 'El precio unitario debe ser positivo.'),
+    totalPrice: z.coerce.number().optional(),
+    purchaseQuantity: z.coerce.number().optional(),
   });const ingredientUnits = ['kg', 'g', 'l', 'ml', 'unidad', 'paquete'];
 const ingredientCategories = [
   { value: 'protein', label: 'Proteína', prefix: 'PRO' },
@@ -86,7 +88,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
       storageLocation: '',
       reorderLeadTimeDays: 2,
       notes: '',
-      providers: [{ name: '', pricePerUnit: 0 }],
+      providers: [{ name: '', pricePerUnit: 0, totalPrice: 0, purchaseQuantity: 0 }],
     },
   });
 
@@ -94,6 +96,44 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
     control: form.control,
     name: 'providers',
   });
+
+  useEffect(() => {
+    // Actualizar cantidad inicial y costo cuando se agrega el primer proveedor (solo para ingredientes nuevos)
+    if (!ingredient) {
+      const subscription = form.watch((value, { name: fieldName }) => {
+        // Actualizar cantidad inicial con la cantidad comprada del primer proveedor
+        if (fieldName === 'providers.0.purchaseQuantity') {
+          const purchaseQty = value.providers?.[0]?.purchaseQuantity;
+          if (purchaseQty && purchaseQty > 0) {
+            form.setValue('quantity', purchaseQty, { shouldValidate: false });
+          }
+        }
+        // Actualizar costo con el precio del primer proveedor
+        if (fieldName === 'providers.0.pricePerUnit') {
+          const pricePerUnit = value.providers?.[0]?.pricePerUnit;
+          if (pricePerUnit && pricePerUnit > 0) {
+            form.setValue('cost', pricePerUnit, { shouldValidate: false });
+          }
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [ingredient, form]);
+
+  useEffect(() => {
+    // Actualizar costo promedio automáticamente cuando cambia el precio del primer proveedor (solo para ediciones)
+    if (ingredient) {
+      const subscription = form.watch((value, { name: fieldName }) => {
+        if (fieldName?.startsWith('providers.0.pricePerUnit')) {
+          const pricePerUnit = value.providers?.[0]?.pricePerUnit;
+          if (pricePerUnit && pricePerUnit > 0) {
+            form.setValue('cost', pricePerUnit, { shouldValidate: false });
+          }
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [ingredient, form]);
 
   useEffect(() => {
     const subscription = form.watch((value, { name: fieldName }) => {
@@ -128,7 +168,9 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
         providers: ingredient.providers?.length ? ingredient.providers.map(p => ({
           name: p.name,
           pricePerUnit: p.pricePerUnit,
-        })) : [{ name: '', pricePerUnit: 0 }],
+          totalPrice: (p as any).totalPrice || 0,
+          purchaseQuantity: (p as any).purchaseQuantity || 0,
+        })) : [{ name: '', pricePerUnit: 0, totalPrice: 0, purchaseQuantity: 0 }],
       });
     } else {
       const defaultSKU = generateSKU('', 'protein');
@@ -144,7 +186,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
         storageLocation: '',
         reorderLeadTimeDays: 2,
         notes: '',
-        providers: [{ name: '', pricePerUnit: 0 }],
+        providers: [{ name: '', pricePerUnit: 0, totalPrice: 0, purchaseQuantity: 0 }],
       });
     }
   }, [ingredient, form, isOpen]);
@@ -217,9 +259,14 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Código interno / SKU</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Se genera automáticamente" {...field} />
+                        <Input 
+                          className="h-12 sm:h-11 text-base rounded-lg bg-muted/50" 
+                          placeholder="Se genera automáticamente" 
+                          readOnly
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Identificador único generado automáticamente. Puedes editarlo para usar un código específico.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Identificador único generado automáticamente.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -278,11 +325,26 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base font-medium">Cantidad en stock</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">
+                        {ingredient ? 'Cantidad en stock actual' : 'Cantidad inicial'}
+                      </FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 50" {...field} />
+                        <Input 
+                          className={cn(
+                            "h-12 sm:h-11 text-base rounded-lg font-semibold",
+                            !ingredient && "bg-muted/50"
+                          )}
+                          type="number" 
+                          placeholder={ingredient ? "Ej. 50" : "Se completa automáticamente"}
+                          readOnly={!ingredient}
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Cantidad disponible actualmente en inventario.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">
+                        {ingredient 
+                          ? 'Stock actual. Usa el botón "Añadir al stock" en proveedores para actualizar.' 
+                          : '✓ Se establece automáticamente con la cantidad comprada.'}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -333,11 +395,20 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="cost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base font-medium">Costo objetivo por unidad (S/)</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Costo promedio por unidad (S/)</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 2.50" {...field} />
+                        <Input 
+                          className="h-12 sm:h-11 text-base rounded-lg font-semibold bg-muted/50" 
+                          type="number" 
+                          step="0.0001" 
+                          placeholder="Se calcula automáticamente" 
+                          {...field}
+                          readOnly
+                        />
                       </FormControl>
-                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Precio promedio esperado por unidad. Sirve como referencia para calcular márgenes y comparar con los proveedores.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">
+                        Se actualiza automáticamente con el precio del proveedor. Usado para calcular márgenes.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -415,7 +486,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                       variant="outline"
                       size="default"
                       className="h-12 sm:h-11 w-full sm:w-auto text-base rounded-lg"
-                      onClick={() => appendProvider({ name: '', pricePerUnit: 0 })}
+                      onClick={() => appendProvider({ name: '', pricePerUnit: 0, totalPrice: 0, purchaseQuantity: 0 })}
                     >
                       <Plus className="mr-2 h-5 w-5 sm:h-4 sm:w-4" /> Añadir proveedor
                     </Button>
@@ -454,28 +525,143 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                               <Trash2 className="h-5 w-5 sm:h-4 sm:w-4" />
                             </Button>
                           </div>
-                          <FormField
-                            control={form.control}
-                            name={`providers.${index}.pricePerUnit`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium">Precio Unitario (S/ por {form.watch('unit')})</FormLabel>
-                                <FormControl>
-                                  <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 2.40" {...field} />
-                                </FormControl>
-                                <FormDescription className="text-xs leading-relaxed text-slate-600">Precio que cobra el proveedor por cada unidad.</FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          {form.watch(`providers.${index}.pricePerUnit`) > 0 && form.watch('quantity') > 0 && (
-                            <div className="p-3 bg-muted/50 rounded-md border">
-                              <p className="text-sm text-muted-foreground">
-                                <span className="font-medium">Costo total por {form.watch('quantity')} {form.watch('unit')}:</span>{' '}
-                                <span className="text-foreground font-semibold text-base">
-                                  S/ {(form.watch(`providers.${index}.pricePerUnit`) * form.watch('quantity')).toFixed(2)}
-                                </span>
-                              </p>
+
+                          {/* Datos de compra al proveedor */}
+                          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name={`providers.${index}.totalPrice`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm font-medium"> Precio Total Pagado (S/)</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      className="h-12 sm:h-11 text-base rounded-lg" 
+                                      type="number" 
+                                      step="0.01" 
+                                      placeholder="Ej. 120.00" 
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        // Calcular precio unitario automáticamente
+                                        const totalPrice = parseFloat(e.target.value) || 0;
+                                        const purchaseQuantity = form.watch(`providers.${index}.purchaseQuantity`) || 0;
+                                        if (totalPrice > 0 && purchaseQuantity > 0) {
+                                          const pricePerUnit = totalPrice / purchaseQuantity;
+                                          form.setValue(`providers.${index}.pricePerUnit`, parseFloat(pricePerUnit.toFixed(4)));
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormDescription className="text-xs leading-relaxed text-slate-600">¿Cuánto pagaste en total?</FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`providers.${index}.purchaseQuantity`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm font-medium"> Cantidad Recibida ({form.watch('unit')})</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      className="h-12 sm:h-11 text-base rounded-lg" 
+                                      type="number" 
+                                      step="0.01" 
+                                      placeholder="Ej. 50" 
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        // Calcular precio unitario automáticamente
+                                        const purchaseQuantity = parseFloat(e.target.value) || 0;
+                                        const totalPrice = form.watch(`providers.${index}.totalPrice`) || 0;
+                                        if (totalPrice > 0 && purchaseQuantity > 0) {
+                                          const pricePerUnit = totalPrice / purchaseQuantity;
+                                          form.setValue(`providers.${index}.pricePerUnit`, parseFloat(pricePerUnit.toFixed(4)));
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormDescription className="text-xs leading-relaxed text-slate-600">¿Cuántas unidades compraste?</FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Precio unitario calculado automáticamente (solo lectura visual) */}
+                          {form.watch(`providers.${index}.pricePerUnit`) > 0 && (
+                            <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border-2 border-green-200 dark:border-green-800">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                                    ✓ Precio Unitario
+                                  </p>
+                                  <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                                    Calculado automáticamente
+                                  </p>
+                                </div>
+                                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                                  S/ {form.watch(`providers.${index}.pricePerUnit`)?.toFixed(4) || '0.00'}
+                                  <span className="text-sm font-normal ml-1">por {form.watch('unit')}</span>
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Botón para añadir al stock */}
+                          {ingredient && (form.watch(`providers.${index}.purchaseQuantity`) ?? 0) > 0 && (
+                            <Button
+                              type="button"
+                              variant="default"
+                              className="w-full h-12 text-base font-semibold"
+                              onClick={() => {
+                                const currentStock = form.watch('quantity') || 0;
+                                const purchaseQty = form.watch(`providers.${index}.purchaseQuantity`) || 0;
+                                const newStock = currentStock + purchaseQty;
+                                form.setValue('quantity', newStock);
+                                
+                                // Actualizar el costo promedio
+                                const purchasePrice = form.watch(`providers.${index}.pricePerUnit`) || 0;
+                                if (purchasePrice > 0) {
+                                  form.setValue('cost', purchasePrice);
+                                }
+                              }}
+                            >
+                              <Plus className="mr-2 h-5 w-5" />
+                              Añadir {form.watch(`providers.${index}.purchaseQuantity`)} {form.watch('unit')} al stock
+                            </Button>
+                          )}
+
+                          {/* Resumen de la compra y stock */}
+                          {form.watch(`providers.${index}.pricePerUnit`) > 0 && (
+                            <div className="space-y-2">
+                              {/* Resumen de la compra actual */}
+                              {(form.watch(`providers.${index}.totalPrice`) ?? 0) > 0 && (form.watch(`providers.${index}.purchaseQuantity`) ?? 0) > 0 && (
+                                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+                                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                                     Resumen de esta compra:
+                                  </p>
+                                  <div className="text-xs text-blue-700 dark:text-blue-300 space-y-0.5">
+                                    <p>• Cantidad: {form.watch(`providers.${index}.purchaseQuantity`)} {form.watch('unit')}</p>
+                                    <p>• Total pagado: S/ {form.watch(`providers.${index}.totalPrice`)?.toFixed(2)}</p>
+                                    <p>• Precio unitario: S/ {form.watch(`providers.${index}.pricePerUnit`)?.toFixed(4)} por {form.watch('unit')}</p>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Valor del stock total */}
+                              {form.watch('quantity') > 0 && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+                                  <p className="text-sm text-amber-900 dark:text-amber-100">
+                                    <span className="font-medium"> Valor total del inventario ({form.watch('quantity')} {form.watch('unit')}):</span>{' '}
+                                    <span className="font-bold text-base">
+                                      S/ {(form.watch(`providers.${index}.pricePerUnit`) * form.watch('quantity')).toFixed(2)}
+                                    </span>
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
