@@ -142,25 +142,38 @@ function MobileBottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center h-16 px-4 gap-1 justify-between mx-auto w-full max-w-md">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-lg min-w-[64px] touch-manipulation transition-all active:scale-95",
-                isActive 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:text-primary"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
-              <span className={cn("text-[10px] font-medium leading-tight text-center line-clamp-1", isActive ? "font-bold" : "")}>{item.label}</span>
-            </Link>
-          );
-        })}
+      <div 
+        className="flex items-center h-16 px-2 gap-2 w-full overflow-x-auto"
+        style={{ 
+            scrollbarWidth: 'none',  /* Firefox */
+            msOverflowStyle: 'none'  /* IE and Edge */
+        }}
+      >
+        <style dangerouslySetInnerHTML={{__html: `
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+        `}} />
+        <div className="flex gap-1 min-w-full mx-auto justify-start sm:justify-center no-scrollbar">
+            {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+                <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                    "flex-shrink-0 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-lg min-w-[68px] touch-manipulation transition-all active:scale-95",
+                    isActive 
+                    ? "text-primary bg-primary/10" 
+                    : "text-muted-foreground hover:text-primary hover:bg-muted"
+                )}
+                >
+                <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
+                <span className={cn("text-[10px] font-medium leading-tight text-center line-clamp-1", isActive ? "font-bold" : "")}>{item.label}</span>
+                </Link>
+            );
+            })}
+        </div>
       </div>
     </nav>
   );
