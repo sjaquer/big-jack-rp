@@ -1,112 +1,60 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // === FUNCIÓN HELPER ===
+    // === FUNCI�N HELPER ===
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // === PRODUCTOS ===
-    match /products/{productId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-    
-    // === INGREDIENTES ===
-    match /ingredients/{ingredientId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
+    // === PRODUCTOS & INGREDIENTES ===
+    match /products/{productId} { allow read, write: if isAuthenticated(); }
+    match /ingredients/{ingredientId} { allow read, write: if isAuthenticated(); }
     
     // === VENTAS ===
     match /sales/{saleId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() 
-        && (request.resource.data.keys().hasOnly(['sunatStatus', 'sunatNote', 'sunatDocumentId'])
-            || request.auth.uid == resource.data.cashierId);
-      allow delete: if isAuthenticated(); // Permitir cancelación de ventas
+      allow read, create: if isAuthenticated();
+      allow update: if isAuthenticated(); 
+      allow delete: if isAuthenticated(); 
       
-      // Subcolección de items
-      match /sale_items/{itemId} {
-        allow read, write: if isAuthenticated();
-      }
+      match /sale_items/{itemId} { allow read, write: if isAuthenticated(); }
+    }
+
+    // === INSIGHTS QUERY (Collection Group) ===
+    match /{path=**}/sale_items/{itemId} {
+      allow read: if isAuthenticated();
     }
     
-    // === ITEMS DE VENTA (Legacy - Remover si ya no se usa root collection) ===
-    // match /sale_items/{itemId} {
-    //   allow read: if isAuthenticated();
-    //   allow create: if isAuthenticated();
-    //   allow update: if isAuthenticated();
-    //   allow delete: if isAuthenticated(); 
-    // }
-    
-    // === PEDIDOS ONLINE / COCINA ===
+    // === PEDIDOS & CLIENTES ===
     match /online_orders/{orderId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() 
-        && request.resource.data.keys().hasOnly(['status', 'completedAt']);
+      allow read, create, update: if isAuthenticated();
       allow delete: if false;
     }
     
-    // === CLIENTES ===
     match /customers/{customerId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow read, create, update: if isAuthenticated();
       allow delete: if false;
     }
     
-    // === FLUJO DE CAJA ===
-    match /cash_flows/{entryId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
+    // === VARIOS ===
+    match /cash_flows/{entryId} { allow read, write: if isAuthenticated(); }
+    match /sunat_series/{seriesId} { allow read, write: if isAuthenticated(); }
+    match /other_items/{itemId} { allow read, write: if isAuthenticated(); }
+    match /inventory_items/{itemId} { allow read, write: if isAuthenticated(); }
     
-    // === SERIES SUNAT ===
-    match /sunat_series/{seriesId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-    
-    // === OTROS ITEMS DE INVENTARIO ===
-    match /other_items/{itemId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-    
-    // === INVENTARIO ITEMS ===
-    match /inventory_items/{itemId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-    
-    // === MOVIMIENTOS DE INVENTARIO ===
     match /inventory_movements/{movementId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated();
+      allow read, create, update, delete: if isAuthenticated();
     }
     
-    // === CAJA CHICA / REGISTROS DE CAJA ===
+    // === CAJA CHICA (Requerido para POS) ===
     match /cash_registers/{registerId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if false; // No permitir eliminar registros de caja
+      allow read, create, update: if isAuthenticated();
+      allow delete: if false;
     }
     
-    // === MOVIMIENTOS DE CAJA ===
     match /cash_movements/{movementId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if false; // No permitir editar movimientos una vez creados
-      allow delete: if false; // No permitir eliminar movimientos
+      allow read, create: if isAuthenticated();
+      allow update, delete: if false;
     }
   }
 }
