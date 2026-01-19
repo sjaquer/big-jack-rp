@@ -7,8 +7,9 @@ import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ShoppingCart } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { RecentSalesDialog } from '@/components/pos/recent-sales-dialog';
+import { CashRegister } from '@/components/pos/cash-register';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc, writeBatch, increment } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc, writeBatch, increment, where } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -199,6 +200,20 @@ export default function POSPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
+    const [cashBalance, setCashBalance] = useState<number>(0);
+
+    // Query para verificar si hay caja abierta
+    const currentRegisterQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(
+        collection(firestore, 'cash_registers'),
+        where('status', '==', 'open'),
+        orderBy('openedAt', 'desc'),
+        limit(1)
+      );
+    }, [firestore]);
+    const { data: currentRegisterData } = useCollection(currentRegisterQuery);
+    const currentRegister = currentRegisterData?.[0];
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -508,6 +523,12 @@ export default function POSPage() {
         return;
       }
 
+      // Validar caja abierta si es pago en efectivo
+      if (paymentMethod === 'cash' && !currentRegister) {
+        toast({ variant: "destructive", title: "Caja Cerrada", description: "Debes abrir la caja antes de recibir pagos en efectivo."});
+        return;
+      }
+
       const startTime = performance.now();
       let createdSaleId = '';
       let generatedSerie = DEFAULT_SERIE_CODE;
@@ -595,6 +616,32 @@ export default function POSPage() {
         const transactionTime = performance.now() - startTime;
         console.info(`[POS] ✅ Transacción completada en ${transactionTime.toFixed(0)}ms`);
 
+        // === REGISTRAR EN CAJA CHICA (si es efectivo) ===
+        if (paymentMethod === 'cash' && currentRegister) {
+          try {
+            // Registrar movimiento de venta
+            const cashMovementsCol = collection(firestore, 'cash_movements');
+            await addDocumentNonBlocking(cashMovementsCol, {
+              registerId: currentRegister.id,
+              type: 'sale',
+              amount: total,
+              description: `Venta ${generatedSerie}-${String(generatedCorrelativo).padStart(8, '0')}`,
+              createdAt: Timestamp.now(),
+              cashier: user.email || 'unknown',
+            });
+
+            // Actualizar balance de caja
+            const registerDoc = doc(firestore, 'cash_registers', currentRegister.id);
+            await updateDocumentNonBlocking(registerDoc, {
+              currentBalance: currentRegister.currentBalance + total,
+              totalIncome: currentRegister.totalIncome + total,
+            });
+          } catch (error) {
+            console.error('[POS] Error al actualizar caja:', error);
+            // No bloqueamos la venta si falla el registro de caja
+          }
+        }
+
         // === FEEDBACK INMEDIATO AL USUARIO ===
         toast({
           title: "✅ Venta registrada",
@@ -659,19 +706,29 @@ export default function POSPage() {
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[90%] sm:w-[400px] p-0">
-            <CartPanel
-              order={order}
-              subtotal={subtotal}
-              total={total}
-              selectedPaymentMethod={selectedPaymentMethod}
-              setSelectedPaymentMethod={setSelectedPaymentMethod}
-              handleResetOrder={handleResetOrder}
-              updateQuantity={updateQuantity}
-              setPaymentModalOpen={setPaymentModalOpen}
-              firestore={firestore}
-              triggerThermalPrint={triggerThermalPrint}
-            />
+          <SheetContent side="right" className="w-[90%] sm:w-[400px] p-0 flex flex-col">
+            <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
+              <SheetTitle>Pedido Actual</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto">
+              {/* Caja Chica en Mobile */}
+              <div className="p-4">
+                <CashRegister onBalanceUpdate={setCashBalance} userEmail={user?.email || null} />
+              </div>
+              
+              <CartPanel
+                order={order}
+                subtotal={subtotal}
+                total={total}
+                selectedPaymentMethod={selectedPaymentMethod}
+                setSelectedPaymentMethod={setSelectedPaymentMethod}
+                handleResetOrder={handleResetOrder}
+                updateQuantity={updateQuantity}
+                setPaymentModalOpen={setPaymentModalOpen}
+                firestore={firestore}
+                triggerThermalPrint={triggerThermalPrint}
+              />
+            </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -709,10 +766,17 @@ export default function POSPage() {
 
         {/* Right Side: Order Summary - Desktop Only */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="hidden lg:block h-full">
-          <CartPanel
-            order={order}
-            subtotal={subtotal}
-            total={total}
+          <div className="h-full flex flex-col gap-3">
+            {/* Caja Chica en Desktop */}
+            <div className="flex-shrink-0">
+              <CashRegister onBalanceUpdate={setCashBalance} userEmail={user?.email || null} />
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+              <CartPanel
+                order={order}
+                subtotal={subtotal}
+                total={total}
             selectedPaymentMethod={selectedPaymentMethod}
             setSelectedPaymentMethod={setSelectedPaymentMethod}
             handleResetOrder={handleResetOrder}
@@ -721,6 +785,8 @@ export default function POSPage() {
             firestore={firestore}
             triggerThermalPrint={triggerThermalPrint}
           />
+            </div>
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

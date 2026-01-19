@@ -112,75 +112,81 @@ export default function ProductsPage() {
   const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-orange-50/20">
       <ProductForm 
         isOpen={isFormOpen}
         onClose={handleFormClose}
         product={selectedProduct}
         ingredients={ingredients ?? []}
       />
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardHeader className="flex-shrink-0">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
-                  <CardTitle className="font-headline text-lg sm:text-xl">Registro de Productos</CardTitle>
-                  <CardDescription className="text-sm">Gestiona todos los productos de tu inventario.</CardDescription>
+                  <h1 className="font-headline text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">Registro de Productos</h1>
+                  <p className="text-base text-slate-600 mt-1">Gestiona todos los productos de tu inventario y menú.</p>
               </div>
-              <Button onClick={handleAddProduct} size="default" className="h-11 text-sm sm:text-base w-full sm:w-auto touch-manipulation font-medium">
+              <Button onClick={handleAddProduct} size="default" className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow">
                   <PlusCircle className="mr-2 h-5 w-5" />
                   Añadir Producto
               </Button>
           </div>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-0">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Precio de Venta</TableHead>
-                <TableHead>Stock Actual</TableHead>
-                <TableHead>Stock Producible</TableHead>
-                <TableHead>
-                  <span className="sr-only">Acciones</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
-              {products?.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{product.sku}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {PRODUCT_CATEGORY_LABELS[product.category ?? 'otros']}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>S/ {product.salePrice.toFixed(2)}</TableCell>
-                  <TableCell>{product.quantity}</TableCell>
-                  <TableCell>
-                    {calculateProducibleQuantity(product, ingredients ?? [])}
-                  </TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>
-                      Editar
-                    </Button>
-                    <Button size="default" variant="destructive" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleDeleteProduct(product.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </div>
-        </CardContent>
-      </Card>
+          <Card className="flex flex-col overflow-hidden shadow-lg border-slate-200">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="font-headline text-base sm:text-lg">Listado</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Consulta y edita los productos disponibles.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-0">
+              <div className="overflow-x-auto">
+                <Table className="min-w-[900px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Precio de Venta</TableHead>
+                    <TableHead>Stock Actual</TableHead>
+                    <TableHead>Stock Producible</TableHead>
+                    <TableHead>
+                      <span className="sr-only">Acciones</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
+                  {products?.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{product.sku}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {PRODUCT_CATEGORY_LABELS[product.category ?? 'otros']}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>S/ {product.salePrice.toFixed(2)}</TableCell>
+                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>
+                        {calculateProducibleQuantity(product, ingredients ?? [])}
+                      </TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>
+                          Editar
+                        </Button>
+                        <Button size="default" variant="destructive" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleDeleteProduct(product.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

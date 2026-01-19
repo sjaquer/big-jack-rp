@@ -98,7 +98,7 @@ export default function InventoryPage() {
   const lowStockOtherItems = otherItems?.filter(i => i.quantity <= (i.minimumStock ?? 0)).length ?? 0;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30">
       <IngredientForm
         isOpen={isIngredientFormOpen}
         onClose={() => setIngredientFormOpen(false)}
@@ -115,33 +115,33 @@ export default function InventoryPage() {
         item={quickStockItem}
         itemType={quickStockType}
       />
-
-      <div className="flex-shrink-0 pb-3">
-          <h1 className="text-2xl lg:text-3xl font-headline font-bold">Gestión de Inventario</h1>
-          <p className="text-sm text-muted-foreground">Supervisa y gestiona los niveles de stock de todos los artículos.</p>
-      </div>
-
-      {/* Alerta de bajo stock */}
-      {(lowStockIngredients > 0 || lowStockOtherItems > 0) && (
-        <div className="flex-shrink-0 mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-destructive">
-              {lowStockIngredients + lowStockOtherItems} artículo{lowStockIngredients + lowStockOtherItems > 1 ? 's' : ''} con bajo stock
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {lowStockIngredients > 0 && `${lowStockIngredients} ingrediente${lowStockIngredients > 1 ? 's' : ''}`}
-              {lowStockIngredients > 0 && lowStockOtherItems > 0 && ' • '}
-              {lowStockOtherItems > 0 && `${lowStockOtherItems} artículo${lowStockOtherItems > 1 ? 's' : ''}`}
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-2">
-          <Card className="lg:col-span-2 flex flex-col">
-            <CardHeader className="flex-shrink-0 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="max-w-7xl mx-auto w-full space-y-5 px-3 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">Gestión de Inventario</h1>
+            <p className="text-base text-slate-600 max-w-2xl">Supervisa y gestiona los niveles de stock de todos los artículos de tu negocio.</p>
+          </div>
+
+          {/* Alerta de bajo stock */}
+          {(lowStockIngredients > 0 || lowStockOtherItems > 0) && (
+            <div className="p-4 sm:p-5 rounded-xl bg-red-50 border-2 border-red-200 flex items-center gap-4 shadow-sm">
+              <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-red-700">
+                  {lowStockIngredients + lowStockOtherItems} artículo{lowStockIngredients + lowStockOtherItems > 1 ? 's' : ''} con bajo stock
+                </p>
+                <p className="text-xs text-slate-600">
+                  {lowStockIngredients > 0 && `${lowStockIngredients} ingrediente${lowStockIngredients > 1 ? 's' : ''}`}
+                  {lowStockIngredients > 0 && lowStockOtherItems > 0 && ' • '}
+                  {lowStockOtherItems > 0 && `${lowStockOtherItems} artículo${lowStockOtherItems > 1 ? 's' : ''}`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-4">
+          <Card className="lg:col-span-2 flex flex-col shadow-md border-slate-200">
+            <CardHeader className="flex-shrink-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pb-4">
               <div>
                 <CardTitle className="font-headline text-base sm:text-lg flex items-center gap-2">
                   <Package className="h-5 w-5" />
@@ -152,7 +152,7 @@ export default function InventoryPage() {
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Materias primas para tus productos.</CardDescription>
               </div>
-              <Button onClick={handleAddIngredient} size="default" className="h-11 text-sm w-full sm:w-auto touch-manipulation font-medium">
+              <Button onClick={handleAddIngredient} size="default" className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow">
                 <PlusCircle className="h-5 w-5 mr-2" />
                 Nuevo Ingrediente
               </Button>
@@ -219,9 +219,9 @@ export default function InventoryPage() {
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="font-headline text-base sm:text-lg">Productos Terminados</CardTitle>
+          <Card className="flex flex-col shadow-md border-slate-200">
+            <CardHeader className="flex-shrink-0 pb-4">
+              <CardTitle className="font-headline text-lg sm:text-xl font-bold">Productos Terminados</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Productos listos para la venta.</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-0">
@@ -263,19 +263,19 @@ export default function InventoryPage() {
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col">
-            <CardHeader className="flex-shrink-0 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <Card className="flex flex-col shadow-md border-slate-200">
+            <CardHeader className="flex-shrink-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pb-4">
               <div>
-                <CardTitle className="font-headline text-base sm:text-lg flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5" />
+                <CardTitle className="font-headline text-lg sm:text-xl font-bold flex items-center gap-2">
+                  <ShoppingBag className="h-6 w-6" />
                   Otros Artículos
                   {lowStockOtherItems > 0 && (
-                    <Badge variant="destructive" className="ml-2">{lowStockOtherItems} bajo</Badge>
+                    <Badge variant="destructive" className="ml-2 text-sm">{lowStockOtherItems} bajo</Badge>
                   )}
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Empaques, utensilios, etc.</CardDescription>
+                <CardDescription className="text-sm">Empaques, utensilios, etc.</CardDescription>
               </div>
-              <Button onClick={handleAddOtherItem} size="default" className="h-11 text-sm w-full sm:w-auto touch-manipulation font-medium">
+              <Button onClick={handleAddOtherItem} size="default" className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow">
                 <PlusCircle className="h-5 w-5 mr-2" />
                 Nuevo Artículo
               </Button>
@@ -343,6 +343,7 @@ export default function InventoryPage() {
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
     </div>

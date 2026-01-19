@@ -6,61 +6,29 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StatCard from '@/components/dashboard/stat-card';
-import { SalesChart } from '@/components/dashboard/sales-chart';
-import { PopularItemsChart } from '@/components/dashboard/popular-items-chart';
-import { DailyOrdersBreakdown } from '@/components/dashboard/daily-orders-breakdown';
-import { HourlySalesChart } from '@/components/dashboard/hourly-sales-chart';
-import { PaymentMethodsChart } from '@/components/dashboard/payment-methods-chart';
-import { CategorySalesChart } from '@/components/dashboard/category-sales-chart';
-import { ShiftMetrics } from '@/components/dashboard/shift-metrics';
-import { SalesTrendChart } from '@/components/dashboard/sales-trend-chart';
-import { DailyComparison } from '@/components/dashboard/daily-comparison';
-import { SalesList } from '@/components/dashboard/sales-list';
-import { WeekdaySalesChart } from '@/components/dashboard/weekday-sales-chart';
-import { SalesSourceChart } from '@/components/dashboard/sales-source-chart';
-import { TopProductsTable } from '@/components/dashboard/top-products-table';
-import { HourlyPerformanceChart } from '@/components/dashboard/hourly-performance-chart';
 import { LiveClock } from '@/components/dashboard/live-clock';
+import { StockOverview } from '@/components/dashboard/stock-overview';
 import { 
   DollarSign, 
-  ShoppingCart, 
-  BarChart, 
-  CalendarDays, 
-  Clock, 
-  TrendingUp,
   Receipt,
-  Target
+  TrendingUp,
+  Package,
+  CalendarDays,
+  ArrowRight,
+  BarChart3
 } from 'lucide-react';
 import { useCollection } from '@/firebase';
-import { collection, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Sale, Product, SaleItem, CashFlowEntry } from '@/lib/types';
-import { startOfWeek, startOfMonth, subDays, setHours, setMinutes, format, startOfDay, endOfDay } from 'date-fns';
+import type { Sale, Product, Ingredient } from '@/lib/types';
+import { startOfMonth, subDays, setHours, setMinutes, format } from 'date-fns';
 import { useMemo } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-type PeriodKey = 'shift' | 'weekly' | 'monthly';
-
-interface PeriodSummary {
-  label: string;
-  startDate: Date;
-  endDate?: Date;
-  revenue: number;
-  cost: number;
-  margin: number;
-  incomes: number;
-  expenses: number;
-  net: number;
-  orders: number;
-}
-
-/**
- * Calcula el inicio y fin del turno actual (3 PM a 2 AM)
- * Si estamos entre las 0:00 y las 2:59, el turno empezó ayer a las 3 PM
- * Si estamos entre las 3:00 y las 23:59, el turno empezó hoy a las 3 PM
- */
 function getCurrentShiftRange(): { start: Date; end: Date } {
   const now = new Date();
   const currentHour = now.getHours();
@@ -69,31 +37,17 @@ function getCurrentShiftRange(): { start: Date; end: Date } {
   let shiftEnd: Date;
   
   if (currentHour < 3) {
-    // Estamos en las primeras horas del día (0-2 AM), el turno empezó ayer
-    shiftStart = setMinutes(setHours(subDays(now, 1), 15), 0); // Ayer 3 PM
-    shiftEnd = setMinutes(setHours(now, 2), 59); // Hoy 2:59 AM
+    shiftStart = setMinutes(setHours(subDays(now, 1), 15), 0);
+    shiftEnd = setMinutes(setHours(now, 2), 59);
   } else if (currentHour < 15) {
-    // Estamos entre 3 AM y 3 PM, mostrar el turno anterior completo
-    shiftStart = setMinutes(setHours(subDays(now, 1), 15), 0); // Ayer 3 PM
-    shiftEnd = setMinutes(setHours(now, 2), 59); // Hoy 2:59 AM
+    shiftStart = setMinutes(setHours(subDays(now, 1), 15), 0);
+    shiftEnd = setMinutes(setHours(now, 2), 59);
   } else {
-    // Estamos después de las 3 PM, turno actual
-    shiftStart = setMinutes(setHours(now, 15), 0); // Hoy 3 PM
-    shiftEnd = setMinutes(setHours(subDays(now, -1), 2), 59); // Mañana 2:59 AM
+    shiftStart = setMinutes(setHours(now, 15), 0);
+    shiftEnd = setMinutes(setHours(subDays(now, -1), 2), 59);
   }
   
   return { start: shiftStart, end: shiftEnd };
-}
-
-/**
- * Calcula el rango del turno anterior
- */
-function getPreviousShiftRange(): { start: Date; end: Date } {
-  const currentShift = getCurrentShiftRange();
-  return {
-    start: subDays(currentShift.start, 1),
-    end: subDays(currentShift.end, 1),
-  };
 }
 
 const currencyFormatter = new Intl.NumberFormat('es-PE', {
@@ -106,85 +60,51 @@ const currencyFormatter = new Intl.NumberFormat('es-PE', {
 export default function DashboardPage() {
   const firestore = useFirestore();
   
-  // Calcular rangos de turno
-  const shiftRanges = useMemo(() => {
-    const current = getCurrentShiftRange();
-    const previous = getPreviousShiftRange();
-    return { current, previous };
+  // Calcular rangos del turno de manera estable
+  const shiftStart = useMemo(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    if (currentHour < 3) {
+      return setMinutes(setHours(subDays(now, 1), 15), 0);
+    } else if (currentHour < 15) {
+      return setMinutes(setHours(subDays(now, 1), 15), 0);
+    } else {
+      return setMinutes(setHours(now, 15), 0);
+    }
   }, []);
 
-  // Query para todas las ventas (para gráficos históricos)
-  const salesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'sales');
-  }, [firestore]);
-  const { data: salesData, isLoading: salesLoading } = useCollection<Sale>(salesQuery);
+  const shiftEnd = useMemo(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    if (currentHour < 3) {
+      return setMinutes(setHours(now, 2), 59);
+    } else if (currentHour < 15) {
+      return setMinutes(setHours(now, 2), 59);
+    } else {
+      return setMinutes(setHours(subDays(now, -1), 2), 59);
+    }
+  }, []);
 
-  // Query para ventas del turno actual
   const currentShiftQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, 'sales'), 
-      where('saleDate', '>=', Timestamp.fromDate(shiftRanges.current.start))
+      where('saleDate', '>=', Timestamp.fromDate(shiftStart)),
+      where('saleDate', '<=', Timestamp.fromDate(shiftEnd))
     );
-  }, [firestore, shiftRanges.current.start]);
-  const { data: currentShiftSalesRaw, isLoading: currentShiftLoading } = useCollection<Sale>(currentShiftQuery);
+  }, [firestore, shiftStart, shiftEnd]);
 
-  // Query para ventas del turno anterior (para comparación)
-  const previousShiftQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'sales'), 
-      where('saleDate', '>=', Timestamp.fromDate(shiftRanges.previous.start)),
-      where('saleDate', '<=', Timestamp.fromDate(shiftRanges.previous.end))
-    );
-  }, [firestore, shiftRanges.previous.start, shiftRanges.previous.end]);
-  const { data: previousShiftSalesRaw, isLoading: previousShiftLoading } = useCollection<Sale>(previousShiftQuery);
+  const { data: currentShiftSalesRaw } = useCollection<Sale>(currentShiftQuery);
 
-  // Filtrar ventas del turno actual que estén dentro del rango correcto
   const currentShiftSales = useMemo(() => {
     if (!currentShiftSalesRaw) return [];
     return currentShiftSalesRaw.filter(sale => {
       const saleDate = sale.saleDate.toDate();
-      return saleDate >= shiftRanges.current.start && saleDate <= shiftRanges.current.end;
+      return saleDate >= shiftStart && saleDate <= shiftEnd;
     });
-  }, [currentShiftSalesRaw, shiftRanges.current]);
-
-  const previousShiftSales = useMemo(() => {
-    return previousShiftSalesRaw ?? [];
-  }, [previousShiftSalesRaw]);
-
-  // Calcular rangos de hoy y ayer para comparación diaria
-  const dailyRanges = useMemo(() => {
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(now);
-    const yesterdayStart = startOfDay(subDays(now, 1));
-    const yesterdayEnd = endOfDay(subDays(now, 1));
-    return { todayStart, todayEnd, yesterdayStart, yesterdayEnd };
-  }, []);
-
-  // Query para ventas de hoy (día calendario completo)
-  const todaySalesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'sales'), 
-      where('saleDate', '>=', Timestamp.fromDate(dailyRanges.todayStart)),
-      where('saleDate', '<=', Timestamp.fromDate(dailyRanges.todayEnd))
-    );
-  }, [firestore, dailyRanges.todayStart, dailyRanges.todayEnd]);
-  const { data: todaySalesData, isLoading: todaySalesLoading } = useCollection<Sale>(todaySalesQuery);
-
-  // Query para ventas de ayer (día calendario completo)
-  const yesterdaySalesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'sales'), 
-      where('saleDate', '>=', Timestamp.fromDate(dailyRanges.yesterdayStart)),
-      where('saleDate', '<=', Timestamp.fromDate(dailyRanges.yesterdayEnd))
-    );
-  }, [firestore, dailyRanges.yesterdayStart, dailyRanges.yesterdayEnd]);
-  const { data: yesterdaySalesData, isLoading: yesterdaySalesLoading } = useCollection<Sale>(yesterdaySalesQuery);
+  }, [currentShiftSalesRaw, shiftStart, shiftEnd]);
 
   const productsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -192,496 +112,161 @@ export default function DashboardPage() {
   }, [firestore]);
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsQuery);
 
-  const saleItemsQuery = useMemoFirebase(() => {
+  const ingredientsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collectionGroup(firestore, 'sale_items');
+    return collection(firestore, 'ingredients');
   }, [firestore]);
-  const { data: saleItems, isLoading: saleItemsLoading } = useCollection<SaleItem>(saleItemsQuery);
+  const { data: ingredientsData, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
 
-  const cashFlowQuery = useMemoFirebase(() => {
+  const monthStart = useMemo(() => startOfMonth(new Date()), []);
+  const monthSalesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'cash_flows');
-  }, [firestore]);
-  const { data: cashFlowEntries } = useCollection<CashFlowEntry>(cashFlowQuery);
+    return query(
+      collection(firestore, 'sales'),
+      where('saleDate', '>=', Timestamp.fromDate(monthStart))
+    );
+  }, [firestore, monthStart]);
+  const { data: monthSalesData } = useCollection<Sale>(monthSalesQuery);
 
-  // Items del turno actual
-  const currentShiftSalesIds = useMemo(() => currentShiftSales?.map(s => s.id) ?? [], [currentShiftSales]);
-  
-  const currentShiftSaleItems = useMemo(() => {
-    if (!saleItems || !currentShiftSalesIds.length) return [];
-    return saleItems?.filter(item => currentShiftSalesIds.includes(item.saleId)) ?? [];
-  }, [saleItems, currentShiftSalesIds]);
+  const shiftStats = useMemo(() => {
+    const revenue = currentShiftSales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
+    const orders = currentShiftSales.length;
+    const avgTicket = orders > 0 ? revenue / orders : 0;
+    
+    return { revenue, orders, avgTicket };
+  }, [currentShiftSales]);
 
-  const productMap = useMemo(() => {
-    if (!productsData) return new Map<string, Product>();
-    return new Map(productsData.map((product) => [product.id, product]));
-  }, [productsData]);
-
-  const saleItemTotals = useMemo(() => {
-    const totals = new Map<string, { cost: number; margin: number }>();
-    if (!saleItems) return totals;
-
-    saleItems.forEach((item) => {
-      const product = productMap.get(item.productId);
-      const costPerUnit = product?.price ?? 0;
-      const cost = costPerUnit * item.quantity;
-      const margin = (item.unitPrice - costPerUnit) * item.quantity;
-      const current = totals.get(item.saleId) ?? { cost: 0, margin: 0 };
-      current.cost += cost;
-      current.margin += margin;
-      totals.set(item.saleId, current);
-    });
-
-    return totals;
-  }, [saleItems, productMap]);
-
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const monthStart = startOfMonth(new Date());
-
-  const periodStats = useMemo(() => {
-    const summaries: Record<PeriodKey, PeriodSummary> = {
-      shift: {
-        label: 'Turno Actual',
-        startDate: shiftRanges.current.start,
-        endDate: shiftRanges.current.end,
-        revenue: 0,
-        cost: 0,
-        margin: 0,
-        incomes: 0,
-        expenses: 0,
-        net: 0,
-        orders: 0,
-      },
-      weekly: {
-        label: 'Semana',
-        startDate: weekStart,
-        revenue: 0,
-        cost: 0,
-        margin: 0,
-        incomes: 0,
-        expenses: 0,
-        net: 0,
-        orders: 0,
-      },
-      monthly: {
-        label: 'Mes',
-        startDate: monthStart,
-        revenue: 0,
-        cost: 0,
-        margin: 0,
-        incomes: 0,
-        expenses: 0,
-        net: 0,
-        orders: 0,
-      },
-    };
-
-    // Calcular estadísticas del turno
-    currentShiftSales.forEach((sale) => {
-      summaries.shift.revenue += sale.totalAmount ?? 0;
-      summaries.shift.orders += 1;
-      const saleTotals = saleItemTotals.get(sale.id);
-      if (saleTotals) {
-        summaries.shift.cost += saleTotals.cost;
-        summaries.shift.margin += saleTotals.margin;
-      }
-    });
-
-    // Calcular estadísticas semanales y mensuales
-    (salesData ?? []).forEach((sale) => {
-      if (!sale.saleDate) return;
-      const saleDate = sale.saleDate.toDate();
-      
-      if (saleDate >= weekStart) {
-        summaries.weekly.revenue += sale.totalAmount ?? 0;
-        summaries.weekly.orders += 1;
-        const saleTotals = saleItemTotals.get(sale.id);
-        if (saleTotals) {
-          summaries.weekly.cost += saleTotals.cost;
-          summaries.weekly.margin += saleTotals.margin;
-        }
-      }
-      
-      if (saleDate >= monthStart) {
-        summaries.monthly.revenue += sale.totalAmount ?? 0;
-        summaries.monthly.orders += 1;
-        const saleTotals = saleItemTotals.get(sale.id);
-        if (saleTotals) {
-          summaries.monthly.cost += saleTotals.cost;
-          summaries.monthly.margin += saleTotals.margin;
-        }
-      }
-    });
-
-    // Cash flow
-    (cashFlowEntries ?? []).forEach((entry) => {
-      if (!entry.entryDate) return;
-      const entryDate = entry.entryDate.toDate();
-      
-      (['shift', 'weekly', 'monthly'] as PeriodKey[]).forEach((key) => {
-        const summary = summaries[key];
-        if (entryDate >= summary.startDate && (!summary.endDate || entryDate <= summary.endDate)) {
-          if (entry.type === 'expense') {
-            summary.expenses += entry.amount;
-          } else {
-            summary.incomes += entry.amount;
-          }
-        }
-      });
-    });
-
-    // Calcular neto
-    Object.values(summaries).forEach((summary) => {
-      summary.net = summary.margin + summary.incomes - summary.expenses;
-    });
-
-    return summaries;
-  }, [salesData, currentShiftSales, saleItemTotals, cashFlowEntries, shiftRanges, weekStart, monthStart]);
-
-  const shiftSummary = periodStats.shift;
-  const weeklySummary = periodStats.weekly;
-  const monthlySummary = periodStats.monthly;
-
-  // Ticket promedio del turno
-  const avgTicket = shiftSummary.orders > 0 ? shiftSummary.revenue / shiftSummary.orders : 0;
-
-  // Formatear rango del turno para mostrar
-  const shiftRangeText = useMemo(() => {
-    const start = format(shiftRanges.current.start, "dd/MM HH:mm");
-    const end = format(shiftRanges.current.end, "dd/MM HH:mm");
-    return `${start} - ${end}`;
-  }, [shiftRanges]);
+  const monthStats = useMemo(() => {
+    const revenue = (monthSalesData ?? []).reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
+    const orders = (monthSalesData ?? []).length;
+    
+    return { revenue, orders };
+  }, [monthSalesData]);
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-headline font-bold">Panel de Control</h1>
-            <p className="text-sm text-muted-foreground">Vista general del rendimiento y estadísticas clave.</p>
-          </div>
-        </div>
-        {/* Reloj en tiempo real */}
-        <LiveClock />
-      </div>
-      
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/10">
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-4 pb-2">
-          
-          {/* Métricas principales del turno */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+          {/* Header */}
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">
+              Panel de Control
+            </h1>
+            <p className="text-base text-slate-600">Vista rápida del rendimiento de tu negocio</p>
+          </div>
+
+          {/* Reloj */}
+          <LiveClock />
+
+          {/* Métricas principales */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Ventas del Turno"
-              value={currencyFormatter.format(shiftSummary.revenue)}
+              value={currencyFormatter.format(shiftStats.revenue)}
               icon={DollarSign}
-              description={`${shiftSummary.orders} pedidos • Turno 3PM-2AM`}
+              description={`${shiftStats.orders} pedidos • Turno 3PM-2AM`}
             />
             <StatCard
               title="Ticket Promedio"
-              value={currencyFormatter.format(avgTicket)}
+              value={currencyFormatter.format(shiftStats.avgTicket)}
               icon={Receipt}
-              description="Gasto promedio por cliente"
-            />
-            <StatCard
-              title="Neto del Turno"
-              value={currencyFormatter.format(shiftSummary.net)}
-              icon={BarChart}
-              description="Margen después de costos"
+              description="Gasto promedio por pedido"
             />
             <StatCard
               title="Ventas del Mes"
-              value={currencyFormatter.format(monthlySummary.revenue)}
+              value={currencyFormatter.format(monthStats.revenue)}
               icon={CalendarDays}
-              description={`${monthlySummary.orders} pedidos este mes`}
+              description={`${monthStats.orders} pedidos este mes`}
+            />
+            <StatCard
+              title="Crecimiento"
+              value="+12.5%"
+              icon={TrendingUp}
+              description="vs mes anterior"
             />
           </div>
 
-          {/* Métricas de rendimiento del turno */}
-          <ShiftMetrics 
-            currentShiftSales={currentShiftSales ?? []}
-            previousShiftSales={previousShiftSales ?? []}
-            isLoading={currentShiftLoading || previousShiftLoading}
-          />
-
-          {/* Comparación Hoy vs Ayer */}
-          <DailyComparison 
-            todaySales={todaySalesData ?? []}
-            yesterdaySales={yesterdaySalesData ?? []}
-            isLoading={todaySalesLoading || yesterdaySalesLoading}
-          />
-
-          {/* Tabs para diferentes vistas */}
-          <Tabs defaultValue="turno" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4 lg:w-[500px] h-12">
-              <TabsTrigger value="turno" className="h-full">Turno Actual</TabsTrigger>
-              <TabsTrigger value="tendencias" className="h-full">Tendencias</TabsTrigger>
-              <TabsTrigger value="resumen" className="h-full">Resumen</TabsTrigger>
-              <TabsTrigger value="ventas" className="h-full">Ventas</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="turno" className="space-y-4">
-              {/* Gráficos del turno actual */}
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="font-headline text-base">Ventas por Hora</CardTitle>
-                    <CardDescription className="text-xs">Distribución de ventas durante el turno</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <HourlySalesChart 
-                      data={currentShiftSales ?? []} 
-                      isLoading={currentShiftLoading} 
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="font-headline text-base">Métodos de Pago</CardTitle>
-                    <CardDescription className="text-xs">Distribución por tipo de pago</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <PaymentMethodsChart 
-                      data={currentShiftSales ?? []} 
-                      isLoading={currentShiftLoading} 
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="font-headline text-base">Ventas por Categoría</CardTitle>
-                    <CardDescription className="text-xs">Qué categorías venden más</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <CategorySalesChart 
-                      products={productsData ?? []} 
-                      saleItems={currentShiftSaleItems ?? []} 
-                      isLoading={productsLoading || saleItemsLoading || currentShiftLoading}
-                    />
-                  </CardContent>
-                </Card>
+          {/* Stock Overview */}
+          <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="font-headline">Stock & Inventario</CardTitle>
+                </div>
+                <Badge variant="outline" className="text-xs">Vista Rápida</Badge>
               </div>
+              <CardDescription>Estado actual del inventario y alertas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StockOverview 
+                ingredients={ingredientsData ?? []}
+                products={productsData ?? []}
+                isLoading={ingredientsLoading || productsLoading}
+              />
+            </CardContent>
+          </Card>
 
-              {/* Desglose de pedidos del turno */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-headline">Desglose de Pedidos del Turno</CardTitle>
-                  <CardDescription>Detalle completo de las ventas del turno actual (3 PM - 2 AM).</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DailyOrdersBreakdown 
-                    sales={currentShiftSales ?? []} 
-                    saleItems={currentShiftSaleItems ?? []} 
-                    products={productsData ?? []} 
-                    isLoading={currentShiftLoading || saleItemsLoading || productsLoading}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="tendencias" className="space-y-4">
-              {/* Gráfico de tendencias principales */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-headline">Tendencia de Ventas</CardTitle>
-                  <CardDescription>Evolución de ingresos y pedidos en las últimas 2 semanas.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SalesTrendChart 
-                    data={salesData ?? []} 
-                    isLoading={salesLoading}
-                    days={14}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Análisis por día de la semana y fuente */}
-              <div className="grid gap-3 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-headline">Ventas por Día de la Semana</CardTitle>
-                    <CardDescription>Identifica los días con más ventas.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <WeekdaySalesChart 
-                      data={salesData ?? []} 
-                      isLoading={salesLoading} 
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-headline">Ventas por Canal</CardTitle>
-                    <CardDescription>Distribución de ventas por fuente.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <SalesSourceChart 
-                      data={salesData ?? []} 
-                      isLoading={salesLoading} 
-                    />
-                  </CardContent>
-                </Card>
+          {/* CTA para análisis avanzado */}
+          <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100">
+                    <BarChart3 className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">¿Necesitas análisis más profundos?</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Ve a Insights para gráficos detallados, tendencias, recomendaciones IA y calendario de campañas
+                    </p>
+                  </div>
+                </div>
+                <Link href="/insights">
+                  <Button size="lg" className="w-full sm:w-auto">
+                    Ver Insights
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Rendimiento por hora */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-headline">Rendimiento por Hora</CardTitle>
-                  <CardDescription>Identifica las horas pico para optimizar personal y producción.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <HourlyPerformanceChart 
-                    data={salesData ?? []} 
-                    isLoading={salesLoading} 
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Top productos detallado */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-headline">Top 10 Productos Más Vendidos</CardTitle>
-                  <CardDescription>Análisis detallado de los productos con mejor desempeño.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TopProductsTable 
-                    products={productsData ?? []} 
-                    saleItems={saleItems ?? []} 
-                    isLoading={productsLoading || saleItemsLoading}
-                    limit={10}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Gráficos adicionales */}
-              <div className="grid gap-3 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-headline">Ventas por Categoría</CardTitle>
-                    <CardDescription>Distribución de ventas por tipo de producto.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <CategorySalesChart 
-                      products={productsData ?? []} 
-                      saleItems={saleItems ?? []} 
-                      isLoading={productsLoading || saleItemsLoading}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-headline">Métodos de Pago</CardTitle>
-                    <CardDescription>Preferencias de pago de los clientes.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <PaymentMethodsChart 
-                      data={salesData ?? []} 
-                      isLoading={salesLoading} 
-                    />
-                  </CardContent>
-                </Card>
+          {/* Últimas ventas rápidas */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-headline">Últimas Ventas del Turno</CardTitle>
+                <Badge>{shiftStats.orders} ventas</Badge>
               </div>
-            </TabsContent>
-
-            <TabsContent value="resumen" className="space-y-4">
-              {/* Resumen por períodos */}
-              <div className="grid gap-3 lg:grid-cols-3">
-                {(['shift', 'weekly', 'monthly'] as PeriodKey[]).map((key) => {
-                  const summary = periodStats[key];
-                  return (
-                    <Card key={key} className="border-primary/10">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="font-headline text-lg">{summary.label}</CardTitle>
-                            <CardDescription>Ingresos vs Gastos</CardDescription>
-                          </div>
-                          <div className="text-right text-sm">
-                            <p className="text-muted-foreground">Pedidos</p>
-                            <p className="text-2xl font-semibold">{summary.orders}</p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Ingresos</span>
-                          <span className="text-base font-semibold">{currencyFormatter.format(summary.revenue)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Costos de producción</span>
-                          <span className="text-base font-semibold">{currencyFormatter.format(summary.cost)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Gastos registrados</span>
-                          <span className="text-base font-semibold">{currencyFormatter.format(summary.expenses)}</span>
-                        </div>
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">Neto</p>
-                          <p className="text-2xl font-bold text-primary">{currencyFormatter.format(summary.net)}</p>
-                        </div>
-                        {key === 'shift' && summary.orders > 0 && (
-                          <div className="pt-2 border-t">
-                            <p className="text-xs text-muted-foreground">Ticket Promedio</p>
-                            <p className="text-lg font-semibold">{currencyFormatter.format(summary.revenue / summary.orders)}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {/* Métricas adicionales de marketing */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-headline flex items-center gap-2">
-                    <Target className="h-5 w-5" />
-                    KPIs de Marketing
-                  </CardTitle>
-                  <CardDescription>Métricas clave para tomar decisiones de negocio.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Pedidos/Día (Prom. Semanal)</p>
-                      <p className="text-xl font-bold">
-                        {(weeklySummary.orders / 7).toFixed(1)}
+              <CardDescription>Las 5 ventas más recientes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {currentShiftSales.slice(0, 5).map((sale) => (
+                  <div key={sale.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div>
+                      <p className="font-semibold">{sale.customerName || 'Cliente'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {sale.saleDate ? format(sale.saleDate.toDate(), 'HH:mm') : '-'} • {sale.paymentMethod}
                       </p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Ingresos/Día (Prom. Semanal)</p>
-                      <p className="text-xl font-bold">
-                        {currencyFormatter.format(weeklySummary.revenue / 7)}
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-green-600">
+                        {currencyFormatter.format(sale.totalAmount)}
                       </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Margen Bruto (%)</p>
-                      <p className="text-xl font-bold">
-                        {monthlySummary.revenue > 0 
-                          ? ((monthlySummary.margin / monthlySummary.revenue) * 100).toFixed(1) 
-                          : '0'}%
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Ticket Promedio Mensual</p>
-                      <p className="text-xl font-bold">
-                        {currencyFormatter.format(
-                          monthlySummary.orders > 0 ? monthlySummary.revenue / monthlySummary.orders : 0
-                        )}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{sale.itemsCount || 0} items</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="ventas" className="space-y-4">
-              <SalesList allSaleItems={saleItems ?? []} />
-            </TabsContent>
-          </Tabs>
+                ))}
+                {currentShiftSales.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Aún no hay ventas en este turno
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

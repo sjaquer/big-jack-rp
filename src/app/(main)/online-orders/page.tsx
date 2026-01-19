@@ -49,15 +49,17 @@ export default function IncomingOrdersPage() {
 
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-headline font-bold">Gestión de Pedidos Entrantes</h1>
-        <p className="text-muted-foreground">Revisa y actualiza el estado de todos los pedidos a preparar.</p>
-      </div>
-      {isLoading && <p>Cargando pedidos...</p>}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {onlineOrders?.map((order) => (
-          <Card key={order.id} className="hover:shadow-lg transition-shadow">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/20">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">Gestión de Pedidos Entrantes</h1>
+            <p className="text-base text-slate-600 mt-1">Revisa y actualiza el estado de todos los pedidos a preparar.</p>
+          </div>
+          {isLoading && <p className="text-slate-500">Cargando pedidos...</p>}
+          <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {onlineOrders?.map((order) => (
+              <Card key={order.id} className="hover:shadow-xl transition-all duration-200 border-slate-200 shadow-md">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -107,7 +109,7 @@ export default function IncomingOrdersPage() {
                 Ver Detalles
               </Button>
               <Select defaultValue={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus as OnlineOrder['status'])}>
-                <SelectTrigger className="h-14 text-base font-medium touch-manipulation">
+                <SelectTrigger className="h-12 text-base font-semibold touch-manipulation shadow-sm">
                   <SelectValue placeholder="Cambiar estado" />
                 </SelectTrigger>
                 <SelectContent>
@@ -126,6 +128,8 @@ export default function IncomingOrdersPage() {
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
       />
+        </div>
+      </div>
     </div>
   );
 }

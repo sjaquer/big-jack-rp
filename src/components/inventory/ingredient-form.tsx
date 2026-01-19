@@ -178,19 +178,19 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[100vw] h-[100dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-2xl p-0 flex flex-col overflow-hidden">
-        <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
-          <DialogTitle className="font-headline text-lg sm:text-xl">{ingredient ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</DialogTitle>
+      <DialogContent className="w-full max-w-[min(100vw,1100px)] h-[100dvh] sm:h-[min(90vh,900px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
+        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white">
+          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900">{ingredient ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</DialogTitle>
           <DialogDescription className="text-sm">
             {ingredient ? 'Actualiza los detalles del ingrediente.' : 'Completa los detalles para añadir un nuevo ingrediente.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden min-h-0">
-          <ScrollArea className="h-full px-4 sm:px-6" type="always">
+          <ScrollArea className="h-full px-4 sm:px-6 pb-6" type="always">
             <ScrollBar className="z-50" />
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-3">
-            <section className="space-y-4 rounded-lg border p-3 sm:p-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-3 sm:pr-2">
+            <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Información del ingrediente</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Define cómo identificarás este insumo dentro del inventario de la hamburguesería.</p>
@@ -201,11 +201,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Nombre del Ingrediente</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Nombre del Ingrediente</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Tomate Roma" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="e.g., Tomate Roma" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Usa el mismo nombre que figura en tus fichas técnicas.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Usa el mismo nombre que figura en tus fichas técnicas.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -215,11 +215,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Código interno / SKU</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Código interno / SKU</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="Se genera automáticamente al escribir el nombre" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Se genera automáticamente" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Identificador interno único. Se genera automáticamente, pero puedes editarlo para usar un código específico del negocio.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Identificador único generado automáticamente. Puedes editarlo para usar un código específico.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -234,7 +234,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                       <FormLabel className="text-sm sm:text-base">Familia</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value ?? 'protein'}>
                         <FormControl>
-                          <SelectTrigger className="h-11 sm:h-10 text-base">
+                          <SelectTrigger className="h-12 sm:h-11 text-base rounded-lg">
                             <SelectValue placeholder="Selecciona una categoría" />
                           </SelectTrigger>
                         </FormControl>
@@ -255,11 +255,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="storageLocation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Ubicación de almacenamiento</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Ubicación de almacenamiento</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Cámara fría #2, Estante 3" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Ej. Cámara fría #2" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Indica exactamente dónde se guarda (ej.: cámara fría #2, estante 3). Facilita el acceso rápido por parte del equipo.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Dónde se guarda este ingrediente para acceso rápido del equipo.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -267,22 +267,22 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
               </div>
             </section>
 
-            <section className="space-y-4 rounded-lg border p-3 sm:p-4">
+            <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Control de inventario</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Establece las cantidades con las que operas día a día.</p>
               </div>
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Cantidad en stock</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Cantidad en stock</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="Cantidad disponible actualmente (ej.: 50)" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 50" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Cantidad disponible en inventario. Para ingredientes a granel, utiliza la unidad seleccionada en 'Unidad'.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Cantidad disponible actualmente en inventario.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -292,10 +292,10 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Unidad</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Unidad</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-11 sm:h-10 text-base">
+                          <SelectTrigger className="h-12 sm:h-11 text-base rounded-lg">
                             <SelectValue placeholder="Selecciona una unidad" />
                           </SelectTrigger>
                         </FormControl>
@@ -307,7 +307,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormDescription className="text-xs">Unidad en la que se registra la cantidad (kg, g, l, ml, unidad, paquete). Usa la misma unidad que usas al comprar al proveedor.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Unidad en la que se registra la cantidad (Kg, g, L, ml, unidad, paquete). Usa la misma unidad que usas al comprar al proveedor.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -317,27 +317,27 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="minimumStock"
                   render={({ field }) => (
                     <FormItem className="col-span-2 sm:col-span-1">
-                      <FormLabel className="text-sm sm:text-base">Stock mínimo</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Stock mínimo</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="Cantidad mínima para operar (ej.: 5)" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 5" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Nivel mínimo operativo. Cuando el inventario baje de este valor, deberías programar una reposición.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Nivel mínimo operativo. Cuando el inventario baje de este valor, deberías programar una reposición.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="cost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Costo objetivo por unidad (S/)</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Costo objetivo por unidad (S/)</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" step="0.01" placeholder="Precio estimado por unidad (ej.: 2.50)" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 2.50" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Precio promedio esperado por unidad. Sirve como referencia para calcular márgenes y comparar con los proveedores.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Precio promedio esperado por unidad. Sirve como referencia para calcular márgenes y comparar con los proveedores.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -347,11 +347,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="reorderLeadTimeDays"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Días de reposición</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Días de reposición</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="Tiempo en días para recibir nuevo stock (ej.: 2)" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 2" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Número de días que suele tardar el proveedor en entregar desde que se realiza el pedido. Útil para planificar compras.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Número de días que suele tardar el proveedor en entregar desde que se realiza el pedido. Útil para planificar compras.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -361,14 +361,14 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   name="expiryDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col col-span-2 sm:col-span-1">
-                      <FormLabel className="text-sm sm:text-base">Fecha de vencimiento</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Fecha de vencimiento</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full h-11 sm:h-10 justify-between pl-3 text-left font-normal text-base",
+                                "w-full h-12 sm:h-11 justify-between pl-3 text-left font-normal text-base rounded-lg",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -391,7 +391,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormDescription className="text-xs">Ideal para perecibles como vegetales o pan.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Ideal para perecibles como vegetales o pan.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -399,7 +399,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
               </div>
             </section>
 
-            <section className="space-y-4 rounded-lg border p-3 sm:p-4">
+            <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
             <FormField
               control={form.control}
               name="providers"
@@ -408,13 +408,13 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <FormLabel className="mb-0 text-base sm:text-lg font-semibold">Proveedores y tarifas</FormLabel>
-                      <FormDescription className="text-xs">Registra varios proveedores para comparar precios rápidamente.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Registra varios proveedores para comparar precios rápidamente.</FormDescription>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="default"
-                      className="h-11 sm:h-10 w-full sm:w-auto text-base"
+                      className="h-12 sm:h-11 w-full sm:w-auto text-base rounded-lg"
                       onClick={() => appendProvider({ name: '', pricePerUnit: 0 })}
                     >
                       <Plus className="mr-2 h-5 w-5 sm:h-4 sm:w-4" /> Añadir proveedor
@@ -424,20 +424,20 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                     {providerFields.map((provider, index) => (
                       <div
                         key={provider.id}
-                        className="rounded-md border p-3 sm:p-4 space-y-3"
+                        className="rounded-lg border bg-background p-3 sm:p-4 space-y-3"
                       >
                         <div className="grid gap-3 grid-cols-1">
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                             <FormField
                               control={form.control}
                               name={`providers.${index}.name`}
                               render={({ field }) => (
                                 <FormItem className="flex-1">
-                                  <FormLabel className="text-sm">Proveedor</FormLabel>
+                                  <FormLabel className="text-sm font-medium">Proveedor</FormLabel>
                                   <FormControl>
-                                    <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Distribuidora S.A." {...field} />
+                                    <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Ej. Distribuidora S.A." {...field} />
                                   </FormControl>
-                                  <FormDescription className="text-xs">Nombre del proveedor o distribuidor. Útil para comparar tarifas y tiempos de entrega.</FormDescription>
+                                  <FormDescription className="text-xs leading-relaxed text-slate-600">Nombre del proveedor o distribuidor.</FormDescription>
                                   <FormMessage />
                                 </FormItem>
                               )}
@@ -446,7 +446,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-11 w-11 sm:h-10 sm:w-10 mt-7"
+                              className="h-11 w-11 sm:h-10 sm:w-10 sm:mt-6"
                               onClick={() => removeProvider(index)}
                               disabled={providerFields.length === 1}
                               aria-label="Eliminar proveedor"
@@ -459,11 +459,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                             name={`providers.${index}.pricePerUnit`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-sm">Precio Unitario (S/ por {form.watch('unit')})</FormLabel>
+                                <FormLabel className="text-sm font-medium">Precio Unitario (S/ por {form.watch('unit')})</FormLabel>
                                 <FormControl>
-                                  <Input className="h-11 sm:h-10 text-base" type="number" step="0.01" placeholder="e.g., 2.40" {...field} />
+                                  <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 2.40" {...field} />
                                 </FormControl>
-                                <FormDescription className="text-xs">Precio que cobra el proveedor por cada unidad</FormDescription>
+                                <FormDescription className="text-xs leading-relaxed text-slate-600">Precio que cobra el proveedor por cada unidad.</FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -493,10 +493,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm sm:text-base">Notas internas</FormLabel>
+                  <FormLabel className="text-sm sm:text-base font-medium">Notas internas</FormLabel>
                   <FormControl>
-                    <Textarea className="text-base min-h-[100px]" rows={3} placeholder="e.g., Usar solo para la burger premium, rotar cada 48h" {...field} />
+                    <Textarea className="text-base min-h-[100px] rounded-lg" rows={3} placeholder="Ej. Usar solo para la burger premium, rotar cada 48h" {...field} />
                   </FormControl>
+                  <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Observaciones o instrucciones adicionales para el equipo.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -507,11 +508,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex-shrink-0 px-4 pb-5 sm:px-6 sm:pb-6 pt-4 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] gap-3 sm:gap-2">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-12 sm:h-10 text-base font-medium">
+        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold rounded-xl">
             Cancelar
           </Button>
-          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-12 sm:h-10 text-base font-semibold bg-primary hover:bg-primary/90">
+          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg">
             Guardar Ingrediente
           </Button>
         </DialogFooter>

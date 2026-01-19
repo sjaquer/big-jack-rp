@@ -12,6 +12,7 @@ import {
   LogOut,
   Users,
   Wallet,
+  Sparkles,
 } from "lucide-react"
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,7 @@ import {
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Panel' },
+  { href: '/insights', icon: Sparkles, label: 'Insights' },
   { href: '/cash-flow', icon: Wallet, label: 'Caja' },
   { href: '/pos', icon: Coins, label: 'POS' },
   { href: '/customers', icon: Users, label: 'Clientes' },

@@ -75,8 +75,9 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
   }, [firestore]);
   const { data: customers } = useCollection<Customer>(customersQuery);
 
-  const amount = parseFloat(amountReceived);
+  const amount = parseFloat(amountReceived) || 0;
   const change = amount >= total ? amount - total : 0;
+  const isInsufficientCash = paymentMethod === 'cash' && amount > 0 && amount < total;
   const sanitizedDocument = documentNumber.replace(/\D/g, '');
   const isCustomerNameRequired = documentType !== '0';
 
@@ -256,22 +257,66 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                     placeholder='0.00'
                     disabled={isProcessing}
                     autoFocus
+                    step="0.01"
                   />
                 </div>
+
+                {/* Sugerencias de pago */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: 'Exacto', value: total },
+                    { label: Math.ceil(total / 10) * 10, value: Math.ceil(total / 10) * 10 },
+                    { label: Math.ceil(total / 50) * 50, value: Math.ceil(total / 50) * 50 },
+                    { label: Math.ceil(total / 100) * 100, value: Math.ceil(total / 100) * 100 },
+                  ].filter((item, index, arr) => index === 0 || item.value !== arr[index-1].value).slice(0, 4).map((item, index) => (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8"
+                      onClick={() => setAmountReceived(item.value.toFixed(2))}
+                      disabled={isProcessing}
+                    >
+                      S/ {item.label}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Vuelto */}
                 {amountReceived && (
                   <div className={cn(
-                    "flex items-center justify-between p-3 rounded-lg border-2 transition-colors",
-                    amount >= total ? "bg-green-500/10 border-green-500/20" : "bg-destructive/10 border-destructive/20"
+                    "flex items-center justify-between p-4 rounded-lg border-2 transition-colors",
+                    isInsufficientCash ? "bg-destructive/10 border-destructive/20 animate-pulse" :
+                    amount >= total ? "bg-green-500/10 border-green-500/20" : "bg-amber-500/10 border-amber-500/20"
                   )}>
-                    <span className="font-medium text-sm">Vuelto:</span>
+                    <div className="space-y-1">
+                      <span className="font-medium text-sm text-muted-foreground">Vuelto</span>
+                      {isInsufficientCash && (
+                        <p className="text-xs text-destructive">Falta S/ {(total - amount).toFixed(2)}</p>
+                      )}
+                    </div>
                     <span className={cn(
-                      "text-xl font-bold",
-                      amount >= total ? "text-green-600" : "text-destructive"
+                      "text-3xl font-bold",
+                      isInsufficientCash ? "text-destructive" :
+                      amount >= total ? "text-green-600" : "text-amber-600"
                     )}>
-                      {amount >= total ? `S/ ${change.toFixed(2)}` : 'Falta dinero'}
+                      {isInsufficientCash ? '-' : `S/ ${change.toFixed(2)}`}
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Advertencia efectivo insuficiente */}
+            {isInsufficientCash && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="h-4 w-4 rounded-full bg-destructive flex items-center justify-center flex-shrink-0">
+                  <span className="text-destructive-foreground text-xs font-bold">!</span>
+                </div>
+                <p className="text-sm font-medium text-destructive">
+                  El efectivo recibido no cubre el total. Recibido: S/ {amount.toFixed(2)}, Falta: S/ {(total - amount).toFixed(2)}
+                </p>
               </div>
             )}
 

@@ -138,9 +138,9 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-full max-w-[95vw] sm:max-w-md p-0 gap-0">
-        <DialogHeader className="px-4 pt-4 pb-3 border-b">
-          <DialogTitle className="font-headline text-lg flex items-center gap-2">
+      <DialogContent className="w-full max-w-[min(100vw,480px)] p-0 gap-0 rounded-2xl shadow-2xl border-slate-200">
+        <DialogHeader className="px-4 sm:px-5 pt-5 pb-4 border-b bg-white">
+          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Package className="h-5 w-5" />
             Actualizar Stock
           </DialogTitle>
@@ -153,12 +153,12 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
 
         <div className="p-4 space-y-4">
           {/* Modo: Agregar / Quitar */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <Button
               type="button"
               variant={mode === 'add' ? 'default' : 'outline'}
               className={cn(
-                "h-14 text-base font-semibold touch-manipulation",
+                "h-14 sm:h-12 text-base font-bold touch-manipulation rounded-xl",
                 mode === 'add' && "bg-green-600 hover:bg-green-700"
               )}
               onClick={() => setMode('add')}
@@ -209,7 +209,7 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Ingresa cantidad"
-              className="h-12 text-lg font-semibold mt-1.5"
+              className="h-14 sm:h-12 text-lg font-semibold mt-1.5 rounded-xl"
               min="0"
               step="0.1"
             />
@@ -273,12 +273,12 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
           )}
         </div>
 
-        <DialogFooter className="px-4 pb-4 pt-2 border-t gap-2 sm:gap-2">
+        <DialogFooter className="px-4 pb-5 sm:pb-4 pt-3 border-t bg-white shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
-            className="flex-1 sm:flex-none h-12 text-base font-medium touch-manipulation"
+            className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold touch-manipulation rounded-xl"
           >
             Cancelar
           </Button>
@@ -287,7 +287,7 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
             onClick={handleSubmit}
             disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
             className={cn(
-              "flex-1 sm:flex-none h-12 text-base font-semibold touch-manipulation",
+              "flex-1 sm:flex-none h-14 sm:h-12 text-base font-bold touch-manipulation rounded-xl shadow-md hover:shadow-lg",
               mode === 'add' ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"
             )}
           >

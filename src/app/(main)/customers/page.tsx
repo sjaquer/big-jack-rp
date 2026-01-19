@@ -71,29 +71,30 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-headline font-bold">Gestión de Clientes</h1>
-          <p className="text-sm text-muted-foreground">Sistema de lealtad y base de datos de clientes</p>
-        </div>
-        <Button
-          onClick={() => {
-            setSelectedCustomer(null);
-            setShowCustomerForm(true);
-          }}
-          className="h-11 text-sm w-full sm:w-auto touch-manipulation font-medium"
-        >
-          <UserPlus className="mr-2 h-5 w-5" />
-          Nuevo Cliente
-        </Button>
-      </div>
-
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-purple-50/20">
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-4 pb-2">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">Gestión de Clientes</h1>
+              <p className="text-base text-slate-600 mt-1">Sistema de lealtad y base de datos de clientes</p>
+            </div>
+            <Button
+              onClick={() => {
+                setSelectedCustomer(null);
+                setShowCustomerForm(true);
+              }}
+              className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow"
+            >
+              <UserPlus className="mr-2 h-5 w-5" />
+              Nuevo Cliente
+            </Button>
+          </div>
+
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="shadow-md border-slate-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -267,6 +268,7 @@ export default function CustomersPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
           </div>
         </div>
       </div>

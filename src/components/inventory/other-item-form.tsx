@@ -101,19 +101,19 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[100vw] h-[100dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-lg p-0 flex flex-col overflow-hidden">
-        <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
-          <DialogTitle className="font-headline text-lg sm:text-xl">{item ? 'Editar Artículo' : 'Añadir Nuevo Artículo'}</DialogTitle>
+      <DialogContent className="w-full max-w-[min(100vw,900px)] h-[100dvh] sm:h-[min(90vh,750px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
+        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white">
+          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900">{item ? 'Editar Artículo' : 'Añadir Nuevo Artículo'}</DialogTitle>
           <DialogDescription className="text-sm">
             {item ? 'Actualiza los detalles del artículo.' : 'Completa los detalles para añadir un nuevo artículo al inventario.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden min-h-0">
-          <ScrollArea className="h-full px-4 sm:px-6" type="always">
+          <ScrollArea className="h-full px-4 sm:px-6 pb-6" type="always">
             <ScrollBar className="z-50" />
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-3">
-            <section className="space-y-4 rounded-lg border p-3 sm:p-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-3 sm:pr-2">
+            <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Detalles del artículo</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Mantén tu stock de empaques y desechables bajo control.</p>
@@ -124,11 +124,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Nombre del artículo</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Nombre del artículo</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="Ej.: Caja para burger mediana (50 unidades)" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Ej. Caja para burger mediana (50 unid.)" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Nombre claro del artículo tal como aparecerá en órdenes de compra y en almacén. Incluye tamaño o unidades si aplica.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Nombre claro del artículo tal como aparecerá en órdenes de compra y en almacén.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -138,10 +138,10 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Categoría</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Categoría</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-11 sm:h-10 text-base">
+                          <SelectTrigger className="h-12 sm:h-11 text-base rounded-lg">
                             <SelectValue placeholder="Selecciona un tipo" />
                           </SelectTrigger>
                         </FormControl>
@@ -153,23 +153,23 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                           <SelectItem value="other" className="py-3 sm:py-2">Otro</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription className="text-xs">Selecciona la categoría que mejor describa el artículo para agruparlo en el inventario.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Selecciona la categoría para agrupar el artículo en el inventario.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Cantidad en stock</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Cantidad en stock</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="Cantidad disponible actualmente (ej.: 200)" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 200" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Indica cuántas unidades hay físicamente en almacén. Para items empaquetados, registra el número de paquetes.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Indica cuántas unidades hay físicamente en almacén.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -179,11 +179,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   name="minimumStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Stock mínimo</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Stock mínimo</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" placeholder="e.g., 50" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 50" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Cantidad mínima a partir de la cual deberías reponer. El sistema puede avisarte si cae por debajo de este valor.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Cantidad mínima a partir de la cual deberías reponer.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -193,11 +193,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   name="costPerUnit"
                   render={({ field }) => (
                     <FormItem className="col-span-2 sm:col-span-1">
-                      <FormLabel className="text-sm sm:text-base">Costo por unidad (S/)</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Costo por unidad (S/)</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" type="number" step="0.01" placeholder="e.g., 0.45" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 0.45" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Costo de compra por unidad o paquete. Útil para calcular el coste total del inventario y compararlo entre proveedores.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Costo de compra por unidad o paquete. Útil para calcular el coste total del inventario.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -205,7 +205,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-lg border p-3 sm:p-4">
+            <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Logística y notas</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Información útil para el equipo de compras y almacén.</p>
@@ -216,11 +216,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Ubicación</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Ubicación</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Almacén principal" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Ej. Almacén principal" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Lugar físico donde se guarda el artículo (p.ej., Almacén principal, Estante A4).</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Lugar físico donde se guarda el artículo.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -230,11 +230,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   name="supplier"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Proveedor habitual</FormLabel>
+                      <FormLabel className="text-sm sm:text-base font-medium">Proveedor habitual</FormLabel>
                       <FormControl>
-                        <Input className="h-11 sm:h-10 text-base" placeholder="e.g., Empaques Lima" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" placeholder="Ej. Empaques Lima" {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">Indica el proveedor habitual para facilitar nuevas órdenes y comparar precios.</FormDescription>
+                      <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Indica el proveedor habitual para facilitar nuevas órdenes.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -245,11 +245,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Notas internas</FormLabel>
+                    <FormLabel className="text-sm sm:text-base font-medium">Notas internas</FormLabel>
                     <FormControl>
-                      <Textarea className="text-base min-h-[100px]" rows={3} placeholder="e.g., Usar solo para delivery, revisar cada sábado" {...field} />
+                      <Textarea className="text-base min-h-[100px] rounded-lg" rows={3} placeholder="Ej. Usar solo para delivery, revisar cada sábado" {...field} />
                     </FormControl>
-                    <FormDescription className="text-xs">Notas para el equipo: condiciones especiales, frecuencia de uso, instrucciones de almacenamiento o restricciones.</FormDescription>
+                    <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Notas para el equipo: condiciones especiales, frecuencia de uso, instrucciones de almacenamiento.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -261,11 +261,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex-shrink-0 px-4 pb-5 sm:px-6 sm:pb-6 pt-4 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] gap-3 sm:gap-2">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-12 sm:h-10 text-base font-medium">
+        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold rounded-xl">
             Cancelar
           </Button>
-          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-12 sm:h-10 text-base font-semibold bg-primary hover:bg-primary/90">
+          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg">
             Guardar Artículo
           </Button>
         </DialogFooter>

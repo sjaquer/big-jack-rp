@@ -92,5 +92,21 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update, delete: if isAuthenticated();
     }
+    
+    // === CAJA CHICA / REGISTROS DE CAJA ===
+    match /cash_registers/{registerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // No permitir eliminar registros de caja
+    }
+    
+    // === MOVIMIENTOS DE CAJA ===
+    match /cash_movements/{movementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false; // No permitir editar movimientos una vez creados
+      allow delete: if false; // No permitir eliminar movimientos
+    }
   }
 }
