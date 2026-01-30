@@ -13,6 +13,8 @@ import {
   Users,
   Wallet,
   Sparkles,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -30,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { cn } from "@/lib/utils"
+import { useTheme } from "next-themes"
 import {
   Sidebar,
   SidebarContent,
@@ -59,6 +62,7 @@ function UserMenu() {
     const { user } = useUser();
     const auth = useAuth();
     const router = useRouter();
+    const { theme, setTheme } = useTheme();
 
     const handleSignOut = () => {
         signOut(auth).then(() => {
@@ -84,6 +88,11 @@ function UserMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="text-base">{user?.email ?? 'Mi Cuenta'}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="py-3 text-base cursor-pointer">
+            {theme === 'dark' ? <Sun className="mr-2 h-5 w-5" /> : <Moon className="mr-2 h-5 w-5" />}
+            <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut} className="py-3 text-base cursor-pointer">
             <LogOut className="mr-2 h-5 w-5" />
