@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { isDemoMode, DEMO_USER } from '@/lib/demo-mode';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -69,6 +70,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
+    // Verificar modo demo primero
+    if (isDemoMode()) {
+      setUserAuthState({ user: DEMO_USER as User, isUserLoading: false, userError: null });
+      return;
+    }
+
     if (!auth) { // If no Auth service instance, cannot determine user state
       setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;

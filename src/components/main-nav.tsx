@@ -15,6 +15,7 @@ import {
   Sparkles,
   Moon,
   Sun,
+  FlaskConical,
 } from "lucide-react"
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
+import { useDemoMode, clearDemoMode } from "@/lib/demo-mode"
 import {
   Sidebar,
   SidebarContent,
@@ -63,8 +65,15 @@ function UserMenu() {
     const auth = useAuth();
     const router = useRouter();
     const { theme, setTheme } = useTheme();
+    const isDemo = useDemoMode();
 
     const handleSignOut = () => {
+        // Limpiar modo demo si está activo
+        if (isDemo) {
+            clearDemoMode();
+            router.push('/login');
+            return;
+        }
         signOut(auth).then(() => {
             router.push('/login');
         });
@@ -87,7 +96,16 @@ function UserMenu() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel className="text-base">{user?.email ?? 'Mi Cuenta'}</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-base">
+            {isDemo ? (
+              <span className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-amber-500" />
+                Modo Demo
+              </span>
+            ) : (
+              user?.email ?? 'Mi Cuenta'
+            )}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="py-3 text-base cursor-pointer">
             {theme === 'dark' ? <Sun className="mr-2 h-5 w-5" /> : <Moon className="mr-2 h-5 w-5" />}
@@ -189,12 +207,22 @@ function MobileBottomNav() {
 }
 
 export function MainNav({ children }: { children: React.ReactNode }) {
+  const isDemo = useDemoMode();
+  
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-[100dvh] w-full bg-background">
         <AppSidebar />
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-[100dvh]">
+             {/* Demo Mode Banner */}
+             {isDemo && (
+               <div className="bg-amber-500/90 text-amber-950 text-center py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+                 <FlaskConical className="h-4 w-4" />
+                 <span>Modo Demostración - Datos de ejemplo para portafolio</span>
+               </div>
+             )}
+             
              {/* Mobile Header */}
              <header className="md:hidden flex-none h-14 flex items-center gap-4 border-b bg-background/95 backdrop-blur px-4 z-40 sticky top-0">
                 <Link href="/dashboard" className="flex items-center gap-2">

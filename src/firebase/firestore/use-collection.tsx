@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { isDemoMode } from '@/lib/demo-mode';
+import { getDemoData } from '@/lib/demo-data';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -62,6 +64,26 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Verificar modo demo
+    if (isDemoMode()) {
+      setIsLoading(true);
+      // Obtener el path de la colección para determinar qué datos demo devolver
+      let collectionPath = '';
+      if (memoizedTargetRefOrQuery) {
+        if (memoizedTargetRefOrQuery.type === 'collection') {
+          collectionPath = (memoizedTargetRefOrQuery as CollectionReference).path;
+        } else {
+          collectionPath = (memoizedTargetRefOrQuery as unknown as InternalQuery)._query?.path?.toString() || '';
+        }
+      }
+      
+      const demoData = getDemoData(collectionPath) as ResultItemType[];
+      setData(demoData);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);

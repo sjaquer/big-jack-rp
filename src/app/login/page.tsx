@@ -16,21 +16,34 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { BurgerIcon } from "@/components/icons";
+import { setDemoMode } from "@/lib/demo-mode";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
 
   const handleSignIn = async () => {
     setError(null);
+    setIsLoading(true);
+    
+    // Verificar credenciales de demostración
+    if (email === 'admin' && password === 'admin') {
+      setDemoMode(true);
+      router.push("/dashboard");
+      return;
+    }
+    
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      setDemoMode(false); // Asegurar que el modo demo esté desactivado
       router.push("/dashboard");
     } catch (error: any) {
       setError(error.message);
+      setIsLoading(false);
     }
   };
 
@@ -46,6 +59,10 @@ export default function LoginPage() {
                 <CardTitle className="text-2xl font-headline">Iniciar Sesión</CardTitle>
                 <CardDescription>
                     Ingresa tus credenciales para acceder al panel de administración.
+                    <br />
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      Demo: usuario <strong>admin</strong> / contraseña <strong>admin</strong>
+                    </span>
                 </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -58,8 +75,8 @@ export default function LoginPage() {
                     <Input id="password" type="password" className="h-12 text-base" required value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-                <Button type="submit" className="w-full h-12 text-base font-medium" onClick={handleSignIn}>
-                    Iniciar Sesión
+                <Button type="submit" className="w-full h-12 text-base font-medium" onClick={handleSignIn} disabled={isLoading}>
+                    {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </Button>
                 </CardContent>
             </Card>
