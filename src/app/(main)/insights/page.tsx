@@ -237,13 +237,13 @@ export default function InsightsPage() {
       recommendations.push({
         type: 'success',
         title: 'Crecimiento acelerado',
-        description: `Ventas crecieron ${growthRate.toFixed(1)}% vs mes anterior. Aumenta stock de ingredientes populares.`,
+        description: `Ventas crecieron ${(growthRate ?? 0).toFixed(1)}% vs mes anterior. Aumenta stock de ingredientes populares.`,
       });
     } else if (growthRate < -5) {
       recommendations.push({
         type: 'warning',
         title: 'Ventas en descenso',
-        description: `Ventas bajaron ${Math.abs(growthRate).toFixed(1)}% vs mes anterior. Lanza promociones o combos especiales.`,
+        description: `Ventas bajaron ${Math.abs(growthRate ?? 0).toFixed(1)}% vs mes anterior. Lanza promociones o combos especiales.`,
       });
     }
 
@@ -300,7 +300,7 @@ export default function InsightsPage() {
   const { growthRate, avgTicket, topSellingDay, peakHour, topProducts, recommendations, campaignSuggestions } = analysis;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-purple-50/30 to-blue-50/20">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-purple-50/30 to-blue-50/20 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-[1600px] mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           {/* Header */}
@@ -316,7 +316,7 @@ export default function InsightsPage() {
 
           {/* KPIs Principales */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-green-200 bg-gradient-to-br from-white to-green-50/30">
+            <Card className="border-green-200 bg-gradient-to-br from-white to-green-50/30 dark:from-slate-800 dark:to-transparent">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Crecimiento</CardTitle>
@@ -329,13 +329,13 @@ export default function InsightsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {growthRate >= 0 ? '+' : ''}{growthRate.toFixed(1)}%
+                  {growthRate >= 0 ? '+' : ''}{(growthRate ?? 0).toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">vs mes anterior</p>
               </CardContent>
             </Card>
 
-            <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30">
+            <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-transparent">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Ticket Promedio</CardTitle>
@@ -350,7 +350,7 @@ export default function InsightsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-orange-200 bg-gradient-to-br from-white to-orange-50/30">
+            <Card className="border-orange-200 bg-gradient-to-br from-white to-orange-50/30 dark:from-slate-800 dark:to-transparent">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Día Top</CardTitle>
@@ -363,7 +363,7 @@ export default function InsightsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
+            <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-transparent">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Hora Pico</CardTitle>
@@ -559,9 +559,9 @@ export default function InsightsPage() {
                     {topProducts.map((product, index) => (
                       <div 
                         key={product.productId} 
-                        className="flex items-center gap-4 p-3 rounded-lg border bg-gradient-to-r from-muted/30 to-transparent"
+                        className="flex items-center gap-4 p-3 rounded-lg border bg-gradient-to-r from-muted/30 to-transparent dark:from-muted/20"
                       >
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-lg">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-lg dark:from-yellow-600 dark:to-orange-600">
                           {index < 3 ? <Medal className="h-5 w-5" /> : `#${index + 1}`}
                         </div>
                         <div className="flex-1">
@@ -610,7 +610,7 @@ export default function InsightsPage() {
 
             {/* Tab: IA */}
             <TabsContent value="ia" className="space-y-4">
-              <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
+              <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-transparent">
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-purple-600" />
@@ -621,7 +621,7 @@ export default function InsightsPage() {
                 <CardContent>
                   <div className="space-y-3">
                     {recommendations.map((rec, index) => (
-                      <div key={index} className="flex items-start gap-3 p-4 rounded-lg border bg-white/60">
+                      <div key={index} className="flex items-start gap-3 p-4 rounded-lg border bg-white/60 dark:bg-slate-800/60">
                         <div className={`p-2 rounded-lg ${rec.type === 'success' ? 'bg-green-100 text-green-600' : rec.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
                           <Target className="h-5 w-5" />
                         </div>
@@ -641,7 +641,7 @@ export default function InsightsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30">
+              <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-transparent">
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-blue-600" />
@@ -652,7 +652,7 @@ export default function InsightsPage() {
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-2">
                     {campaignSuggestions.map((campaign, index) => (
-                      <div key={index} className="p-4 rounded-lg border bg-white/60 space-y-2">
+                      <div key={index} className="p-4 rounded-lg border bg-white/60 space-y-2 dark:bg-slate-800/60">
                         <div className="flex items-center justify-between">
                           <h4 className="font-semibold">{campaign.title}</h4>
                           <Badge variant="outline">{campaign.timing}</Badge>

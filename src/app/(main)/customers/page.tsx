@@ -71,7 +71,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-purple-50/20">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-purple-50/20 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -110,7 +110,7 @@ export default function CustomersPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">S/ {stats.totalSpent.toFixed(2)}</div>
+                <div className="text-2xl font-bold">S/ {(stats.totalSpent ?? 0).toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">De clientes registrados</p>
               </CardContent>
             </Card>
@@ -132,7 +132,7 @@ export default function CustomersPage() {
                 <Award className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.avgPoints.toFixed(0)}</div>
+                <div className="text-2xl font-bold">{(stats.avgPoints ?? 0).toFixed(0)}</div>
                 <p className="text-xs text-muted-foreground">Puntos por cliente</p>
               </CardContent>
             </Card>
@@ -251,7 +251,7 @@ export default function CustomersPage() {
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>{customer.totalVisits} visitas</span>
                             <span>•</span>
-                            <span>S/ {customer.totalSpent.toFixed(0)}</span>
+                            <span>S/ {(customer.totalSpent ?? 0).toFixed(0)}</span>
                           </div>
                           {customer.lastVisit && (
                             <p className="text-xs text-muted-foreground">

@@ -231,7 +231,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
         <DialogHeader className="px-5 py-3 flex-shrink-0 border-b">
           <DialogTitle className="font-headline text-xl">Procesar Pago</DialogTitle>
           <DialogDescription className="text-sm">
-            Total a cobrar: <span className="font-bold text-primary text-lg">S/ {total.toFixed(2)}</span>
+            Total a cobrar: <span className="font-bold text-primary text-lg">S/ {(total ?? 0).toFixed(2)}</span>
             {' • '}
             <span className="capitalize">{paymentMethod === 'cash' ? 'Efectivo' : paymentMethod === 'card' ? 'Tarjeta' : paymentMethod === 'yape' ? 'Yape' : paymentMethod === 'plin' ? 'Plin' : 'Pedidos Ya'}</span>
           </DialogDescription>
@@ -275,7 +275,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                       variant="outline"
                       size="sm"
                       className="text-xs h-8"
-                      onClick={() => setAmountReceived(item.value.toFixed(2))}
+                      onClick={() => setAmountReceived((item.value ?? 0).toFixed(2))}
                       disabled={isProcessing}
                     >
                       S/ {item.label}
@@ -293,7 +293,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                     <div className="space-y-1">
                       <span className="font-medium text-sm text-muted-foreground">Vuelto</span>
                       {isInsufficientCash && (
-                        <p className="text-xs text-destructive">Falta S/ {(total - amount).toFixed(2)}</p>
+                        <p className="text-xs text-destructive">Falta S/ {((total ?? 0) - (amount ?? 0)).toFixed(2)}</p>
                       )}
                     </div>
                     <span className={cn(
@@ -301,7 +301,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                       isInsufficientCash ? "text-destructive" :
                       amount >= total ? "text-green-600" : "text-amber-600"
                     )}>
-                      {isInsufficientCash ? '-' : `S/ ${change.toFixed(2)}`}
+                      {isInsufficientCash ? '-' : `S/ ${(change ?? 0).toFixed(2)}`}
                     </span>
                   </div>
                 )}
@@ -315,7 +315,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                   <span className="text-destructive-foreground text-xs font-bold">!</span>
                 </div>
                 <p className="text-sm font-medium text-destructive">
-                  El efectivo recibido no cubre el total. Recibido: S/ {amount.toFixed(2)}, Falta: S/ {(total - amount).toFixed(2)}
+                  El efectivo recibido no cubre el total. Recibido: S/ {(amount ?? 0).toFixed(2)}, Falta: S/ {((total ?? 0) - (amount ?? 0)).toFixed(2)}
                 </p>
               </div>
             )}
@@ -474,7 +474,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
             size="default" 
             className="h-10 text-sm w-full sm:w-auto font-bold shadow-md"
           >
-            {isProcessing ? 'Procesando...' : `Cobrar S/ ${total.toFixed(2)}`}
+            {isProcessing ? 'Procesando...' : `Cobrar S/ ${(total ?? 0).toFixed(2)}`}
           </Button>
         </DialogFooter>
       </DialogContent>

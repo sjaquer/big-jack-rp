@@ -112,7 +112,7 @@ export default function ProductsPage() {
   const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-orange-50/20">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-orange-50/20 dark:from-slate-900 dark:to-slate-800">
       <ProductForm 
         isOpen={isFormOpen}
         onClose={handleFormClose}
@@ -165,8 +165,8 @@ export default function ProductsPage() {
                           {PRODUCT_CATEGORY_LABELS[product.category ?? 'otros']}
                         </Badge>
                       </TableCell>
-                      <TableCell>S/ {product.salePrice.toFixed(2)}</TableCell>
-                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>S/ {(product.salePrice ?? 0).toFixed(2)}</TableCell>
+                      <TableCell>{product.quantity ?? 0}</TableCell>
                       <TableCell>
                         {calculateProducibleQuantity(product, ingredients ?? [])}
                       </TableCell>

@@ -277,12 +277,12 @@ export default function IncomingOrdersPage() {
                                       {item.productName}
                                     </p>
                                     <p className="text-sm md:text-base text-muted-foreground mt-1">
-                                      S/ {item.unitPrice.toFixed(2)} c/u
+                                      S/ {(item.unitPrice ?? 0).toFixed(2)} c/u
                                     </p>
                                   </div>
                                   <div className="text-right">
                                     <p className="font-bold text-lg md:text-2xl text-primary">
-                                      S/ {(item.quantity * item.unitPrice).toFixed(2)}
+                                      S/ {((item.quantity ?? 0) * (item.unitPrice ?? 0)).toFixed(2)}
                                     </p>
                                   </div>
                                 </div>
@@ -302,7 +302,7 @@ export default function IncomingOrdersPage() {
                           <div className="flex items-center justify-between p-5 md:p-6 rounded-xl bg-primary/10 border-2 border-primary/30 shadow-md">
                             <span className="text-xl md:text-2xl font-bold">Total:</span>
                             <span className="text-3xl md:text-4xl font-bold text-primary">
-                              S/ {order.totalAmount.toFixed(2)}
+                              S/ {(order.totalAmount ?? 0).toFixed(2)}
                             </span>
                           </div>
                         </CardContent>

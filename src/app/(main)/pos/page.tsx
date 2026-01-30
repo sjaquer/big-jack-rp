@@ -90,9 +90,9 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
         <div class="line-item">
           <div class="row item-row">
             <span class="left">${item.quantity} x ${safeName}</span>
-            <span class="right">S/ ${item.unitPrice.toFixed(2)}</span>
+            <span class="right">S/ ${(item.unitPrice ?? 0).toFixed(2)}</span>
           </div>
-          ${showSubtotal ? `<div class="row subtotal"><span class="left"></span><span class="right">Subtotal: S/ ${item.subtotal.toFixed(2)}</span></div>` : ''}
+          ${showSubtotal ? `<div class="row subtotal"><span class="left"></span><span class="right">Subtotal: S/ ${(item.subtotal ?? 0).toFixed(2)}</span></div>` : ''}
         </div>`;
       })
       .join('');
@@ -149,7 +149,7 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
 
           <div class="section">
             <div class="row"><span>Pago:</span><span>${payload.paymentMethod}</span></div>
-            <div class="row total"><span>TOTAL</span><span>S/ ${payload.total.toFixed(2)}</span></div>
+            <div class="row total"><span>TOTAL</span><span>S/ ${(payload.total ?? 0).toFixed(2)}</span></div>
           </div>
 
           <div class="section center">
@@ -307,7 +307,8 @@ export default function POSPage() {
 
       categoryKeys.forEach((key) => {
         const list = groups[key] ?? [];
-        list.sort((a, b) => a.name.localeCompare(b.name));
+        // Defensive: ensure we compare strings to avoid calling localeCompare on undefined
+        list.sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
         groups[key] = list;
       });
 
@@ -631,7 +632,7 @@ export default function POSPage() {
         // === FEEDBACK INMEDIATO AL USUARIO ===
         toast({
           title: "✅ Venta registrada",
-          description: `Boleta ${generatedSerie}-${String(generatedCorrelativo).padStart(8, '0')} • S/ ${total.toFixed(2)}`,
+          description: `Boleta ${generatedSerie}-${String(generatedCorrelativo).padStart(8, '0')} • S/ ${(total ?? 0).toFixed(2)}`,
         });
         
         // Limpiar pedido INMEDIATAMENTE

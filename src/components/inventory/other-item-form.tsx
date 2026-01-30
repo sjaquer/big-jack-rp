@@ -102,7 +102,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-[min(100vw,900px)] h-[100dvh] sm:h-[min(90vh,750px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
-        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white">
+        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white dark:bg-slate-900/70">
           <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900">{item ? 'Editar Artículo' : 'Añadir Nuevo Artículo'}</DialogTitle>
           <DialogDescription className="text-sm">
             {item ? 'Actualiza los detalles del artículo.' : 'Completa los detalles para añadir un nuevo artículo al inventario.'}
@@ -261,7 +261,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
+        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
           <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold rounded-xl">
             Cancelar
           </Button>

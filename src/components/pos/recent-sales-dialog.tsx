@@ -237,7 +237,7 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
                             </Badge>
                           )}
                           <Badge variant="outline">
-                            S/ {sale.totalAmount.toFixed(2)}
+                            S/ {(sale.totalAmount ?? 0).toFixed(2)}
                           </Badge>
                           <Badge variant={sale.sunatStatus === 'accepted' ? 'default' : 'secondary'}>
                             {sale.sunatStatus === 'accepted' ? 'SUNAT ✓' : 'Sin SUNAT'}
@@ -265,7 +265,7 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
                             <ul className="space-y-0.5">
                               {sale.items.map((item, idx) => (
                                 <li key={idx}>
-                                  • {item.quantity}x {item.productName || 'Producto'} - S/ {item.unitPrice.toFixed(2)}
+                                  • {item.quantity}x {item.productName || 'Producto'} - S/ {(item.unitPrice ?? 0).toFixed(2)}
                                 </li>
                               ))}
                             </ul>
@@ -312,7 +312,7 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
               {saleToCancel && (
                 <div className="mt-3 p-3 bg-muted rounded-lg">
                   <p className="font-semibold">
-                    Venta: S/ {saleToCancel.totalAmount.toFixed(2)}
+                    Venta: S/ {(saleToCancel.totalAmount ?? 0).toFixed(2)}
                   </p>
                   {saleToCancel.boletaSerie && (
                     <p className="text-sm">

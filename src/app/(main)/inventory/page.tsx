@@ -98,7 +98,7 @@ export default function InventoryPage() {
   const lowStockOtherItems = otherItems?.filter(i => i.quantity <= (i.minimumStock ?? 0)).length ?? 0;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800">
       <IngredientForm
         isOpen={isIngredientFormOpen}
         onClose={() => setIngredientFormOpen(false)}

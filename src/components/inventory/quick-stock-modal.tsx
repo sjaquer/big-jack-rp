@@ -139,7 +139,7 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-[min(100vw,480px)] p-0 gap-0 rounded-2xl shadow-2xl border-slate-200">
-        <DialogHeader className="px-4 sm:px-5 pt-5 pb-4 border-b bg-white">
+        <DialogHeader className="px-4 sm:px-5 pt-5 pb-4 border-b bg-white dark:bg-slate-900/70">
           <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Package className="h-5 w-5" />
             Actualizar Stock
@@ -273,7 +273,7 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
           )}
         </div>
 
-        <DialogFooter className="px-4 pb-5 sm:pb-4 pt-3 border-t bg-white shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
+        <DialogFooter className="px-4 pb-5 sm:pb-4 pt-3 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
           <Button
             type="button"
             variant="outline"

@@ -278,11 +278,11 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
                     <div className="flex-1">
                       <p className="font-medium text-base">{item.productName}</p>
                       <p className="text-sm text-muted-foreground">
-                        Cantidad: {item.quantity} × S/ {item.unitPrice.toFixed(2)}
+                        Cantidad: {item.quantity} × S/ {(item.unitPrice ?? 0).toFixed(2)}
                       </p>
                     </div>
                     <p className="font-semibold text-base">
-                      S/ {(item.quantity * item.unitPrice).toFixed(2)}
+                      S/ {((item.quantity ?? 0) * (item.unitPrice ?? 0)).toFixed(2)}
                     </p>
                   </div>
                 ))}
@@ -291,7 +291,7 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
               <div className="flex justify-between items-center pt-4 border-t-2">
                 <span className="text-lg font-semibold">Total:</span>
                 <span className="text-2xl font-bold text-primary">
-                  S/ {order.totalAmount.toFixed(2)}
+                  S/ {(order.totalAmount ?? 0).toFixed(2)}
                 </span>
               </div>
             </div>

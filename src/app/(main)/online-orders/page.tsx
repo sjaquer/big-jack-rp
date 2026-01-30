@@ -49,7 +49,7 @@ export default function IncomingOrdersPage() {
 
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/20">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/20 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           <div>
@@ -85,7 +85,7 @@ export default function IncomingOrdersPage() {
                       {order.items.map(item => (
                         <div key={item.productId} className="flex justify-between text-xs sm:text-sm p-2 rounded-md bg-muted/30">
                           <span className="font-medium">{item.quantity} x {item.productName}</span>
-                          <span className="font-semibold">S/ {(item.quantity * item.unitPrice).toFixed(2)}</span>
+                          <span className="font-semibold">S/ {((item.quantity ?? 0) * (item.unitPrice ?? 0)).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -95,7 +95,7 @@ export default function IncomingOrdersPage() {
               <div className="mt-4 pt-4 border-t">
                 <p className="flex justify-between font-semibold">
                   <span>Total:</span>
-                  <span>S/ {order.totalAmount.toFixed(2)}</span>
+                  <span>S/ {(order.totalAmount ?? 0).toFixed(2)}</span>
                 </p>
               </div>
             </CardContent>

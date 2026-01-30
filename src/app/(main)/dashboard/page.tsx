@@ -144,7 +144,7 @@ export default function DashboardPage() {
   }, [monthSalesData]);
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/10">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/10 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           {/* Header */}
@@ -187,7 +187,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stock Overview */}
-          <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30">
+          <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-transparent">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -208,7 +208,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* CTA para análisis avanzado */}
-          <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
+          <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-transparent">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-start gap-3">

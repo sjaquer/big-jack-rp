@@ -241,7 +241,7 @@ export function CashRegister({ onBalanceUpdate, userEmail }: CashRegisterProps) 
 
   if (!currentRegister) {
     return (
-      <Card className="border-orange-200 bg-gradient-to-br from-white to-orange-50/30">
+      <Card className="border-orange-200 bg-gradient-to-br from-white to-orange-50/30 dark:from-slate-800 dark:to-transparent">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-orange-600" />
@@ -295,7 +295,7 @@ export function CashRegister({ onBalanceUpdate, userEmail }: CashRegisterProps) 
   return (
     <div className="space-y-4">
       {/* Card principal */}
-      <Card className="border-green-200 bg-gradient-to-br from-white to-green-50/30">
+      <Card className="border-green-200 bg-gradient-to-br from-white to-green-50/30 dark:from-slate-800 dark:to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -310,7 +310,7 @@ export function CashRegister({ onBalanceUpdate, userEmail }: CashRegisterProps) 
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Saldo actual */}
-          <div className="p-4 rounded-lg bg-white border-2 border-green-200">
+          <div className="p-4 rounded-lg bg-white border-2 border-green-200 dark:bg-slate-800/60">
             <p className="text-sm text-muted-foreground mb-1">Efectivo en Caja</p>
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-bold text-green-600">

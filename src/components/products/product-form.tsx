@@ -154,7 +154,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-[min(100vw,1100px)] h-[100dvh] sm:h-[min(90vh,800px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
-        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white">
+        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white dark:bg-slate-900/70">
           <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900">{product ? 'Editar Producto' : 'Añadir Nuevo Producto'}</DialogTitle>
           <DialogDescription className="text-sm">
             {product ? 'Actualiza los detalles y la receta del producto.' : 'Completa los detalles para añadir un nuevo producto al inventario.'}
@@ -343,7 +343,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
           </ScrollArea>
         </div>
         
-        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
+        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
           <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold rounded-xl">
             Cancelar
           </Button>

@@ -126,7 +126,7 @@ export default function CashFlowPage() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-green-50/20">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-green-50/20 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           <div className="flex flex-col gap-2">

@@ -108,7 +108,7 @@ export function ProductGrid({
                                 <div className="w-full p-3 lg:p-4 flex flex-col items-center justify-between bg-card h-full min-h-[7rem] lg:min-h-[9rem]">
                                   <p className="text-sm lg:text-base font-bold text-center leading-tight line-clamp-2 group-hover:text-primary transition-colors">{product.name}</p>
                                   <div className="mt-2 bg-muted/50 rounded-full px-3 py-1 group-hover:bg-primary/10 transition-colors">
-                                    <p className="text-sm lg:text-base font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                    <p className="text-sm lg:text-base font-extrabold text-primary">S/ {(product.salePrice ?? 0).toFixed(2)}</p>
                                   </div>
                                 </div>
                               </button>
@@ -142,7 +142,7 @@ export function ProductGrid({
                                 <div className="w-full p-3 lg:p-4 flex flex-col items-center justify-between bg-card h-full min-h-[7rem] lg:min-h-[9rem]">
                                   <p className="text-sm lg:text-base font-bold text-center leading-tight line-clamp-2 group-hover:text-primary transition-colors">{product.name}</p>
                                   <div className="mt-2 bg-muted/50 rounded-full px-3 py-1 group-hover:bg-primary/10 transition-colors">
-                                    <p className="text-sm lg:text-base font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
+                                    <p className="text-sm lg:text-base font-extrabold text-primary">S/ {(product.salePrice ?? 0).toFixed(2)}</p>
                                   </div>
                                 </div>
                               </button>
@@ -238,7 +238,7 @@ export function CartPanel({
                         <div key={item.id} className="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 bg-card rounded-lg border shadow-sm animate-in slide-in-from-left-5 duration-300">
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm lg:text-base truncate">{item.name}</p>
-                            <p className="text-xs lg:text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)}</p>
+                            <p className="text-xs lg:text-sm text-muted-foreground">S/ {(item.salePrice ?? 0).toFixed(2)}</p>
                           </div>
 
                             <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-0.5 flex-shrink-0">
@@ -262,7 +262,7 @@ export function CartPanel({
                             </div>
                             
                             <div className="text-right min-w-[4.5rem] lg:min-w-[5rem] flex-shrink-0">
-                              <p className="font-bold text-sm lg:text-base text-primary whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
+                              <p className="font-bold text-sm lg:text-base text-primary whitespace-nowrap">S/ {((item.salePrice ?? 0) * item.quantity).toFixed(2)}</p>
                             </div>
                         </div>
                     ))}
@@ -275,12 +275,12 @@ export function CartPanel({
             <div className="space-y-1.5">
                 <div className="flex justify-between text-xs lg:text-sm text-muted-foreground">
                     <span className="font-medium">Subtotal</span>
-                    <span className="font-semibold">S/ {subtotal.toFixed(2)}</span>
+                    <span className="font-semibold">S/ {(subtotal ?? 0).toFixed(2)}</span>
                 </div>
                 <Separator className="my-1" />
                 <div className="flex justify-between items-end gap-2">
                     <span className="text-sm lg:text-base font-bold">Total</span>
-                    <span className="text-xl lg:text-2xl font-bold text-primary whitespace-nowrap">S/ {total.toFixed(2)}</span>
+                    <span className="text-xl lg:text-2xl font-bold text-primary whitespace-nowrap">S/ {(total ?? 0).toFixed(2)}</span>
                 </div>
             </div>
             
@@ -359,7 +359,7 @@ export function CartPanel({
             >
                 Procesar Pago
                 <span className="ml-2 bg-primary-foreground/20 px-2 py-0.5 rounded text-sm lg:text-base">
-                    S/ {total.toFixed(2)}
+                    S/ {(total ?? 0).toFixed(2)}
                 </span>
             </Button>
             <div className="flex flex-col gap-1.5 pt-1">
