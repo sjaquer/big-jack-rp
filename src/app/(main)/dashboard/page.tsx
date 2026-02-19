@@ -9,8 +9,8 @@ import {
 import StatCard from '@/components/dashboard/stat-card';
 import { LiveClock } from '@/components/dashboard/live-clock';
 import { StockOverview } from '@/components/dashboard/stock-overview';
-import { 
-  DollarSign, 
+import {
+  DollarSign,
   Receipt,
   TrendingUp,
   Package,
@@ -32,10 +32,10 @@ import { Badge } from '@/components/ui/badge';
 function getCurrentShiftRange(): { start: Date; end: Date } {
   const now = new Date();
   const currentHour = now.getHours();
-  
+
   let shiftStart: Date;
   let shiftEnd: Date;
-  
+
   if (currentHour < 3) {
     shiftStart = setMinutes(setHours(subDays(now, 1), 15), 0);
     shiftEnd = setMinutes(setHours(now, 2), 59);
@@ -46,7 +46,7 @@ function getCurrentShiftRange(): { start: Date; end: Date } {
     shiftStart = setMinutes(setHours(now, 15), 0);
     shiftEnd = setMinutes(setHours(subDays(now, -1), 2), 59);
   }
-  
+
   return { start: shiftStart, end: shiftEnd };
 }
 
@@ -59,12 +59,12 @@ const currencyFormatter = new Intl.NumberFormat('es-PE', {
 
 export default function DashboardPage() {
   const firestore = useFirestore();
-  
+
   // Calcular rangos del turno de manera estable
   const shiftStart = useMemo(() => {
     const now = new Date();
     const currentHour = now.getHours();
-    
+
     if (currentHour < 3) {
       return setMinutes(setHours(subDays(now, 1), 15), 0);
     } else if (currentHour < 15) {
@@ -77,7 +77,7 @@ export default function DashboardPage() {
   const shiftEnd = useMemo(() => {
     const now = new Date();
     const currentHour = now.getHours();
-    
+
     if (currentHour < 3) {
       return setMinutes(setHours(now, 2), 59);
     } else if (currentHour < 15) {
@@ -90,7 +90,7 @@ export default function DashboardPage() {
   const currentShiftQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'sales'), 
+      collection(firestore, 'sales'),
       where('saleDate', '>=', Timestamp.fromDate(shiftStart)),
       where('saleDate', '<=', Timestamp.fromDate(shiftEnd))
     );
@@ -132,14 +132,14 @@ export default function DashboardPage() {
     const revenue = currentShiftSales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
     const orders = currentShiftSales.length;
     const avgTicket = orders > 0 ? revenue / orders : 0;
-    
+
     return { revenue, orders, avgTicket };
   }, [currentShiftSales]);
 
   const monthStats = useMemo(() => {
     const revenue = (monthSalesData ?? []).reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
     const orders = (monthSalesData ?? []).length;
-    
+
     return { revenue, orders };
   }, [monthSalesData]);
 
@@ -148,7 +148,7 @@ export default function DashboardPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           {/* Header */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2" id="dashboard-header">
             <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">
               Panel de Control
             </h1>
@@ -159,7 +159,7 @@ export default function DashboardPage() {
           <LiveClock />
 
           {/* Métricas principales */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" id="stats-cards">
             <StatCard
               title="Ventas del Turno"
               value={currencyFormatter.format(shiftStats.revenue)}
@@ -199,7 +199,7 @@ export default function DashboardPage() {
               <CardDescription>Estado actual del inventario y alertas</CardDescription>
             </CardHeader>
             <CardContent>
-              <StockOverview 
+              <StockOverview
                 ingredients={ingredientsData ?? []}
                 products={productsData ?? []}
                 isLoading={ingredientsLoading || productsLoading}

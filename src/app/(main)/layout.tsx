@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MainNav } from '@/components/main-nav';
 import { Loader2 } from 'lucide-react';
 import { useDemoMode } from '@/lib/demo-mode';
+import { TourGuide } from '@/components/tour-guide';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -29,6 +30,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <MainNav>
+      <TourGuide />
       {children}
     </MainNav>
   );

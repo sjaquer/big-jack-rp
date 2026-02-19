@@ -1,5 +1,5 @@
 'use client';
-    
+
 import { useState, useEffect } from 'react';
 import {
   DocumentReference,
@@ -10,6 +10,8 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { isDemoMode } from '@/lib/demo-mode';
+import { getDemoDocument } from '@/lib/demo-data';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
@@ -58,6 +60,32 @@ export function useDoc<T = any>(
     setIsLoading(true);
     setError(null);
     // Optional: setData(null); // Clear previous data instantly
+
+    if (isDemoMode()) {
+      if (memoizedDocRef) {
+        try {
+          const path = memoizedDocRef.path;
+          const segments = path.split('/');
+          const docId = segments[segments.length - 1];
+          // Reconstruct collection path
+          const collectionPath = segments.slice(0, -1).join('/');
+
+          const demoDoc = getDemoDocument(collectionPath, docId) as WithId<T>;
+          if (demoDoc) {
+            setData(demoDoc);
+          } else {
+            setData(null);
+          }
+          setError(null);
+          setIsLoading(false);
+        } catch (e) {
+          console.error("Error getting demo data", e);
+          setData(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+    }
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,

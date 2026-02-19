@@ -17,6 +17,7 @@ import { useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { BurgerIcon } from "@/components/icons";
 import { setDemoMode } from "@/lib/demo-mode";
+import { Eye, PlayCircle } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,17 +30,10 @@ export default function LoginPage() {
   const handleSignIn = async () => {
     setError(null);
     setIsLoading(true);
-    
-    // Verificar credenciales de demostración
-    if (email === 'admin' && password === 'admin') {
-      setDemoMode(true);
-      router.push("/dashboard");
-      return;
-    }
-    
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      setDemoMode(false); // Asegurar que el modo demo esté desactivado
+      setDemoMode(false);
       router.push("/dashboard");
     } catch (error: any) {
       setError(error.message);
@@ -47,40 +41,61 @@ export default function LoginPage() {
     }
   };
 
+  const handleDemoMode = () => {
+    setDemoMode(true);
+    router.push("/dashboard");
+  };
+
   return (
     <div className="flex items-center justify-center min-h-[100dvh] bg-muted/40">
-        <div className="w-full max-w-md space-y-4 text-center">
-            <div className="flex justify-center items-center gap-2 font-headline text-2xl font-semibold text-primary mb-4">
-                 <BurgerIcon className="h-8 w-8 text-primary" />
-                <span>Big Jack Manager</span>
-            </div>
-            <Card>
-                <CardHeader>
-                <CardTitle className="text-2xl font-headline">Iniciar Sesión</CardTitle>
-                <CardDescription>
-                    Ingresa tus credenciales para acceder al panel de administración.
-                    <br />
-                    <span className="text-xs text-muted-foreground mt-1 block">
-                      Demo: usuario <strong>admin</strong> / contraseña <strong>admin</strong>
-                    </span>
-                </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                <div className="space-y-2 text-left">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" className="h-12 text-base" placeholder="manager@bigjack.com" required value={email} onChange={e => setEmail(e.target.value)}/>
-                </div>
-                <div className="space-y-2 text-left">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" className="h-12 text-base" required value={password} onChange={e => setPassword(e.target.value)} />
-                </div>
-                {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-                <Button type="submit" className="w-full h-12 text-base font-medium" onClick={handleSignIn} disabled={isLoading}>
-                    {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-                </Button>
-                </CardContent>
-            </Card>
+      <div className="w-full max-w-md space-y-4 text-center px-4">
+        <div className="flex justify-center items-center gap-2 font-headline text-2xl font-semibold text-primary mb-4">
+          <BurgerIcon className="h-8 w-8 text-primary" />
+          <span>Big Jack Manager</span>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-headline">Iniciar Sesión</CardTitle>
+            <CardDescription>
+              Ingresa tus credenciales para acceder al panel de administración.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-left">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" className="h-12 text-base" placeholder="manager@bigjack.com" required value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2 text-left">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input id="password" type="password" className="h-12 text-base" required value={password} onChange={e => setPassword(e.target.value)} />
+            </div>
+            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+            <Button type="submit" className="w-full h-12 text-base font-medium" onClick={handleSignIn} disabled={isLoading}>
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">O</span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              type="button"
+              className="w-full h-12 text-base font-medium border-primary/30 hover:bg-primary/5 hover:border-primary/50 transition-colors"
+              onClick={handleDemoMode}
+            >
+              <PlayCircle className="mr-2 h-5 w-5 text-primary" />
+              Explorar en Modo Demo
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              El modo demo te permite explorar todas las funciones con datos de ejemplo, sin necesidad de cuenta.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
