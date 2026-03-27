@@ -36,12 +36,10 @@ export function clearDemoMode(): void {
  * Hook para verificar si el modo demo está activo
  */
 export function useDemoMode(): boolean {
-  const [isDemo, setIsDemo] = useState(false);
+  const [isDemo, setIsDemo] = useState(() => isDemoMode());
 
   useEffect(() => {
-    setIsDemo(isDemoMode());
-    
-    // Escuchar cambios en localStorage
+    // Escuchar cambios en localStorage desde otras pestañas/ventanas
     const handleStorageChange = () => {
       setIsDemo(isDemoMode());
     };
