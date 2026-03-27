@@ -76,8 +76,11 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
   const { data: customers } = useCollection<Customer>(customersQuery);
 
   const amount = parseFloat(amountReceived) || 0;
-  const change = amount >= total ? amount - total : 0;
-  const isInsufficientCash = paymentMethod === 'cash' && amount > 0 && amount < total;
+  // Redondear a 2 decimales para evitar problemas de precisión con punto flotante
+  const roundedAmount = Math.round(amount * 100) / 100;
+  const roundedTotal = Math.round(total * 100) / 100;
+  const change = roundedAmount >= roundedTotal ? roundedAmount - roundedTotal : 0;
+  const isInsufficientCash = paymentMethod === 'cash' && roundedAmount > 0 && roundedAmount < roundedTotal;
   const sanitizedDocument = documentNumber.replace(/\D/g, '');
   const isCustomerNameRequired = documentType !== '0';
 
@@ -288,18 +291,18 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                   <div className={cn(
                     "flex items-center justify-between p-4 rounded-lg border-2 transition-colors",
                     isInsufficientCash ? "bg-destructive/10 border-destructive/20 animate-pulse" :
-                    amount >= total ? "bg-green-500/10 border-green-500/20" : "bg-amber-500/10 border-amber-500/20"
+                    roundedAmount >= roundedTotal ? "bg-green-500/10 border-green-500/20" : "bg-amber-500/10 border-amber-500/20"
                   )}>
                     <div className="space-y-1">
                       <span className="font-medium text-sm text-muted-foreground">Vuelto</span>
                       {isInsufficientCash && (
-                        <p className="text-xs text-destructive">Falta S/ {((total ?? 0) - (amount ?? 0)).toFixed(2)}</p>
+                        <p className="text-xs text-destructive">Falta S/ {((roundedTotal ?? 0) - (roundedAmount ?? 0)).toFixed(2)}</p>
                       )}
                     </div>
                     <span className={cn(
                       "text-3xl font-bold",
                       isInsufficientCash ? "text-destructive" :
-                      amount >= total ? "text-green-600" : "text-amber-600"
+                      roundedAmount >= roundedTotal ? "text-green-600" : "text-amber-600"
                     )}>
                       {isInsufficientCash ? '-' : `S/ ${(change ?? 0).toFixed(2)}`}
                     </span>
@@ -315,7 +318,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                   <span className="text-destructive-foreground text-xs font-bold">!</span>
                 </div>
                 <p className="text-sm font-medium text-destructive">
-                  El efectivo recibido no cubre el total. Recibido: S/ {(amount ?? 0).toFixed(2)}, Falta: S/ {((total ?? 0) - (amount ?? 0)).toFixed(2)}
+                  El efectivo recibido no cubre el total. Recibido: S/ {(roundedAmount ?? 0).toFixed(2)}, Falta: S/ {((roundedTotal ?? 0) - (roundedAmount ?? 0)).toFixed(2)}
                 </p>
               </div>
             )}
@@ -470,7 +473,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
           </Button>
           <Button 
             onClick={handlePayment} 
-            disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || amount < total)) || isDocumentInvalid} 
+            disabled={isProcessing || (paymentMethod === 'cash' && (!amountReceived || roundedAmount < roundedTotal)) || isDocumentInvalid} 
             size="default" 
             className="h-10 text-sm w-full sm:w-auto font-bold shadow-md"
           >
