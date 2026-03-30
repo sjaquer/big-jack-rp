@@ -87,7 +87,7 @@ export function ShiftMetrics({ currentShiftSales, previousShiftSales, isLoading 
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse border-border/70">
             <CardContent className="p-4">
               <div className="h-4 bg-muted rounded w-20 mb-2" />
               <div className="h-6 bg-muted rounded w-16" />
@@ -133,13 +133,13 @@ export function ShiftMetrics({ currentShiftSales, previousShiftSales, isLoading 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {metricCards.map((metric) => (
-        <Card key={metric.label} className="relative overflow-hidden">
-          <CardContent className="p-4">
+        <Card key={metric.label} className="relative overflow-hidden border-border/70 bg-card/90">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground font-medium">{metric.label}</p>
+                <p className="text-[11px] sm:text-xs uppercase tracking-[0.08em] text-muted-foreground font-semibold">{metric.label}</p>
                 <p className={cn(
-                  "text-xl font-bold",
+                  "text-base sm:text-xl font-bold",
                   metric.isComparison && metric.change !== undefined && (
                     metric.change >= 0 ? "text-green-600" : "text-red-500"
                   )
@@ -147,11 +147,11 @@ export function ShiftMetrics({ currentShiftSales, previousShiftSales, isLoading 
                   {metric.value}
                 </p>
                 {metric.subValue && (
-                  <p className="text-xs text-muted-foreground">{metric.subValue}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{metric.subValue}</p>
                 )}
                 {metric.change !== undefined && !metric.isComparison && (
                   <div className={cn(
-                    "flex items-center gap-1 text-xs",
+                    "flex items-center gap-1 text-[10px] sm:text-xs",
                     metric.change >= 0 ? "text-green-600" : "text-red-500"
                   )}>
                     {metric.change === 0 ? (
@@ -165,15 +165,17 @@ export function ShiftMetrics({ currentShiftSales, previousShiftSales, isLoading 
                   </div>
                 )}
               </div>
-              <metric.icon className={cn(
-                "h-5 w-5",
-                metric.isComparison && metric.change !== undefined
-                  ? metric.change >= 0 ? "text-green-600" : "text-red-500"
-                  : "text-muted-foreground"
-              )} />
+              <div className="rounded-lg p-1.5 sm:p-2 bg-muted/50">
+                <metric.icon className={cn(
+                  "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                  metric.isComparison && metric.change !== undefined
+                    ? metric.change >= 0 ? "text-green-600" : "text-red-500"
+                    : "text-muted-foreground"
+                )} />
+              </div>
             </div>
             {metric.description && (
-              <p className="text-[10px] text-muted-foreground mt-2 truncate">{metric.description}</p>
+              <p className="text-[10px] text-muted-foreground mt-2 line-clamp-2">{metric.description}</p>
             )}
           </CardContent>
         </Card>

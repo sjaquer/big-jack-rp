@@ -41,6 +41,9 @@ import type { Sale, Product, SaleItem } from '@/lib/types';
 import { startOfMonth, subMonths, format, getDay, getHours, startOfWeek, startOfDay, endOfDay, subDays, setHours, setMinutes, addDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { AnalyticsIcon } from '@/components/icons';
 
 const currencyFormatter = new Intl.NumberFormat('es-PE', {
   style: 'currency',
@@ -300,26 +303,43 @@ export default function InsightsPage() {
   const { growthRate, avgTicket, topSellingDay, peakHour, topProducts, recommendations, campaignSuggestions } = analysis;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-purple-50/30 to-blue-50/20 dark:from-slate-900 dark:to-slate-800">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-amber-50/35 to-teal-50/25 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[1600px] mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
-          {/* Header */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-8 w-8 text-purple-600" />
+        <div className="max-w-[1600px] mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
+          <Card className="erp-surface border-teal-200/70">
+            <CardContent className="pt-5 sm:pt-6">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-teal-100 text-teal-700 border-teal-200">Analytics</Badge>
+                  <Badge variant="outline">Ultimos 90 dias</Badge>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex items-center gap-2">
+              <AnalyticsIcon className="h-8 w-8 text-teal-700" />
               <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">
                 Insights de Negocio
               </h1>
-            </div>
-            <p className="text-base text-slate-600">Análisis profundo de ventas, tendencias y oportunidades de crecimiento</p>
-          </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    <Link href="/dashboard" className="contents sm:block">
+                      <Button size="sm" variant="outline" className="w-full sm:w-auto">Panel</Button>
+                    </Link>
+                    <Link href="/pos" className="contents sm:block">
+                      <Button size="sm" className="w-full sm:w-auto">Ir a POS</Button>
+                    </Link>
+                  </div>
+                </div>
+                <p className="text-sm sm:text-base text-slate-600">Analisis profundo de ventas, tendencias y oportunidades de crecimiento</p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* KPIs Principales */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
             <Card className="border-green-200 bg-gradient-to-br from-white to-green-50/30 dark:from-slate-800 dark:to-transparent">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Crecimiento</CardTitle>
+                  <CardTitle className="text-[11px] sm:text-sm font-medium text-muted-foreground">Crecimiento</CardTitle>
                   {growthRate >= 0 ? (
                     <TrendingUp className="h-4 w-4 text-green-600" />
                   ) : (
@@ -328,67 +348,67 @@ export default function InsightsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
+                <div className="text-lg sm:text-3xl font-bold">
                   {growthRate >= 0 ? '+' : ''}{(growthRate ?? 0).toFixed(1)}%
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">vs mes anterior</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">vs mes anterior</p>
               </CardContent>
             </Card>
 
             <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-800 dark:to-transparent">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Ticket Promedio</CardTitle>
+                  <CardTitle className="text-[11px] sm:text-sm font-medium text-muted-foreground">Ticket Promedio</CardTitle>
                   <DollarSign className="h-4 w-4 text-blue-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
+                <div className="text-lg sm:text-3xl font-bold">
                   {currencyFormatter.format(avgTicket)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">últimos 30 días</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">ultimos 30 dias</p>
               </CardContent>
             </Card>
 
             <Card className="border-orange-200 bg-gradient-to-br from-white to-orange-50/30 dark:from-slate-800 dark:to-transparent">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Día Top</CardTitle>
+                  <CardTitle className="text-[11px] sm:text-sm font-medium text-muted-foreground">Dia Top</CardTitle>
                   <CalendarDays className="h-4 w-4 text-orange-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{topSellingDay}</div>
-                <p className="text-xs text-muted-foreground mt-1">mejor día de la semana</p>
+                <div className="text-lg sm:text-3xl font-bold">{topSellingDay}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">mejor dia de la semana</p>
               </CardContent>
             </Card>
 
-            <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-transparent">
-              <CardHeader className="pb-3">
+            <Card className="border-teal-200 bg-gradient-to-br from-white to-teal-50/30 dark:from-slate-800 dark:to-transparent">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Hora Pico</CardTitle>
-                  <Clock className="h-4 w-4 text-purple-600" />
+                  <CardTitle className="text-[11px] sm:text-sm font-medium text-muted-foreground">Hora Pico</CardTitle>
+                  <Clock className="h-4 w-4 text-teal-700" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{peakHour}:00</div>
-                <p className="text-xs text-muted-foreground mt-1">mayor volumen de ventas</p>
+                <div className="text-lg sm:text-3xl font-bold">{peakHour}:00</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">mayor volumen de ventas</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Tabs de análisis */}
           <Tabs defaultValue="tendencias" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5 lg:w-[700px] h-12">
-              <TabsTrigger value="tendencias" className="h-full text-xs sm:text-sm">Tendencias</TabsTrigger>
-              <TabsTrigger value="turno" className="h-full text-xs sm:text-sm">Turno</TabsTrigger>
-              <TabsTrigger value="diario" className="h-full text-xs sm:text-sm">Comparación</TabsTrigger>
-              <TabsTrigger value="productos" className="h-full text-xs sm:text-sm">Productos</TabsTrigger>
-              <TabsTrigger value="ia" className="h-full text-xs sm:text-sm">IA</TabsTrigger>
+            <TabsList className="w-full h-auto gap-1 overflow-x-auto whitespace-nowrap justify-start sm:justify-center [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <TabsTrigger value="tendencias" className="h-9 px-3 text-xs sm:text-sm">Tendencias</TabsTrigger>
+              <TabsTrigger value="turno" className="h-9 px-3 text-xs sm:text-sm">Turno</TabsTrigger>
+              <TabsTrigger value="diario" className="h-9 px-3 text-xs sm:text-sm">Comparacion</TabsTrigger>
+              <TabsTrigger value="productos" className="h-9 px-3 text-xs sm:text-sm">Productos</TabsTrigger>
+              <TabsTrigger value="ia" className="h-9 px-3 text-xs sm:text-sm">IA</TabsTrigger>
             </TabsList>
 
             {/* Tab: Tendencias */}
-            <TabsContent value="tendencias" className="space-y-4">
+            <TabsContent value="tendencias" className="space-y-3 sm:space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline">Tendencia de Ventas (14 días)</CardTitle>
@@ -403,7 +423,7 @@ export default function InsightsPage() {
                 </CardContent>
               </Card>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader>
                     <CardTitle className="font-headline">Ventas por Día</CardTitle>
@@ -446,14 +466,14 @@ export default function InsightsPage() {
             </TabsContent>
 
             {/* Tab: Turno Actual */}
-            <TabsContent value="turno" className="space-y-4">
+            <TabsContent value="turno" className="space-y-3 sm:space-y-4">
               <ShiftMetrics 
                 currentShiftSales={currentShiftSales ?? []}
                 previousShiftSales={previousShiftSales ?? []}
                 isLoading={currentShiftLoading || previousShiftLoading}
               />
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="font-headline text-base">Ventas por Hora</CardTitle>
@@ -509,14 +529,14 @@ export default function InsightsPage() {
             </TabsContent>
 
             {/* Tab: Comparación */}
-            <TabsContent value="diario" className="space-y-4">
+            <TabsContent value="diario" className="space-y-3 sm:space-y-4">
               <DailyComparison 
                 todaySales={todaySalesData ?? []}
                 yesterdaySales={yesterdaySalesData ?? []}
                 isLoading={todaySalesLoading || yesterdaySalesLoading}
               />
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader>
                     <CardTitle className="font-headline">Métodos de Pago</CardTitle>
@@ -545,7 +565,7 @@ export default function InsightsPage() {
             </TabsContent>
 
             {/* Tab: Productos */}
-            <TabsContent value="productos" className="space-y-4">
+            <TabsContent value="productos" className="space-y-3 sm:space-y-4">
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -559,17 +579,17 @@ export default function InsightsPage() {
                     {topProducts.map((product, index) => (
                       <div 
                         key={product.productId} 
-                        className="flex items-center gap-4 p-3 rounded-lg border bg-gradient-to-r from-muted/30 to-transparent dark:from-muted/20"
+                        className="flex items-center gap-3 p-2.5 sm:p-3 rounded-lg border border-border/70 bg-gradient-to-r from-muted/30 to-transparent dark:from-muted/20"
                       >
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-lg dark:from-yellow-600 dark:to-orange-600">
+                        <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-base sm:text-lg dark:from-yellow-600 dark:to-orange-600">
                           {index < 3 ? <Medal className="h-5 w-5" /> : `#${index + 1}`}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.quantity} unidades</p>
+                          <p className="font-semibold text-sm sm:text-base">{product.name}</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground">{product.quantity} unidades</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">{currencyFormatter.format(product.revenue)}</p>
+                          <p className="text-sm sm:text-lg font-bold text-green-600">{currencyFormatter.format(product.revenue)}</p>
                         </div>
                       </div>
                     ))}
@@ -609,11 +629,11 @@ export default function InsightsPage() {
             </TabsContent>
 
             {/* Tab: IA */}
-            <TabsContent value="ia" className="space-y-4">
-              <Card className="border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-transparent">
+            <TabsContent value="ia" className="space-y-3 sm:space-y-4">
+              <Card className="border-teal-200 bg-gradient-to-br from-white to-teal-50/30 dark:from-slate-800 dark:to-transparent">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    <Sparkles className="h-5 w-5 text-teal-700" />
                     <CardTitle className="font-headline">Recomendaciones Inteligentes</CardTitle>
                   </div>
                   <CardDescription>Insights automáticos basados en datos</CardDescription>
@@ -621,13 +641,13 @@ export default function InsightsPage() {
                 <CardContent>
                   <div className="space-y-3">
                     {recommendations.map((rec, index) => (
-                      <div key={index} className="flex items-start gap-3 p-4 rounded-lg border bg-white/60 dark:bg-slate-800/60">
+                      <div key={index} className="flex items-start gap-3 p-3 sm:p-4 rounded-lg border border-border/70 bg-white/60 dark:bg-slate-800/60">
                         <div className={`p-2 rounded-lg ${rec.type === 'success' ? 'bg-green-100 text-green-600' : rec.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
                           <Target className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-sm">{rec.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{rec.description}</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">{rec.description}</p>
                         </div>
                         <Badge variant={rec.type === 'success' ? 'default' : rec.type === 'warning' ? 'destructive' : 'secondary'}>
                           {rec.type === 'success' ? 'Oportunidad' : rec.type === 'warning' ? 'Alerta' : 'Consejo'}
@@ -650,15 +670,15 @@ export default function InsightsPage() {
                   <CardDescription>Momentos clave para impulsar ventas</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
                     {campaignSuggestions.map((campaign, index) => (
-                      <div key={index} className="p-4 rounded-lg border bg-white/60 space-y-2 dark:bg-slate-800/60">
+                      <div key={index} className="p-3 sm:p-4 rounded-lg border border-border/70 bg-white/60 space-y-2 dark:bg-slate-800/60">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-semibold">{campaign.title}</h4>
+                          <h4 className="font-semibold text-sm sm:text-base">{campaign.title}</h4>
                           <Badge variant="outline">{campaign.timing}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{campaign.description}</p>
-                        <div className="flex items-center gap-2 text-xs text-purple-600 font-medium">
+                        <p className="text-xs sm:text-sm text-muted-foreground">{campaign.description}</p>
+                        <div className="flex items-center gap-2 text-[11px] sm:text-xs text-teal-700 font-medium">
                           <Sparkles className="h-3 w-3" />
                           {campaign.action}
                         </div>

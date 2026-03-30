@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { collection } from 'firebase/firestore';
-import { PlusCircle, Package, Plus, Minus, AlertTriangle, ShoppingBag } from 'lucide-react';
+import { PlusCircle, Plus, Minus, AlertTriangle, ShoppingBag } from 'lucide-react';
+import { InventoryCrateIcon } from '@/components/icons';
 import { IngredientForm } from '@/components/inventory/ingredient-form';
 import { OtherItemForm } from '@/components/inventory/other-item-form';
 import { QuickStockModal } from '@/components/inventory/quick-stock-modal';
@@ -144,7 +145,7 @@ export default function InventoryPage() {
             <CardHeader className="flex-shrink-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pb-4">
               <div>
                 <CardTitle className="font-headline text-base sm:text-lg flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+                  <InventoryCrateIcon className="h-5 w-5" />
                   Inventario de Ingredientes
                   {lowStockIngredients > 0 && (
                     <Badge variant="destructive" className="ml-2">{lowStockIngredients} bajo</Badge>

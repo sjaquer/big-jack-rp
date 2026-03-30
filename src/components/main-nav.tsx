@@ -5,14 +5,9 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  Coins,
-  Warehouse,
-  Package,
   UserCircle,
   LogOut,
   Users,
-  Wallet,
-  Sparkles,
   Moon,
   Sun,
   FlaskConical,
@@ -22,7 +17,7 @@ import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button"
-import { BurgerIcon } from "@/components/icons"
+import { AnalyticsIcon, BurgerIcon, CashRegisterIcon, GrillIcon, InventoryCrateIcon, OrderTicketIcon } from "@/components/icons"
 import { useUser, useAuth } from "@/firebase";
 import {
   DropdownMenu,
@@ -52,13 +47,13 @@ import {
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Panel', id: 'nav-dashboard' },
-  { href: '/insights', icon: Sparkles, label: 'Insights', id: 'nav-insights' },
-  { href: '/cash-flow', icon: Wallet, label: 'Caja', id: 'nav-cash-flow' },
-  { href: '/pos', icon: Coins, label: 'POS', id: 'nav-pos' },
+  { href: '/insights', icon: AnalyticsIcon, label: 'Insights', id: 'nav-insights' },
+  { href: '/cash-flow', icon: CashRegisterIcon, label: 'Caja', id: 'nav-cash-flow' },
+  { href: '/pos', icon: GrillIcon, label: 'POS', id: 'nav-pos' },
   { href: '/customers', icon: Users, label: 'Clientes', id: 'nav-customers' },
   { href: '/products', icon: BurgerIcon, label: 'Productos', id: 'nav-products' },
-  { href: '/inventory', icon: Warehouse, label: 'Inventario', id: 'nav-inventory' },
-  { href: '/incoming-orders', icon: Package, label: 'Pedidos', id: 'nav-orders' },
+  { href: '/inventory', icon: InventoryCrateIcon, label: 'Inventario', id: 'nav-inventory' },
+  { href: '/incoming-orders', icon: OrderTicketIcon, label: 'Pedidos', id: 'nav-orders' },
 ];
 
 function UserMenu() {
@@ -86,9 +81,9 @@ function UserMenu() {
         <Button
           variant="outline"
           size="icon"
-          className="overflow-hidden rounded-full h-11 w-11 touch-manipulation"
+          className="overflow-hidden rounded-full h-10 w-10 sm:h-9 sm:w-9 lg:h-11 lg:w-11 touch-manipulation"
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-9 w-9 sm:h-8 sm:w-8 lg:h-10 lg:w-10">
             <AvatarImage src={user?.photoURL ?? undefined} alt="@shadcn" />
             <AvatarFallback>
               <UserCircle className="h-6 w-6" />
@@ -138,15 +133,15 @@ function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon" className="hidden md:flex h-screen border-r bg-background">
-      <SidebarHeader className="border-b p-4 flex flex-row items-center justify-between group-data-[collapsible=icon]:justify-center h-[60px]">
+    <Sidebar collapsible="icon" className="hidden lg:flex h-screen border-r border-border/70 bg-card/70 backdrop-blur-xl">
+      <SidebarHeader className="border-b border-border/70 p-4 flex flex-row items-center justify-between group-data-[collapsible=icon]:justify-center h-[68px]">
         <Link href="/dashboard" className="flex items-center gap-2 overflow-hidden group-data-[collapsible=icon]:hidden">
           <BurgerIcon className="h-6 w-6 text-primary shrink-0" />
-          <span className="font-semibold text-lg whitespace-nowrap">Big Jack</span>
+          <span className="font-headline font-semibold text-lg whitespace-nowrap tracking-tight">POS BIG JACK</span>
         </Link>
         <SidebarTrigger />
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-3 erp-grid-glow">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -155,7 +150,7 @@ function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} size="lg" id={item.id}>
-                      <Link href={item.href} className="flex items-center gap-3">
+                      <Link href={item.href} className="flex items-center gap-3 rounded-xl">
                         <item.icon className="h-5 w-5" />
                         <span className="text-base font-medium group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </Link>
@@ -169,7 +164,7 @@ function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
         <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
-          <span className="text-sm font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">Cuenta</span>
+          <span className="text-xs uppercase tracking-[0.12em] font-semibold text-muted-foreground group-data-[collapsible=icon]:hidden">Cuenta</span>
           <UserMenu />
         </div>
       </SidebarFooter>
@@ -181,21 +176,9 @@ function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 pb-[env(safe-area-inset-bottom)]">
-      <div
-        className="flex items-center h-16 px-2 gap-2 w-full overflow-x-auto"
-        style={{
-          scrollbarWidth: 'none',  /* Firefox */
-          msOverflowStyle: 'none'  /* IE and Edge */
-        }}
-      >
-        <style dangerouslySetInnerHTML={{
-          __html: `
-          .no-scrollbar::-webkit-scrollbar {
-            display: none;
-          }
-        `}} />
-        <div className="flex gap-1 min-w-full mx-auto justify-start sm:justify-center no-scrollbar">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 border-t border-border/70 bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_26px_-18px_rgba(2,6,23,0.5)]">
+      <div className="sm:hidden h-16 px-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-1 min-w-max">
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
@@ -203,18 +186,39 @@ function MobileBottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex-shrink-0 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-lg min-w-[68px] touch-manipulation transition-all active:scale-95",
+                  "flex-shrink-0 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-xl min-w-[68px] touch-manipulation transition-all active:scale-95",
                   isActive
-                    ? "text-primary bg-primary/10"
+                    ? "text-primary bg-primary/12 ring-1 ring-primary/30"
                     : "text-muted-foreground hover:text-primary hover:bg-muted"
                 )}
               >
                 <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
-                <span className={cn("text-[10px] font-medium leading-tight text-center line-clamp-1", isActive ? "font-bold" : "")}>{item.label}</span>
+                <span className={cn("text-[9px] font-medium leading-tight text-center line-clamp-1", isActive ? "font-bold" : "")}>{item.label}</span>
               </Link>
             );
           })}
         </div>
+      </div>
+
+      <div className="hidden sm:grid grid-cols-8 gap-1 px-2 h-14 items-center">
+        {navItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex h-11 flex-col items-center justify-center gap-0.5 rounded-lg transition-all touch-manipulation",
+                isActive
+                    ? "bg-primary/12 text-primary ring-1 ring-primary/30"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="text-[10px] leading-none font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
@@ -231,24 +235,35 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-[100dvh]">
           {/* Demo Mode Banner */}
           {isDemo && (
-            <div className="bg-amber-500/90 text-amber-950 text-center py-1.5 text-sm font-medium flex items-center justify-center gap-2" id="demo-mode-indicator">
+            <div className="bg-amber-400/95 text-amber-950 text-center py-1.5 text-sm font-semibold flex items-center justify-center gap-2" id="demo-mode-indicator">
               <FlaskConical className="h-4 w-4" />
               <span>Modo Demostración - Datos de ejemplo para portafolio</span>
             </div>
           )}
 
           {/* Mobile Header */}
-          <header className="md:hidden flex-none h-14 flex items-center gap-4 border-b bg-background/95 backdrop-blur px-4 z-40 sticky top-0">
+          <header className="lg:hidden flex-none h-14 sm:h-12 flex items-center gap-2 border-b border-border/70 bg-card/90 backdrop-blur px-2.5 sm:px-4 z-40 sticky top-0">
             <Link href="/dashboard" className="flex items-center gap-2">
               <BurgerIcon className="h-6 w-6 text-primary" />
-              <span className="font-semibold text-lg">Big Jack</span>
+              <span className="font-headline font-semibold text-sm sm:text-sm tracking-tight">POS BIG JACK</span>
             </Link>
-            <div className="ml-auto">
+
+            <div className="ml-auto flex items-center gap-1">
+              <Link href="/pos">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <GrillIcon className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/incoming-orders">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <OrderTicketIcon className="h-4 w-4" />
+                </Button>
+              </Link>
               <UserMenu />
             </div>
           </header>
 
-          <main className="flex-1 overflow-auto p-2 md:p-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
+          <main className="flex-1 overflow-auto erp-grid-glow p-2 sm:p-3 lg:p-6 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-6">
             {children}
           </main>
 

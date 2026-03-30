@@ -28,7 +28,7 @@ const TOUR_STEPS: TourStep[] = [
     // --- DASHBOARD ---
     {
         targetId: 'dashboard-header',
-        title: '¡Bienvenido a Big Jack Manager!',
+        title: 'Bienvenido a POS BIG JACK',
         description:
             'Este es tu centro de control. Desde aquí gestionas ventas, productos, clientes e inventario de tu negocio de comida rápida. Te daremos un recorrido por todas las secciones. ¡Vamos!',
         icon: <PartyPopper className="h-5 w-5 text-amber-500" />,
@@ -135,7 +135,7 @@ const TOUR_STEPS: TourStep[] = [
         targetId: 'demo-mode-indicator',
         title: '¡Tour Completado! 🎉',
         description:
-            'Ya conoces todas las secciones de Big Jack Manager. Estás en modo demo con datos de ejemplo. Explora libremente cada página. Para salir del modo demo, cierra sesión desde el menú superior.',
+            'Ya conoces todas las secciones de POS BIG JACK. Estas en modo demo con datos de ejemplo. Explora libremente cada pagina. Para salir del modo demo, cierra sesion desde el menu superior.',
         icon: <PartyPopper className="h-5 w-5 text-amber-500" />,
         position: 'center',
         path: '/incoming-orders',

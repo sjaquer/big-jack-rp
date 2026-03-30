@@ -16,8 +16,6 @@ import {
 } from 'lucide-react';
 import type { Sale } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 interface DailyComparisonProps {
   todaySales: Sale[];
@@ -137,10 +135,10 @@ export function DailyComparison({ todaySales, yesterdaySales, isLoading }: Daily
   };
 
   return (
-    <Card>
+    <Card className="border-border/70">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
             <CardTitle className="font-headline text-lg flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
               Comparación Hoy vs Ayer
@@ -149,10 +147,10 @@ export function DailyComparison({ todaySales, yesterdaySales, isLoading }: Daily
               Comparación a las {comparison.currentHour}:00 hrs
             </CardDescription>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Progreso vs ayer</p>
+          <div className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-right self-start">
+            <p className="text-[11px] text-muted-foreground">Progreso vs ayer</p>
             <p className={cn(
-              "text-xl font-bold",
+              "text-lg font-bold",
               comparison.progressToYesterday >= 100 ? "text-green-600" : "text-amber-500"
             )}>
               {comparison.progressToYesterday.toFixed(0)}%
@@ -160,10 +158,10 @@ export function DailyComparison({ todaySales, yesterdaySales, isLoading }: Daily
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {/* Barra de progreso visual */}
         <div className="space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="flex flex-col gap-1 text-[11px] text-muted-foreground sm:flex-row sm:justify-between sm:text-xs">
             <span>Hoy: {currencyFormatter.format(comparison.today.total)}</span>
             <span>Ayer total: {currencyFormatter.format(comparison.yesterday.total)}</span>
           </div>
@@ -179,72 +177,72 @@ export function DailyComparison({ todaySales, yesterdaySales, isLoading }: Daily
         </div>
 
         {/* Grid de comparación */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
           {/* Ingresos */}
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="bg-muted/30 rounded-xl border border-border/60 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-muted-foreground">
               <DollarSign className="h-3 w-3" />
               <span>Ingresos</span>
             </div>
             <div className="space-y-1">
               <div className="flex items-baseline justify-between">
-                <span className="text-lg font-bold">{currencyFormatter.format(comparison.today.total)}</span>
-                <span className="text-xs text-muted-foreground">hoy</span>
+                <span className="text-base sm:text-lg font-bold">{currencyFormatter.format(comparison.today.total)}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">hoy</span>
               </div>
               <div className="flex items-baseline justify-between text-muted-foreground">
-                <span className="text-sm">{currencyFormatter.format(comparison.yesterday.untilNowTotal)}</span>
-                <span className="text-xs">ayer ({comparison.currentHour}:00)</span>
+                <span className="text-xs sm:text-sm">{currencyFormatter.format(comparison.yesterday.untilNowTotal)}</span>
+                <span className="text-[10px] sm:text-xs">ayer ({comparison.currentHour}:00)</span>
               </div>
               <ChangeIndicator value={comparison.changes.revenue} />
             </div>
           </div>
 
           {/* Pedidos */}
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="bg-muted/30 rounded-xl border border-border/60 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-muted-foreground">
               <ShoppingCart className="h-3 w-3" />
               <span>Pedidos</span>
             </div>
             <div className="space-y-1">
               <div className="flex items-baseline justify-between">
-                <span className="text-lg font-bold">{comparison.today.orders}</span>
-                <span className="text-xs text-muted-foreground">hoy</span>
+                <span className="text-base sm:text-lg font-bold">{comparison.today.orders}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">hoy</span>
               </div>
               <div className="flex items-baseline justify-between text-muted-foreground">
-                <span className="text-sm">{comparison.yesterday.untilNowOrders}</span>
-                <span className="text-xs">ayer ({comparison.currentHour}:00)</span>
+                <span className="text-xs sm:text-sm">{comparison.yesterday.untilNowOrders}</span>
+                <span className="text-[10px] sm:text-xs">ayer ({comparison.currentHour}:00)</span>
               </div>
               <ChangeIndicator value={comparison.changes.orders} />
             </div>
           </div>
 
           {/* Ticket Promedio */}
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="bg-muted/30 rounded-xl border border-border/60 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
               <span>Ticket Promedio</span>
             </div>
             <div className="space-y-1">
               <div className="flex items-baseline justify-between">
-                <span className="text-lg font-bold">{currencyFormatter.format(comparison.today.avgTicket)}</span>
-                <span className="text-xs text-muted-foreground">hoy</span>
+                <span className="text-base sm:text-lg font-bold">{currencyFormatter.format(comparison.today.avgTicket)}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">hoy</span>
               </div>
               <div className="flex items-baseline justify-between text-muted-foreground">
-                <span className="text-sm">{currencyFormatter.format(comparison.yesterday.avgTicket)}</span>
-                <span className="text-xs">ayer</span>
+                <span className="text-xs sm:text-sm">{currencyFormatter.format(comparison.yesterday.avgTicket)}</span>
+                <span className="text-[10px] sm:text-xs">ayer</span>
               </div>
               <ChangeIndicator value={comparison.changes.ticket} />
             </div>
           </div>
 
           {/* Proyección */}
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-primary">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-primary">
               <TrendingUp className="h-3 w-3" />
               <span>Proyección del Día</span>
             </div>
             <div className="space-y-1">
-              <span className="text-lg font-bold text-primary">
+              <span className="text-base sm:text-lg font-bold text-primary">
                 {currencyFormatter.format(comparison.projectedTotal)}
               </span>
               <p className="text-xs text-muted-foreground">

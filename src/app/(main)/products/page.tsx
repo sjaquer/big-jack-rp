@@ -21,6 +21,7 @@ import { useMemoFirebase } from '@/firebase/provider';
 import type { Product, Supplier, Ingredient } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
+import { BurgerIcon } from '@/components/icons';
 // placeholderImages removed; images are no longer used in product listing
 
 export default function ProductsPage() {
@@ -127,7 +128,7 @@ export default function ProductsPage() {
                   <p className="text-base text-slate-600 mt-1">Gestiona todos los productos de tu inventario y menú.</p>
               </div>
               <Button onClick={handleAddProduct} size="default" className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow">
-                  <PlusCircle className="mr-2 h-5 w-5" />
+                  <BurgerIcon className="mr-2 h-5 w-5" />
                   Añadir Producto
               </Button>
           </div>

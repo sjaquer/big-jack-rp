@@ -22,6 +22,7 @@ import { OrderDetailDialog } from '@/components/online-orders/order-detail-dialo
 import { Clock, ChefHat, CheckCircle2, AlertCircle, Eye, ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { OrderTicketIcon } from '@/components/icons';
 
 
 const statusConfig = {
@@ -142,7 +143,7 @@ export default function IncomingOrdersPage() {
           <p className="text-sm md:text-base text-muted-foreground">Gestión de pedidos en tiempo real</p>
         </div>
         <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
-          <Clock className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+          <OrderTicketIcon className="h-5 w-5 md:h-6 md:w-6 text-primary" />
           <span className="text-lg md:text-xl font-bold">
             {format(new Date(), 'HH:mm', { locale: es })}
           </span>

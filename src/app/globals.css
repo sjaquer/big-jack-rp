@@ -4,68 +4,68 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%; /* Light gray-blue bg for professional look */
-    --foreground: 224 71.4% 4.1%; /* Deep navy/black text */
-    
+    --background: 36 30% 97%;
+    --foreground: 211 42% 12%;
+
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    
+    --card-foreground: 211 42% 12%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    
-    --primary: 24 95% 53%; /* Big Jack Orange */
-    --primary-foreground: 0 0% 98%;
-    
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 24 95% 53%;
-    
-    --radius: 0.75rem; /* Larger radius for modern look */
-    
-    --chart-1: 24 95% 53%;
-    --chart-2: 28 90% 65%;
-    --chart-3: 18 90% 40%;
-    --chart-4: 210 20% 80%;
-    --chart-5: 220 20% 25%;
+    --popover-foreground: 211 42% 12%;
+
+    --primary: 18 88% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 190 32% 92%;
+    --secondary-foreground: 200 58% 16%;
+
+    --muted: 36 17% 93%;
+    --muted-foreground: 210 18% 40%;
+
+    --accent: 174 42% 88%;
+    --accent-foreground: 182 64% 17%;
+
+    --destructive: 0 78% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 27 18% 84%;
+    --input: 30 20% 88%;
+    --ring: 18 88% 48%;
+
+    --radius: 0.9rem;
+
+    --chart-1: 18 88% 48%;
+    --chart-2: 174 64% 32%;
+    --chart-3: 212 70% 45%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 335 68% 42%;
   }
 
   .dark {
-    --background: 240 6% 10%;
-    --foreground: 0 0% 98%;
-    --card: 240 4% 14%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 6% 10%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 24 95% 53%;
-    --primary-foreground: 24 95% 13%;
-    --secondary: 240 4% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 14%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 40 85% 95%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 14%;
-    --input: 240 4% 14%;
-    --ring: 24 95% 53%;
-    --chart-1: 24 95% 53%;
-    --chart-2: 24 95% 73%;
-    --chart-3: 24 95% 33%;
-    --chart-4: 0 0% 98%;
-    --chart-5: 24 20% 30%;
+    --background: 220 24% 9%;
+    --foreground: 210 30% 96%;
+    --card: 220 22% 12%;
+    --card-foreground: 210 30% 96%;
+    --popover: 220 24% 9%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 18 88% 58%;
+    --primary-foreground: 20 62% 8%;
+    --secondary: 206 28% 18%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 216 18% 16%;
+    --muted-foreground: 212 18% 80%;
+    --accent: 176 52% 21%;
+    --accent-foreground: 172 85% 93%;
+    --destructive: 0 70% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 16% 26%;
+    --input: 214 16% 26%;
+    --ring: 18 88% 58%;
+    --chart-1: 18 88% 58%;
+    --chart-2: 174 58% 48%;
+    --chart-3: 212 65% 62%;
+    --chart-4: 40 82% 62%;
+    --chart-5: 333 60% 58%;
   }
 }
 
@@ -73,12 +73,55 @@
   * {
     @apply border-border;
   }
+  html,
   body {
-    @apply bg-background text-foreground;
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    overscroll-behavior-y: none;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(circle at 8% -10%, hsl(var(--primary) / 0.16), transparent 36%),
+      radial-gradient(circle at 92% 110%, hsl(var(--accent) / 0.24), transparent 42%),
+      linear-gradient(160deg, hsl(var(--background)) 0%, hsl(35 28% 95%) 100%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at 10% -5%, hsl(var(--primary) / 0.2), transparent 34%),
+      radial-gradient(circle at 90% 110%, hsl(var(--accent) / 0.2), transparent 40%),
+      linear-gradient(165deg, hsl(var(--background)) 0%, hsl(220 28% 6%) 100%);
+  }
+
+  /* Corrige textos hardcodeados claros para mantener contraste en modo oscuro */
+  .dark .text-slate-900 {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .text-slate-700,
+  .dark .text-slate-600 {
+    color: hsl(var(--muted-foreground)) !important;
   }
 }
 
 @layer components {
+  .erp-surface {
+    @apply rounded-2xl border border-border/70 bg-card/85 shadow-[0_12px_38px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm;
+  }
+
+  .erp-section-title {
+    @apply font-headline text-[1.45rem] leading-tight tracking-[-0.02em] sm:text-[1.7rem];
+  }
+
+  .erp-grid-glow {
+    background-image:
+      linear-gradient(to right, hsl(var(--foreground) / 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
   /* Mejoras para tablets y móviles */
   .touch-target {
     @apply min-h-[48px] min-w-[48px];
@@ -117,6 +160,32 @@
     input, textarea, select {
       font-size: 16px; /* Prevenir zoom automático en iOS */
     }
+  }
+
+  /* Ajustes de densidad para tablet en horizontal */
+  @media (min-width: 640px) and (max-width: 1180px) and (orientation: landscape) {
+    body {
+      font-size: 15px;
+    }
+
+    h1 {
+      line-height: 1.15;
+    }
+
+    .erp-compact-landscape {
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+      gap: 0.75rem;
+    }
+  }
+
+  /* Contenedor consistente para vistas ERP */
+  .erp-page {
+    @apply w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-7 py-3 sm:py-5 lg:py-7;
+  }
+
+  .erp-stack {
+    @apply space-y-3 sm:space-y-4 lg:space-y-5;
   }
   
   /* Cards táctiles con mejor feedback */

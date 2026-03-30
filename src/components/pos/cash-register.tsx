@@ -353,7 +353,7 @@ export function CashRegister({ onBalanceUpdate, userEmail }: CashRegisterProps) 
 
             <div className="p-3 rounded-lg border bg-muted/30">
               <div className="flex items-center gap-2 mb-1">
-                <Calculator className="h-4 w-4 text-purple-600" />
+                <Calculator className="h-4 w-4 text-teal-700" />
                 <p className="text-xs text-muted-foreground">Apertura</p>
               </div>
               <p className="text-lg font-semibold">{stats && currencyFormatter.format(stats.openingBalance)}</p>

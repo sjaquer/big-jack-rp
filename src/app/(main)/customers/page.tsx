@@ -11,7 +11,7 @@ import { collection } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Customer } from '@/lib/types';
 import { CustomerForm } from '@/components/customers/customer-form';
-import { Search, UserPlus, Edit, Users, TrendingUp, Award, DollarSign } from 'lucide-react';
+import { Search, UserRoundPlus, Edit, Users, TrendingUp, Award, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -71,7 +71,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-purple-50/20 dark:from-slate-900 dark:to-slate-800">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-amber-50/30 to-teal-50/20 dark:from-slate-900 dark:to-slate-800">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -86,7 +86,7 @@ export default function CustomersPage() {
               }}
               className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow"
             >
-              <UserPlus className="mr-2 h-5 w-5" />
+              <UserRoundPlus className="mr-2 h-5 w-5" />
               Nuevo Cliente
             </Button>
           </div>

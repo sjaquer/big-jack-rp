@@ -101,11 +101,11 @@ export function DailyOrdersBreakdown({ sales, saleItems, products, isLoading }: 
   return (
     <div className="space-y-6">
       {/* Resumen de productos vendidos */}
-      <div className="rounded-lg border p-4 bg-muted/30">
-        <h3 className="font-semibold text-base mb-3">Resumen de productos vendidos hoy</h3>
+      <div className="rounded-xl border border-border/70 p-3 sm:p-4 bg-muted/20">
+        <h3 className="font-semibold text-sm sm:text-base mb-3">Resumen de productos vendidos hoy</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {productSummary.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-md border bg-background">
+            <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-border/70 bg-background/80">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{item.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -122,8 +122,39 @@ export function DailyOrdersBreakdown({ sales, saleItems, products, isLoading }: 
 
       {/* Lista detallada de pedidos */}
       <div>
-        <h3 className="font-semibold text-base mb-3">Detalle de pedidos ({ordersWithDetails.length})</h3>
-        <div className="rounded-md border">
+        <h3 className="font-semibold text-sm sm:text-base mb-3">Detalle de pedidos ({ordersWithDetails.length})</h3>
+
+        <div className="grid gap-2.5 sm:hidden">
+          {ordersWithDetails.map((order) => (
+            <div key={order.id} className="rounded-xl border border-border/70 bg-background/80 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">{format(order.saleDate.toDate(), 'HH:mm', { locale: es })}</p>
+                <Badge variant={order.paymentMethod === 'cash' ? 'default' : 'secondary'}>
+                  {order.paymentMethod === 'cash' ? 'Efectivo' :
+                   order.paymentMethod === 'card' ? 'Tarjeta' :
+                   order.paymentMethod === 'yape' ? 'Yape' :
+                   order.paymentMethod === 'plin' ? 'Plin' :
+                   order.paymentMethod === 'transfer' ? 'Transferencia' :
+                   order.paymentMethod}
+                </Badge>
+              </div>
+              <div className="space-y-1.5">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="text-xs">
+                    <span className="font-medium">{item.quantity}x</span> {item.productName}
+                    <span className="text-muted-foreground ml-1">(S/ {item.subtotal.toFixed(2)})</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between border-t border-border/60 pt-2">
+                <span className="text-xs text-muted-foreground">Total pedido</span>
+                <span className="font-semibold">S/ {order.totalAmount.toFixed(2)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden sm:block rounded-md border border-border/70">
           <Table>
             <TableHeader>
               <TableRow>

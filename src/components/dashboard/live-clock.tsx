@@ -63,13 +63,13 @@ export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveCloc
 
   return (
     <div className={cn(
-      "flex items-center gap-4 px-4 py-3 rounded-lg border bg-card",
+      "flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-border/70 bg-card",
       className
     )}>
       {/* Reloj principal */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <div className={cn(
-          "p-2 rounded-full",
+          "p-1.5 sm:p-2 rounded-full",
           isInShift ? "bg-primary/10" : "bg-muted"
         )}>
           <Clock className={cn(
@@ -77,29 +77,29 @@ export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveCloc
             isInShift ? "text-primary animate-pulse" : "text-muted-foreground"
           )} />
         </div>
-        <div>
-          <p className="text-2xl font-bold font-mono tabular-nums">
+          <div className="min-w-0">
+            <p className="text-lg sm:text-2xl font-bold font-mono tabular-nums leading-none">
             {format(currentTime, 'HH:mm:ss')}
           </p>
-          <p className="text-xs text-muted-foreground capitalize">
+            <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">
             {format(currentTime, "EEEE, d 'de' MMMM", { locale: es })}
           </p>
         </div>
       </div>
 
       {/* Separador */}
-      <div className="h-10 w-px bg-border" />
+        <div className="hidden sm:block h-10 w-px bg-border/80" />
 
       {/* Estado del turno */}
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex-1 min-w-0 w-full">
+        <div className="flex items-center justify-between mb-1 gap-2">
           <span className={cn(
-            "text-xs font-medium",
+            "text-[11px] sm:text-xs font-semibold",
             isInShift ? "text-primary" : "text-muted-foreground"
           )}>
             {isInShift ? '🟢 En turno' : '⚪ Fuera de turno'}
           </span>
-          <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">
             Turno: 3:00 PM - 2:00 AM
           </span>
         </div>
@@ -136,8 +136,8 @@ export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveCloc
       {/* Indicador de fase del turno */}
       {isInShift && (
         <>
-          <div className="h-10 w-px bg-border" />
-          <div className="text-center">
+          <div className="hidden sm:block h-10 w-px bg-border" />
+          <div className="hidden sm:block text-center shrink-0 min-w-[58px]">
             <p className={cn(
               "text-lg font-bold",
               shiftStatus === 'starting' && "text-blue-500",
