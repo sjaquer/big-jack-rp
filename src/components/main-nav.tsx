@@ -46,14 +46,14 @@ import {
 } from "@/components/ui/sidebar"
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Panel', id: 'nav-dashboard' },
-  { href: '/insights', icon: AnalyticsIcon, label: 'Insights', id: 'nav-insights' },
-  { href: '/cash-flow', icon: CashRegisterIcon, label: 'Caja', id: 'nav-cash-flow' },
-  { href: '/pos', icon: GrillIcon, label: 'POS', id: 'nav-pos' },
-  { href: '/customers', icon: Users, label: 'Clientes', id: 'nav-customers' },
-  { href: '/products', icon: BurgerIcon, label: 'Productos', id: 'nav-products' },
-  { href: '/inventory', icon: InventoryCrateIcon, label: 'Inventario', id: 'nav-inventory' },
-  { href: '/incoming-orders', icon: OrderTicketIcon, label: 'Pedidos', id: 'nav-orders' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Panel General', shortLabel: 'Panel', id: 'nav-dashboard' },
+  { href: '/insights', icon: AnalyticsIcon, label: 'Analítica', shortLabel: 'Insights', id: 'nav-insights' },
+  { href: '/cash-flow', icon: CashRegisterIcon, label: 'Caja y Flujo', shortLabel: 'Caja', id: 'nav-cash-flow' },
+  { href: '/pos', icon: GrillIcon, label: 'Punto de Venta', shortLabel: 'POS', id: 'nav-pos' },
+  { href: '/customers', icon: Users, label: 'Clientes', shortLabel: 'Clientes', id: 'nav-customers' },
+  { href: '/products', icon: BurgerIcon, label: 'Productos', shortLabel: 'Productos', id: 'nav-products' },
+  { href: '/inventory', icon: InventoryCrateIcon, label: 'Inventario', shortLabel: 'Inventario', id: 'nav-inventory' },
+  { href: '/incoming-orders', icon: OrderTicketIcon, label: 'Pedidos', shortLabel: 'Pedidos', id: 'nav-orders' },
 ];
 
 function UserMenu() {
@@ -134,25 +134,31 @@ function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="hidden lg:flex h-screen border-r border-border/70 bg-card/70 backdrop-blur-xl">
-      <SidebarHeader className="border-b border-border/70 p-4 flex flex-row items-center justify-between group-data-[collapsible=icon]:justify-center h-[68px]">
+      <SidebarHeader className="border-b border-border/70 p-4 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3 flex flex-row items-center justify-between group-data-[collapsible=icon]:justify-center h-[68px]">
         <Link href="/dashboard" className="flex items-center gap-2 overflow-hidden group-data-[collapsible=icon]:hidden">
           <BurgerIcon className="h-6 w-6 text-primary shrink-0" />
           <span className="font-headline font-semibold text-lg whitespace-nowrap tracking-tight">POS BIG JACK</span>
         </Link>
         <SidebarTrigger />
       </SidebarHeader>
-      <SidebarContent className="p-3 erp-grid-glow">
+      <SidebarContent className="p-3 group-data-[collapsible=icon]:p-2 erp-grid-glow">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1.5">
               {navItems.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} size="lg" id={item.id}>
-                      <Link href={item.href} className="flex items-center gap-3 rounded-xl">
-                        <item.icon className="h-5 w-5" />
-                        <span className="text-base font-medium group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} size="lg" id={item.id} className="h-auto min-h-[46px] px-2 py-1.5 rounded-xl group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:justify-center">
+                      <Link href={item.href} className="flex w-full items-center gap-2.5 rounded-xl group-data-[collapsible=icon]:justify-center">
+                        <div className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-lg border border-transparent transition-colors",
+                          "group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9",
+                          isActive ? "bg-primary/15 text-primary border-primary/20" : "text-muted-foreground"
+                        )}>
+                          <item.icon className="h-4 w-4" />
+                        </div>
+                        <span className="truncate text-sm font-medium leading-tight group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -162,7 +168,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t p-4 group-data-[collapsible=icon]:p-2">
         <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
           <span className="text-xs uppercase tracking-[0.12em] font-semibold text-muted-foreground group-data-[collapsible=icon]:hidden">Cuenta</span>
           <UserMenu />
@@ -193,7 +199,7 @@ function MobileBottomNav() {
                 )}
               >
                 <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
-                <span className={cn("text-[9px] font-medium leading-tight text-center line-clamp-1", isActive ? "font-bold" : "")}>{item.label}</span>
+                <span className={cn("text-[9px] font-medium leading-tight text-center line-clamp-1", isActive ? "font-bold" : "")}>{item.shortLabel}</span>
               </Link>
             );
           })}
@@ -215,7 +221,7 @@ function MobileBottomNav() {
               )}
             >
               <item.icon className="h-4 w-4" />
-              <span className="text-[10px] leading-none font-medium">{item.label}</span>
+              <span className="text-[10px] leading-none font-medium">{item.shortLabel}</span>
             </Link>
           );
         })}
