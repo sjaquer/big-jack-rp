@@ -14,7 +14,7 @@ Sistema completo de gestión para restaurantes de comida rápida, construido con
 - Interfaz táctil optimizada para tablets
 - Gestión de pedidos rápida
 - Múltiples métodos de pago (Efectivo, Yape, Plin, Tarjeta)
-- Impresión de boletas/tickets
+- Impresión de comprobantes/tickets
 - Registro de clientes en venta
 
 ### Gestión de Productos
@@ -71,11 +71,22 @@ git clone https://github.com/sjaquer/big-jack-rp.git
 npm install
 
 # Configurar variables de entorno (crear .env.local)
-# Ver firebase/config.ts para las variables necesarias
+# Copiar desde .env.example y completar valores
 
 # Ejecutar en desarrollo
 npm run dev
 ```
+
+Variables recomendadas:
+- NEXT_PUBLIC_FIREBASE_PROJECT_ID
+- NEXT_PUBLIC_FIREBASE_APP_ID
+- NEXT_PUBLIC_FIREBASE_API_KEY
+- NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+- NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+- NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID (opcional)
+- UPLOAD_MAX_IMAGE_MB (default: 5)
+- UPLOAD_IMAGE_SUBDIR (default: images)
+- UPLOAD_ALLOWED_TYPES (CSV de MIME types)
 
 ## 📱 Diseño Responsivo
 

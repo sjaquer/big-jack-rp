@@ -88,7 +88,6 @@ export interface InventoryItem {
 
 
 export type SaleSource = 'pos' | 'online' | 'delivery';
-export type SunatStatus = 'pending' | 'queued' | 'sent' | 'accepted' | 'rejected';
 
 export interface Sale {
   id: string;
@@ -104,11 +103,7 @@ export interface Sale {
   customerName?: string | null;
   customerDocumentType?: '0' | '1' | '6';
   customerDocumentNumber?: string | null;
-  sunatStatus?: SunatStatus;
-  sunatDocumentId?: string;
-  sunatNote?: string;
-  boletaSerie?: string;
-  boletaCorrelativo?: number;
+  receiptReference?: string;
 }
 
 export interface SaleItem {

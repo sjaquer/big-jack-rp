@@ -290,7 +290,7 @@ Todos los componentes están optimizados para:
 - **Modal de Pago** (`src/components/pos/payment-modal.tsx`):
   - Campos rápidos para capturar tipo de documento (Consumidor Final, DNI, RUC), número y nombre/razón social.
   - Validaciones automáticas (DNI = 8 dígitos, RUC = 11 dígitos).
-  - Los datos ingresados viajan con la venta y alimentan la boleta electrónica.
+  - Los datos ingresados viajan con la venta y se imprimen en el comprobante interno.
 - **Tipos**: `Product` ahora incluye `category` (`src/lib/types.ts`).
 - **Formularios**: `src/components/products/product-form.tsx` permite elegir categoría al crear/editar.
 
@@ -303,7 +303,7 @@ Todos los componentes están optimizados para:
   - Nuevo módulo en el menú (icono billetera) para registrar ingresos/gastos.
   - Formulario rápido con tipo, categoría, monto, método y nota.
   - Tabla con historial y resumen mensual (ingresos, gastos y neto).
-- **Tipos nuevos**: `CashFlowEntry`, `CashFlowSummary`, `order.source` y campos de SUNAT en `Sale`.
+- **Tipos nuevos**: `CashFlowEntry`, `CashFlowSummary`, `order.source` y referencia de comprobante en `Sale`.
 
 ### 6. 🍳 Pedidos de Cocina con Etiquetas
 - **Página**: `src/app/(main)/incoming-orders/page.tsx`
@@ -311,27 +311,6 @@ Todos los componentes están optimizados para:
   - Etiquetas de origen para diferenciar pedidos de POS (En tienda) y Pedidos Ya.
   - Contador y badge animado para destacar ingresos nuevos en la pestaña “Nuevos”.
   - Cards muestran etiqueta “Nuevo ingreso” durante los primeros 5 minutos.
-
-### 7. 🧾 Boletas Electrónicas SUNAT
-- **API Interna**: `src/app/api/sunat/boletas/route.ts`
-  - Expone `POST /api/sunat/boletas` que recibe la venta y la envía a SUNAT.
-  - Se apoya en `src/lib/sunat.ts` para construir la URL correcta de token (`api-seguridad.../{clientId}/oauth2/token/`), solicitar el access token y centralizar la configuración.
-  - Devuelve `status`/`ticket` y cualquier error de token con `details.status` + `details.body` para depuración.
-- **Serie y correlativo**:
-  - Firestore mantiene `sunat_series/boletas` con la serie activa y el correlativo incremental.
-  - Cada venta POS reserva el siguiente correlativo dentro de la misma transacción y lo guarda en `sales.boletaSerie` y `sales.boletaCorrelativo`.
-- **POS**: tras registrar una venta, se envía automáticamente la boleta y se actualiza el documento `sales/{saleId}` con `sunatStatus`, `sunatDocumentId` y `sunatNote`.
-- **Datos del cliente**:
-  - Los campos capturados en el modal se guardan en `sales` (`customerDocumentType`, `customerDocumentNumber`) y `online_orders`.
-  - El payload a SUNAT incluye esos valores para que la boleta salga con DNI/RUC correcto.
-- **Configuración**:
-  - Requiere `SUNAT_CLIENT_ID`, `SUNAT_CLIENT_SECRET` y opcionalmente `SUNAT_TOKEN_URL_BASE` (default `https://api-seguridad.sunat.gob.pe/v1/clientesextranet`).
-  - No sobreescribas `SUNAT_API_TOKEN_URL` a menos que la URL ya incluya tu `clientId`; si existe `clientId`, el sistema siempre arma `https://api-seguridad.sunat.gob.pe/v1/clientesextranet/{clientId}/oauth2/token/`.
-  - URLs de envío REST/SOAP configurables: `SUNAT_API_BASE_URL`, `SUNAT_API_RECEIPT_URL`, `SUNAT_ENVIO_URL_PROD`, `SUNAT_ENVIO_URL_BETA`.
-  - Scopes configurables con `SUNAT_SCOPE` (default `https://api-cpe.sunat.gob.pe`).
-  - Cliente sin datos entrega por defecto boleta “Cliente Mostrador” DNI 00000000.
-- **Nota técnica**: el flujo actual usa la API REST (`conectate/boleta`). Para integrarse con el servicio SOAP tradicional (`billService`) se deben usar las URLs `SUNAT_ENVIO_URL_*` y credenciales SOL en el XML (no cubierto aún, pero preparado desde `src/lib/sunat.ts`).
-- **Estados posibles**: `pending`, `sent`, `accepted`, `rejected`. Se reflejan en el dashboard para cálculos de neto.
 
 ---
 

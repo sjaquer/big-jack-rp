@@ -601,8 +601,8 @@ export default function InsightsPage() {
                 <CardContent>
                   <PopularItemsChart 
                     products={productsData ?? []} 
-                    salesData={salesData ?? []} 
-                    isLoading={productsLoading || salesLoading}
+                    saleItems={saleItems ?? []}
+                    isLoading={productsLoading || saleItemsLoading}
                   />
                 </CardContent>
               </Card>

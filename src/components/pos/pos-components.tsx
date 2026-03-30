@@ -406,8 +406,7 @@ export function CartPanel({
                     }));
 
                     const payload = {
-                      serie: saleData.boletaSerie ?? 'B001',
-                      correlativo: saleData.boletaCorrelativo ?? 0,
+                      reference: saleData.receiptReference ?? saleId.slice(0, 8).toUpperCase(),
                       issuedAt: (saleData.saleDate && (saleData.saleDate.toDate ? saleData.saleDate.toDate().toISOString() : new Date().toISOString())) || new Date().toISOString(),
                       customer: {
                         name: saleData.customerName ?? 'Cliente Mostrador',
@@ -417,16 +416,14 @@ export function CartPanel({
                       items: printItems,
                       total: saleData.totalAmount ?? 0,
                       paymentMethod: saleData.paymentMethod ?? 'unknown',
-                      sunatStatus: saleData.sunatStatus ?? 'unknown',
-                      sunatNote: saleData.sunatNote ?? undefined,
                       cashierEmail: saleData.cashierEmail ?? undefined,
                     };
 
                     // Reuse triggerThermalPrint from file scope
                     triggerThermalPrint(payload as any);
                   } catch (error) {
-                    console.error('Error imprimiendo última boleta', error);
-                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo imprimir la última boleta.' });
+                    console.error('Error imprimiendo último comprobante', error);
+                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo imprimir el último comprobante.' });
                   }
                 }}
                 disabled={!firestore}

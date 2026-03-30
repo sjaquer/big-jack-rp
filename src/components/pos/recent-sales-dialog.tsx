@@ -162,7 +162,7 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
         totalAmount: saleToCancel.totalAmount,
         userId: user?.uid || 'unknown',
         timestamp: Timestamp.now(),
-        note: `Venta cancelada - ${saleToCancel.boletaSerie || ''}-${saleToCancel.boletaCorrelativo || ''}`,
+        note: `Venta cancelada - ${saleToCancel.receiptReference || saleToCancel.id}`,
       });
 
       await batch.commit();
@@ -231,16 +231,13 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {sale.boletaSerie && sale.boletaCorrelativo && (
+                          {sale.receiptReference && (
                             <Badge variant="secondary" className="font-mono">
-                              {sale.boletaSerie}-{String(sale.boletaCorrelativo).padStart(8, '0')}
+                              Ref: {sale.receiptReference}
                             </Badge>
                           )}
                           <Badge variant="outline">
                             S/ {(sale.totalAmount ?? 0).toFixed(2)}
-                          </Badge>
-                          <Badge variant={sale.sunatStatus === 'accepted' ? 'default' : 'secondary'}>
-                            {sale.sunatStatus === 'accepted' ? 'SUNAT ✓' : 'Sin SUNAT'}
                           </Badge>
                         </div>
 
@@ -314,9 +311,9 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
                   <p className="font-semibold">
                     Venta: S/ {(saleToCancel.totalAmount ?? 0).toFixed(2)}
                   </p>
-                  {saleToCancel.boletaSerie && (
+                  {saleToCancel.receiptReference && (
                     <p className="text-sm">
-                      Boleta: {saleToCancel.boletaSerie}-{String(saleToCancel.boletaCorrelativo).padStart(8, '0')}
+                      Referencia: {saleToCancel.receiptReference}
                     </p>
                   )}
                   <p className="text-sm">

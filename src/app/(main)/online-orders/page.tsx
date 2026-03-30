@@ -73,7 +73,7 @@ export default function IncomingOrdersPage() {
             </CardHeader>
             <CardContent>
                <div className="text-sm">
-                <p className="font-medium">Cliente: {order.customerName ?? order.customerId.slice(0,10)}</p>
+                <p className="font-medium">Cliente: {order.customerName ?? order.customerId?.slice(0, 10) ?? 'Sin cliente'}</p>
               </div>
                <Accordion type="single" collapsible className="w-full mt-4">
                 <AccordionItem value="items" className="border-none">

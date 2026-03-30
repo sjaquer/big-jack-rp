@@ -102,7 +102,7 @@ export function SalesList({ allSaleItems = [] }: SalesListProps) {
 
     const headers = [
       'ID', 'Fecha', 'Hora', 'Cliente', 'Documento Cliente', 
-      'Método Pago', 'Total', 'Estado SUNAT', 'Items', 'Fuente'
+      'Método Pago', 'Total', 'Items', 'Fuente'
     ];
 
     const csvContent = [
@@ -117,7 +117,6 @@ export function SalesList({ allSaleItems = [] }: SalesListProps) {
           sale.customerDocumentNumber || '',
           sale.paymentMethod,
           sale.totalAmount.toFixed(2),
-          sale.sunatStatus || 'pending',
           sale.itemsCount || 0,
           sale.source || 'pos'
         ].join(',');
@@ -404,14 +403,8 @@ export function SalesList({ allSaleItems = [] }: SalesListProps) {
                       {sale.paymentMethod}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        sale.sunatStatus === 'accepted' ? 'bg-green-100 text-green-800' :
-                        sale.sunatStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {sale.sunatStatus === 'accepted' ? 'Aceptado' :
-                         sale.sunatStatus === 'rejected' ? 'Rechazado' :
-                         sale.sunatStatus === 'sent' ? 'Enviado' : 'Pendiente'}
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Registrada
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-medium">

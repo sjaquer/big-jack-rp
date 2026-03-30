@@ -8,8 +8,8 @@ import { ShoppingCart } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { RecentSalesDialog } from '@/components/pos/recent-sales-dialog';
 // import { CashRegister } from '@/components/pos/cash-register'; // Deshabilitado temporalmente
-import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc, query, orderBy, limit, getDocs, getDoc, writeBatch, increment, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, getDoc, writeBatch, increment } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -21,25 +21,8 @@ interface OrderItem extends Product {
   quantity: number;
 }
 
-interface SunatBoletaPayload {
-  saleId: string;
-  total: number;
-  paymentMethod: string;
-  issuedAt: string;
-  serie: string;
-  correlativo: number;
-  customer: PaymentCustomerPayload;
-  items: Array<{
-    productId: string;
-    description: string;
-    quantity: number;
-    unitPrice: number;
-  }>;
-}
-
 interface ThermalPrintPayload {
-  serie: string;
-  correlativo: number;
+  reference: string;
   issuedAt: string;
   customer: PaymentCustomerPayload;
   items: Array<{
@@ -50,16 +33,8 @@ interface ThermalPrintPayload {
   }>;
   total: number;
   paymentMethod: string;
-  sunatStatus: string;
-  sunatNote?: string;
   cashierEmail?: string | null;
 }
-
-type SunatDispatchResult = {
-  status: 'accepted' | 'sent' | 'queued' | 'rejected' | 'error';
-  message?: string;
-  documentId?: string | null;
-};
 
 const escapeHtml = (value: string) =>
   value
@@ -99,16 +74,11 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
 
     const safeCustomerName = escapeHtml(payload.customer.name);
     const safeDocumentNumber = escapeHtml(payload.customer.documentNumber);
-    // const safeCashier = payload.cashierEmail ? escapeHtml(payload.cashierEmail) : '---'; // Removed in favor of hardcoded JACK
-    // const safeSunatNote = payload.sunatNote ? escapeHtml(payload.sunatNote) : ''; // Removed detailed note
-
-    const simpleSunatStatus = payload.sunatStatus === 'accepted' ? 'ACEPTADO' : 'NO REGISTRADO';
-
     const html = `<!DOCTYPE html>
     <html>
       <head>
         <meta charSet="utf-8" />
-        <title>Boleta ${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</title>
+        <title>Comprobante ${payload.reference}</title>
         <style>
           @page { size: 58mm auto; margin: 0; }
           *, *:before, *:after { box-sizing: border-box; }
@@ -132,8 +102,8 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
       <body>
         <div class="receipt">
           <div class="section center">
-            <h1>Boleta Electrónica</h1>
-            <p class="small">${payload.serie}-${String(payload.correlativo).padStart(8, '0')}</p>
+            <h1>Comprobante de Venta</h1>
+            <p class="small">Ref: ${payload.reference}</p>
             <p class="small">${new Date(payload.issuedAt).toLocaleString()}</p>
           </div>
           
@@ -153,7 +123,6 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
           </div>
 
           <div class="section center">
-            <p class="small">Estado SUNAT: ${simpleSunatStatus}</p>
             <p style="margin-top: 8px;">*** Gracias por su compra ***</p>
           </div>
         </div>
@@ -179,14 +148,10 @@ const triggerThermalPrint = (payload: ThermalPrintPayload) => {
 };
 
 const WALK_IN_CUSTOMER = 'Cliente Mostrador';
-const SUNAT_SERIES_COLLECTION = 'sunat_series';
-const DEFAULT_SERIES_DOC = 'boletas';
-const DEFAULT_SERIE_CODE = 'B001';
 
 interface PaymentResult {
   paymentMethod: string;
   customer: PaymentCustomerPayload;
-  issueBoleta: boolean;
 }
 
 export default function POSPage() {
@@ -219,73 +184,6 @@ export default function POSPage() {
       return collection(firestore, 'products');
     }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
-
-    const sendSaleToSunat = async (saleId: string, payload: SunatBoletaPayload): Promise<SunatDispatchResult> => {
-      if (!firestore || !saleId) {
-        return { status: 'error', message: 'Firestore no disponible' };
-      }
-      console.groupCollapsed('[SUNAT] Enviando boleta', saleId);
-      console.info('[SUNAT] Payload preparado', payload);
-      try {
-        const response = await fetch('/api/sunat/boletas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json().catch(() => ({}));
-        console.info('[SUNAT] Respuesta cruda', result);
-        const saleRef = doc(firestore, 'sales', saleId);
-
-        if (response.ok && (result.status === 'accepted' || result.status === 'queued' || result.status === 'sent')) {
-          const normalizedStatus = result.status === 'accepted' ? 'accepted' : result.status === 'queued' ? 'queued' : 'sent';
-          await updateDoc(saleRef, {
-            sunatStatus: normalizedStatus,
-            sunatDocumentId: result.ticket ?? result.response?.numeroComprobante ?? null,
-            sunatNote: result.message ?? 'Boleta enviada a SUNAT.',
-          });
-          toast({ title: 'Boleta electrónica enviada', description: 'SUNAT recibió la boleta.' });
-          return {
-            status: normalizedStatus,
-            documentId: result.ticket ?? result.response?.numeroComprobante ?? null,
-            message: result.message,
-          };
-        } else {
-          await updateDoc(saleRef, {
-            sunatStatus: 'rejected',
-            sunatNote: result.message ?? 'No se pudo registrar la boleta.',
-          });
-          console.warn('[SUNAT] Boleta rechazada', { saleId, message: result.message, details: result });
-          toast({
-            variant: 'destructive',
-            title: 'SUNAT rechazó la boleta',
-            description: result.message ?? 'Revisa las credenciales configuradas.',
-          });
-          return {
-            status: 'rejected',
-            message: result.message ?? 'SUNAT rechazó la boleta.',
-          };
-        }
-      } catch (error) {
-        console.error('[SUNAT] Error enviando boleta', error);
-        const saleRef = doc(firestore, 'sales', saleId);
-        await updateDoc(saleRef, {
-          sunatStatus: 'rejected',
-          sunatNote: (error as Error).message,
-        });
-        toast({
-          variant: 'destructive',
-          title: 'Boleta pendiente',
-          description: 'No se pudo contactar con SUNAT. Intenta reenviar más tarde.',
-        });
-        return {
-          status: 'error',
-          message: (error as Error).message,
-        };
-      } finally {
-        console.groupEnd();
-      }
-      return { status: 'error', message: 'Respuesta desconocida de SUNAT.' };
-    };
 
     const categoryKeys = useMemo(() => Object.keys(PRODUCT_CATEGORY_LABELS) as ProductCategory[], []);
     const groupedProducts = useMemo(() => {
@@ -456,68 +354,8 @@ export default function POSPage() {
       console.info('[POS-BG] Pedido enviado a cocina');
     };
 
-    /**
-     * Envía la boleta a SUNAT y actualiza el estado en background
-     */
-    const sendToSunatInBackground = async (
-      saleId: string,
-      serie: string,
-      correlativo: number,
-      customer: PaymentCustomerPayload,
-      orderItems: OrderItem[],
-      totalAmount: number,
-      paymentMethod: string
-    ) => {
-      if (!firestore) return;
-      
-      const issuedAt = new Date().toISOString();
-      const orderItemsSnapshot = orderItems.map(item => ({
-        productId: item.id,
-        productName: item.name,
-        quantity: item.quantity,
-        unitPrice: item.salePrice,
-        subtotal: item.salePrice * item.quantity,
-      }));
-      
-      const sunatPayload: SunatBoletaPayload = {
-        saleId,
-        total: totalAmount,
-        paymentMethod,
-        issuedAt,
-        serie,
-        correlativo,
-        customer: {
-          name: customer.name,
-          documentType: customer.documentType,
-          documentNumber: customer.documentNumber,
-        },
-        items: orderItemsSnapshot.map(item => ({
-          productId: item.productId,
-          description: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-      };
-      
-      const sunatResult = await sendSaleToSunat(saleId, sunatPayload);
-      
-      // Imprimir ticket
-      triggerThermalPrint({
-        serie,
-        correlativo,
-        issuedAt,
-        customer,
-        items: orderItemsSnapshot,
-        total: totalAmount,
-        paymentMethod,
-        sunatStatus: sunatResult.status,
-        sunatNote: sunatResult.message,
-        cashierEmail: user?.email || null,
-      });
-    };
-
     // === FUNCIÓN PRINCIPAL DE PAGO (OPTIMIZADA) ===
-    const handleSuccessfulPayment = async ({ paymentMethod, customer, issueBoleta }: PaymentResult) => {
+    const handleSuccessfulPayment = async ({ paymentMethod, customer }: PaymentResult) => {
       if (!firestore || !user) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos o no hay usuario."});
         return;
@@ -531,8 +369,6 @@ export default function POSPage() {
 
       const startTime = performance.now();
       let createdSaleId = '';
-      let generatedSerie = DEFAULT_SERIE_CODE;
-      let generatedCorrelativo = 0;
 
       const normalizedCustomer: PaymentCustomerPayload = {
         name: customer.name?.trim() || WALK_IN_CUSTOMER,
@@ -546,30 +382,14 @@ export default function POSPage() {
       try {
         // === TRANSACCIÓN MÍNIMA: Solo lo crítico ===
         // Esta transacción solo hace:
-        // 1. Leer/actualizar el correlativo de series
-        // 2. Crear el documento de venta
-        // 3. Crear los sale_items
+        // 1. Crear el documento de venta
+        // 2. Crear los sale_items
         // NO actualiza stocks (eso se hace en background)
         
         await runTransaction(firestore, async (transaction) => {
           console.groupCollapsed('[POS] Transacción rápida de venta');
-          
-          // 1. Leer y actualizar series (1 lectura, 1 escritura)
-          const seriesDocRef = doc(firestore, SUNAT_SERIES_COLLECTION, DEFAULT_SERIES_DOC);
-          const seriesDoc = await transaction.get(seriesDocRef);
-          const storedSerie = seriesDoc.exists() ? (seriesDoc.data()?.serie as string | undefined) : undefined;
-          const storedCorrelativo = seriesDoc.exists() ? (seriesDoc.data()?.correlativo as number | undefined) : undefined;
-          generatedSerie = storedSerie || DEFAULT_SERIE_CODE;
-          const nextCorrelativo = (storedCorrelativo ?? 0) + 1;
-          generatedCorrelativo = nextCorrelativo;
 
-          transaction.set(seriesDocRef, {
-            serie: generatedSerie,
-            correlativo: nextCorrelativo,
-            updatedAt: Timestamp.now(),
-          });
-
-          // 2. Crear documento de venta (1 escritura)
+          // 1. Crear documento de venta (1 escritura)
           const newSaleRef = doc(collection(firestore, 'sales'));
           createdSaleId = newSaleRef.id;
 
@@ -588,15 +408,13 @@ export default function POSPage() {
             customerName: normalizedCustomer.name,
             customerDocumentType: normalizedCustomer.documentType,
             customerDocumentNumber: normalizedCustomer.documentNumber,
-            sunatStatus: issueBoleta ? 'pending' : 'skipped',
-            boletaSerie: generatedSerie,
-            boletaCorrelativo: generatedCorrelativo,
+            receiptReference: createdSaleId.slice(0, 8).toUpperCase(),
           };
           
           transaction.set(newSaleRef, saleData);
-          console.info('[POS] Venta creada', { saleId: createdSaleId, serie: generatedSerie, correlativo: generatedCorrelativo });
+          console.info('[POS] Venta creada', { saleId: createdSaleId });
 
-          // 3. Crear sale_items (N escrituras, sin lecturas adicionales)
+          // 2. Crear sale_items (N escrituras, sin lecturas adicionales)
           for (const item of orderSnapshot) {
             const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
             const saleItemData = {
@@ -632,7 +450,7 @@ export default function POSPage() {
         // === FEEDBACK INMEDIATO AL USUARIO ===
         toast({
           title: "✅ Venta registrada",
-          description: `Boleta ${generatedSerie}-${String(generatedCorrelativo).padStart(8, '0')} • S/ ${(total ?? 0).toFixed(2)}`,
+          description: `Venta ${createdSaleId.slice(0, 8).toUpperCase()} • S/ ${(total ?? 0).toFixed(2)}`,
         });
         
         // Limpiar pedido INMEDIATAMENTE
@@ -646,19 +464,24 @@ export default function POSPage() {
         
         // 2. Crear orden de cocina
         createKitchenOrderInBackground(orderSnapshot, normalizedCustomer, paymentMethod, total);
-        
-        // 3. Enviar a SUNAT e imprimir (solo si se solicitó boleta)
-        if (issueBoleta && createdSaleId) {
-          sendToSunatInBackground(
-            createdSaleId,
-            generatedSerie,
-            generatedCorrelativo,
-            normalizedCustomer,
-            orderSnapshot,
-            total,
-            paymentMethod
-          );
-        }
+
+        // 3. Imprimir comprobante interno
+        const issuedAt = new Date().toISOString();
+        const orderItemsSnapshot = orderSnapshot.map(item => ({
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.salePrice,
+          subtotal: item.salePrice * item.quantity,
+        }));
+        triggerThermalPrint({
+          reference: createdSaleId.slice(0, 8).toUpperCase(),
+          issuedAt,
+          customer: normalizedCustomer,
+          items: orderItemsSnapshot,
+          total,
+          paymentMethod,
+          cashierEmail: user?.email || null,
+        });
 
         const totalTime = performance.now() - startTime;
         console.info(`[POS] 🚀 Flujo completo iniciado en ${totalTime.toFixed(0)}ms (tareas de background en proceso)`);

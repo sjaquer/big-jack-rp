@@ -41,7 +41,6 @@ interface PaymentModalProps {
   onSuccess: (payload: {
     paymentMethod: string;
     customer: PaymentCustomerPayload;
-    issueBoleta: boolean;
   }) => void | Promise<void>;
 }
 
@@ -58,7 +57,6 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
   const [documentType, setDocumentType] = useState<DocumentType>('0');
   const [documentNumber, setDocumentNumber] = useState('');
   const [customerName, setCustomerName] = useState('Cliente Mostrador');
-  const [shouldIssueBoleta, setShouldIssueBoleta] = useState(true);
   
   // Customer Search State
   const [customerSearchMode, setCustomerSearchMode] = useState<'search' | 'manual'>('manual');
@@ -129,7 +127,6 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
       setDocumentType('0');
       setDocumentNumber('');
       setCustomerName('Cliente Mostrador');
-      setShouldIssueBoleta(true);
       setCustomerSearchMode('manual');
       setSearchTerm('');
       setSelectedCustomerId(null);
@@ -215,7 +212,6 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
           documentType,
           documentNumber: sanitizedDocument || (documentType === '0' ? '00000000' : ''),
         },
-        issueBoleta: shouldIssueBoleta,
       });
       onClose();
     } catch (error) {
@@ -452,18 +448,6 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                 </div>
               )}
             </div>
-
-            {/* Options Section */}
-            <div className="flex items-center justify-between rounded-lg border p-3 bg-card shadow-sm">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-semibold">Boleta Electrónica</Label>
-                <p className="text-xs text-muted-foreground">
-                  Enviar comprobante a SUNAT
-                </p>
-              </div>
-              <Switch checked={shouldIssueBoleta} onCheckedChange={setShouldIssueBoleta} disabled={isProcessing} />
-            </div>
-
           </div>
         </ScrollArea>
 
