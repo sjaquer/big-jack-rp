@@ -17,6 +17,7 @@ import type { Customer } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DOCUMENT_TYPES = [
   { value: '0', label: 'Sin documento', icon: null },
@@ -186,8 +187,8 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-full max-w-[min(100vw,920px)] h-[100dvh] sm:h-[min(92vh,900px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border">
+        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white dark:bg-slate-900/70">
           <DialogTitle className="text-2xl font-headline">
             {customer ? 'Editar Cliente' : 'Nuevo Cliente'}
           </DialogTitle>
@@ -198,10 +199,12 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex-1 overflow-hidden min-h-0">
+          <ScrollArea className="h-full px-4 sm:px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6 py-4 pr-2 sm:pr-2">
             {/* Información básica */}
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-xl border bg-muted/20 p-3 sm:p-4">
               <h3 className="font-semibold text-base">Información Básica</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -265,7 +268,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
             </div>
 
             {/* Documento de Identidad */}
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-xl border bg-muted/20 p-3 sm:p-4">
               <h3 className="font-semibold text-base">Documento de Identidad</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -327,7 +330,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
             </div>
 
             {/* Contacto */}
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-xl border bg-muted/20 p-3 sm:p-4">
               <h3 className="font-semibold text-base">Contacto</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -392,7 +395,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
             </div>
 
             {/* Alergias y preferencias */}
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-xl border bg-muted/20 p-3 sm:p-4">
               <h3 className="font-semibold text-base">Preferencias y Restricciones</h3>
               
               <div className="space-y-2">
@@ -459,6 +462,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               />
             </div>
 
+            <div className="space-y-4 rounded-xl border bg-muted/20 p-3 sm:p-4">
             {/* Notas adicionales */}
             <FormField
               control={form.control}
@@ -477,8 +481,9 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 </FormItem>
               )}
             />
+            </div>
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 border-t pt-4 bg-background/90 sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"
@@ -487,14 +492,14 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                   setAllergies([]);
                   onOpenChange(false);
                 }}
-                className="h-12 text-base touch-manipulation"
+                className="h-12 text-base touch-manipulation w-full sm:w-auto"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={form.formState.isSubmitting}
-                className="h-12 text-base touch-manipulation"
+                className="h-12 text-base touch-manipulation w-full sm:w-auto"
               >
                 {form.formState.isSubmitting ? (
                   <>
@@ -516,6 +521,8 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
             </DialogFooter>
           </form>
         </Form>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -158,9 +158,11 @@ export default function InventoryPage() {
                 Nuevo Ingrediente
               </Button>
             </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-0">
-              <div className="overflow-x-auto">
-                <Table className="min-w-[600px]">
+            <CardContent className="flex-1 overflow-hidden p-0">
+              <p className="px-4 pt-2 text-[11px] text-muted-foreground sm:hidden">Desliza horizontalmente para ver todas las columnas.</p>
+              <div className="w-full overflow-x-auto overflow-y-hidden pt-1 [scrollbar-gutter:stable] touch-pan-x [transform:rotateX(180deg)]">
+                <div className="[transform:rotateX(180deg)]">
+                <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre</TableHead>
@@ -216,6 +218,7 @@ export default function InventoryPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -225,9 +228,11 @@ export default function InventoryPage() {
               <CardTitle className="font-headline text-lg sm:text-xl font-bold">Productos Terminados</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Productos listos para la venta.</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-0">
-              <div className="overflow-x-auto">
-                <Table className="min-w-[600px]">
+            <CardContent className="flex-1 overflow-hidden p-0">
+              <p className="px-4 pt-2 text-[11px] text-muted-foreground sm:hidden">Desliza horizontalmente para ver todas las columnas.</p>
+              <div className="w-full overflow-x-auto overflow-y-hidden pt-1 [scrollbar-gutter:stable] touch-pan-x [transform:rotateX(180deg)]">
+                <div className="[transform:rotateX(180deg)]">
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre</TableHead>
@@ -260,6 +265,7 @@ export default function InventoryPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -281,9 +287,11 @@ export default function InventoryPage() {
                 Nuevo Artículo
               </Button>
             </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-0">
-              <div className="overflow-x-auto">
-                <Table className="min-w-[600px]">
+            <CardContent className="flex-1 overflow-hidden p-0">
+              <p className="px-4 pt-2 text-[11px] text-muted-foreground sm:hidden">Desliza horizontalmente para ver todas las columnas.</p>
+              <div className="w-full overflow-x-auto overflow-y-hidden pt-1 [scrollbar-gutter:stable] touch-pan-x [transform:rotateX(180deg)]">
+                <div className="[transform:rotateX(180deg)]">
+                <Table className="min-w-[760px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre</TableHead>
@@ -341,6 +349,7 @@ export default function InventoryPage() {
                       ))}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             </CardContent>
           </Card>

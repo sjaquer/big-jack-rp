@@ -19,7 +19,7 @@ const fontBody = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: 'POS BIG JACK | ERP',
+  title: 'BIG JACK | ERP',
   description: 'Sistema ERP integral para operaciones, ventas e inventario.',
 };
 

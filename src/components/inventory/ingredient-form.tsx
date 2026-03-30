@@ -220,24 +220,24 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[min(100vw,1100px)] h-[100dvh] sm:h-[min(90vh,900px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
+      <DialogContent className="w-full max-w-[min(100vw,1100px)] h-[100dvh] sm:h-[min(92vh,900px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
         <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white dark:bg-slate-900/70">
-          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900">{ingredient ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</DialogTitle>
+          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-foreground">{ingredient ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</DialogTitle>
           <DialogDescription className="text-sm">
             {ingredient ? 'Actualiza los detalles del ingrediente.' : 'Completa los detalles para añadir un nuevo ingrediente.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden min-h-0">
-          <ScrollArea className="h-full px-4 sm:px-6 pb-6" type="always">
+          <ScrollArea className="h-full px-4 sm:px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]" type="always">
             <ScrollBar className="z-50" />
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-3 sm:pr-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6 py-4 pr-2 sm:pr-2">
             <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Información del ingrediente</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Define cómo identificarás este insumo dentro del inventario de la hamburguesería.</p>
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
@@ -272,7 +272,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   )}
                 />
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="category"
@@ -319,7 +319,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                 <h3 className="font-semibold text-base sm:text-lg">Control de inventario</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Establece las cantidades con las que operas día a día.</p>
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="quantity"
@@ -378,7 +378,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   control={form.control}
                   name="minimumStock"
                   render={({ field }) => (
-                    <FormItem className="col-span-2 sm:col-span-1">
+                    <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Stock mínimo</FormLabel>
                       <FormControl>
                         <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 5" {...field} />
@@ -389,7 +389,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   )}
                 />
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="cost"
@@ -431,7 +431,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   control={form.control}
                   name="expiryDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col col-span-2 sm:col-span-1">
+                    <FormItem className="flex flex-col">
                       <FormLabel className="text-sm sm:text-base font-medium">Fecha de vencimiento</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
@@ -517,7 +517,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-11 w-11 sm:h-10 sm:w-10 sm:mt-6"
+                              className="h-11 w-11 sm:h-10 sm:w-10 sm:mt-6 self-end"
                               onClick={() => removeProvider(index)}
                               disabled={providerFields.length === 1}
                               aria-label="Eliminar proveedor"
@@ -527,7 +527,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                           </div>
 
                           {/* Datos de compra al proveedor */}
-                          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                             <FormField
                               control={form.control}
                               name={`providers.${index}.totalPrice`}
@@ -694,11 +694,11 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold rounded-xl">
+        <DialogFooter className="flex-shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-6 sm:px-6 pt-4 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3 flex-col-reverse sm:flex-row">
+          <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto h-12 text-base font-semibold rounded-xl">
             Cancelar
           </Button>
-          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg">
+          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="w-full sm:w-auto h-12 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg">
             Guardar Ingrediente
           </Button>
         </DialogFooter>

@@ -101,24 +101,24 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[min(100vw,900px)] h-[100dvh] sm:h-[min(90vh,750px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
+      <DialogContent className="w-full max-w-[min(100vw,900px)] h-[100dvh] sm:h-[min(92vh,760px)] p-0 flex flex-col overflow-hidden rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border">
         <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 pb-4 flex-shrink-0 border-b bg-white dark:bg-slate-900/70">
-          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-slate-900">{item ? 'Editar Artículo' : 'Añadir Nuevo Artículo'}</DialogTitle>
+          <DialogTitle className="font-headline text-xl sm:text-2xl font-bold text-foreground">{item ? 'Editar Artículo' : 'Añadir Nuevo Artículo'}</DialogTitle>
           <DialogDescription className="text-sm">
             {item ? 'Actualiza los detalles del artículo.' : 'Completa los detalles para añadir un nuevo artículo al inventario.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden min-h-0">
-          <ScrollArea className="h-full px-4 sm:px-6 pb-6" type="always">
+          <ScrollArea className="h-full px-4 sm:px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]" type="always">
             <ScrollBar className="z-50" />
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-3 sm:pr-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6 py-4 pr-2 sm:pr-2">
             <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Detalles del artículo</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Mantén tu stock de empaques y desechables bajo control.</p>
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
@@ -159,7 +159,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   )}
                 />
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="quantity"
@@ -192,7 +192,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                   control={form.control}
                   name="costPerUnit"
                   render={({ field }) => (
-                    <FormItem className="col-span-2 sm:col-span-1">
+                    <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Costo por unidad (S/)</FormLabel>
                       <FormControl>
                         <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 0.45" {...field} />
@@ -210,7 +210,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                 <h3 className="font-semibold text-base sm:text-lg">Logística y notas</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">Información útil para el equipo de compras y almacén.</p>
               </div>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="location"
@@ -261,11 +261,11 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex-shrink-0 px-4 pb-6 sm:px-6 pt-4 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-semibold rounded-xl">
+        <DialogFooter className="flex-shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-6 sm:px-6 pt-4 border-t bg-white dark:bg-slate-900/70 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.08)] gap-3 flex-col-reverse sm:flex-row">
+          <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto h-12 text-base font-semibold rounded-xl">
             Cancelar
           </Button>
-          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="flex-1 sm:flex-none h-14 sm:h-12 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg">
+          <Button type="submit" onClick={form.handleSubmit(onSubmit)} className="w-full sm:w-auto h-12 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg">
             Guardar Artículo
           </Button>
         </DialogFooter>
