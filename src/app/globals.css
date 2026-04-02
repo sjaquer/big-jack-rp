@@ -82,17 +82,17 @@
     overscroll-behavior-y: none;
     text-rendering: optimizeLegibility;
     background-image:
-      radial-gradient(circle at 8% -10%, hsl(var(--primary) / 0.16), transparent 36%),
-      radial-gradient(circle at 92% 110%, hsl(var(--accent) / 0.24), transparent 42%),
-      linear-gradient(160deg, hsl(var(--background)) 0%, hsl(35 28% 95%) 100%);
+      radial-gradient(circle at 12% 12%, rgba(245, 126, 66, 0.24), transparent 28%),
+      radial-gradient(circle at 88% 88%, rgba(245, 126, 66, 0.10), transparent 30%),
+      linear-gradient(160deg, #0d0d0f 0%, #1d1713 52%, #0f0f11 100%);
     background-attachment: fixed;
   }
 
   .dark body {
     background-image:
-      radial-gradient(circle at 10% -5%, hsl(var(--primary) / 0.2), transparent 34%),
-      radial-gradient(circle at 90% 110%, hsl(var(--accent) / 0.2), transparent 40%),
-      linear-gradient(165deg, hsl(var(--background)) 0%, hsl(220 28% 6%) 100%);
+      radial-gradient(circle at 12% 12%, rgba(245, 126, 66, 0.24), transparent 28%),
+      radial-gradient(circle at 88% 88%, rgba(245, 126, 66, 0.12), transparent 30%),
+      linear-gradient(165deg, #09090b 0%, #16100d 48%, #09090b 100%);
   }
 
   /* Corrige textos hardcodeados claros para mantener contraste en modo oscuro */
@@ -113,13 +113,6 @@
 
   .erp-section-title {
     @apply font-headline text-[1.45rem] leading-tight tracking-[-0.02em] sm:text-[1.7rem];
-  }
-
-  .erp-grid-glow {
-    background-image:
-      linear-gradient(to right, hsl(var(--foreground) / 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
-    background-size: 28px 28px;
   }
 
   /* Mejoras para tablets y móviles */

@@ -465,6 +465,11 @@ export default function POSPage() {
         // 2. Crear orden de cocina
         createKitchenOrderInBackground(orderSnapshot, normalizedCustomer, paymentMethod, total);
 
+        toast({
+          title: 'Pedido enviado',
+          description: 'La orden quedó registrada para cocina.',
+        });
+
         // 3. Imprimir comprobante interno
         const issuedAt = new Date().toISOString();
         const orderItemsSnapshot = orderSnapshot.map(item => ({
@@ -502,7 +507,7 @@ export default function POSPage() {
     }
 
   return (
-    <div className="h-full w-full relative">
+    <div className="relative h-full w-full bg-transparent">
       {/* Mobile Cart Trigger - Floating Button */}
       <div className="lg:hidden fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-50">
         <Sheet>
