@@ -87,6 +87,53 @@ Variables recomendadas:
 - UPLOAD_MAX_IMAGE_MB (default: 5)
 - UPLOAD_IMAGE_SUBDIR (default: images)
 - UPLOAD_ALLOWED_TYPES (CSV de MIME types)
+- ONLINE_ORDERS_API_KEY (API key para recibir pedidos externos)
+- FIREBASE_SERVICE_ACCOUNT_KEY (opcional en local; JSON de service account en una sola línea)
+
+## 🔌 Endpoint para Pedidos Externos
+
+Se agregó un endpoint para que otra web de pedidos online envíe pedidos y se procese con lógica ERP completa.
+
+- Método: `POST`
+- URL: `/api/online-orders`
+- Headers:
+	- `Content-Type: application/json`
+	- `x-online-orders-key: <ONLINE_ORDERS_API_KEY>` (o `Authorization: Bearer <ONLINE_ORDERS_API_KEY>`)
+
+Ejemplo de payload:
+
+```json
+{
+	"externalOrderId": "tienda-web-84521",
+	"orderDate": "2026-04-06T14:25:00.000Z",
+	"customerName": "Juan Perez",
+	"customerPhone": "+51987654321",
+	"paymentMethod": "yape",
+	"deliveryAddress": "Av. Principal 123",
+	"source": "web",
+	"notes": "Sin cebolla",
+	"useCatalogPrice": true,
+	"acceptPriceDiff": true,
+	"enforceStock": false,
+	"items": [
+		{ "sku": "BURG-002", "quantity": 2 },
+		{ "sku": "BEB-001", "quantity": 1 }
+	]
+}
+```
+
+Notas:
+- `sku` es obligatorio por cada item. El ERP busca el producto por SKU en `products`.
+- El precio final se toma del catálogo (`products.salePrice`) cuando `useCatalogPrice=true`.
+- Si `enforceStock=true`, el endpoint rechaza el pedido si no hay stock suficiente de productos o ingredientes.
+- Se crea venta en `sales` + `sales/{saleId}/sale_items`.
+- Se descuenta stock de `products` e `ingredients` automáticamente.
+- Se registra movimiento en `inventory_movements`.
+- Si envías `externalOrderId`, el endpoint es idempotente: no duplica pedidos repetidos.
+- Los pedidos se guardan en `online_orders` y aparecen automáticamente en la cola de pedidos.
+
+Documentación completa de integración para la web externa:
+- Ver `docs/online-orders-api.md`
 
 ## 📱 Diseño Responsivo
 

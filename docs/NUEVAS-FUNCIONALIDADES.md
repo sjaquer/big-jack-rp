@@ -2,6 +2,23 @@
 
 ## 📋 Resumen de Cambios
 
+### 0. 🔌 Integración API de Pedidos Online con lógica ERP
+- **Ubicación**: `src/app/api/online-orders/route.ts`
+- **Documentación técnica**: `docs/online-orders-api.md`
+
+#### Cambios principales:
+- ✅ Recepción de pedidos externos por endpoint seguro (`ONLINE_ORDERS_API_KEY`)
+- ✅ Resolución de productos por `sku` obligatorio
+- ✅ Cálculo de precios usando catálogo ERP (`products.salePrice`)
+- ✅ Creación automática de venta en `sales` y `sale_items`
+- ✅ Descuento automático de inventario en `products` e `ingredients`
+- ✅ Registro en `inventory_movements`
+- ✅ Idempotencia usando `externalOrderId`
+
+#### Resultado:
+- El pedido aparece en la cola de pedidos (`online_orders`)
+- El ERP mantiene consistencia entre pedido, venta e inventario
+
 ### 1. 🔒 **Seguridad del Login**
 - **Ubicación**: `src/app/login/page.tsx`
 - **Cambio**: Eliminado el enlace de registro ("¿No tienes cuenta? Regístrate")
