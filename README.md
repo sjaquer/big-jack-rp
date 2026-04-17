@@ -96,6 +96,7 @@ Se agregó un endpoint para que otra web de pedidos online envíe pedidos y se p
 
 - Método: `POST`
 - URL: `/api/online-orders`
+- URL producción: `https://bigjack-rp.vercel.app/api/online-orders`
 - Headers:
 	- `Content-Type: application/json`
 	- `x-online-orders-key: <ONLINE_ORDERS_API_KEY>` (o `Authorization: Bearer <ONLINE_ORDERS_API_KEY>`)

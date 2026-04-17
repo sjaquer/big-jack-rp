@@ -6,7 +6,7 @@ Este documento explica como integrar una web externa de pedidos con el endpoint 
 
 - Metodo: POST
 - URL local: http://localhost:9002/api/online-orders
-- URL produccion: https://<tu-dominio>/api/online-orders
+- URL produccion: https://bigjack-rp.vercel.app/api/online-orders
 - Content-Type: application/json
 - Autenticacion:
   - Header recomendado: x-online-orders-key: <ONLINE_ORDERS_API_KEY>
@@ -109,7 +109,7 @@ const payload = {
   ]
 };
 
-const response = await fetch("https://<tu-dominio>/api/online-orders", {
+const response = await fetch("https://bigjack-rp.vercel.app/api/online-orders", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",

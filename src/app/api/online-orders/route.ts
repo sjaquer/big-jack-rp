@@ -113,6 +113,12 @@ function toNumber(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function isAlreadyExistsError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 6 || code === '6' || code === 'already-exists' || code === 'ALREADY_EXISTS';
+}
+
 async function resolveProductsBySku(inputSkus: string[]) {
   const uniqueSkus = [...new Set(inputSkus.map(normalizeSku))];
   const lookups = await Promise.all(
@@ -434,7 +440,8 @@ export async function POST(request: NextRequest) {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    batch.set(docRef, {
+    // Use create to enforce true idempotency under concurrent requests.
+    batch.create(docRef, {
       orderDate: toFirestoreOrderDate(order.orderDate),
       customerId: order.customerId ?? null,
       status: order.status,
@@ -473,7 +480,19 @@ export async function POST(request: NextRequest) {
       via: 'api',
     });
 
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (commitError) {
+      if (order.externalOrderId && isAlreadyExistsError(commitError)) {
+        return jsonResponse({
+          success: true,
+          duplicated: true,
+          orderId: docRef.id,
+          message: 'Pedido ya registrado previamente.',
+        });
+      }
+      throw commitError;
+    }
 
     return jsonResponse({
       success: true,
