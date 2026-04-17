@@ -119,6 +119,13 @@ function isAlreadyExistsError(error: unknown): boolean {
   return code === 6 || code === '6' || code === 'already-exists' || code === 'ALREADY_EXISTS';
 }
 
+function buildErpFailureHint() {
+  return (
+    'Revisa logs del endpoint online-orders en produccion, escritura en sales/sale_items, ' +
+    'descuento en products/ingredients/inventory_movements y variables de entorno de conexion/permisos.'
+  );
+}
+
 async function resolveProductsBySku(inputSkus: string[]) {
   const uniqueSkus = [...new Set(inputSkus.map(normalizeSku))];
   const lookups = await Promise.all(
@@ -512,7 +519,9 @@ export async function POST(request: NextRequest) {
     return jsonResponse(
       {
         success: false,
-        error: 'No se pudo registrar el pedido.',
+        error: 'El ERP devolvio un error interno al registrar el pedido.',
+        upstreamStatus: 500,
+        hint: buildErpFailureHint(),
       },
       500
     );
