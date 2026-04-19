@@ -143,26 +143,22 @@ export default function DashboardPage() {
     const now = new Date();
     const currentHour = now.getHours();
 
-    if (currentHour < 3) {
-      return setMinutes(setHours(subDays(now, 1), 15), 0);
-    } else if (currentHour < 15) {
-      return setMinutes(setHours(subDays(now, 1), 15), 0);
-    } else {
-      return setMinutes(setHours(now, 15), 0);
+    if (currentHour < 18) {
+      return setMinutes(setHours(subDays(now, 1), 18), 0);
     }
+
+    return setMinutes(setHours(now, 18), 0);
   }, []);
 
   const shiftEnd = useMemo(() => {
     const now = new Date();
     const currentHour = now.getHours();
 
-    if (currentHour < 3) {
-      return setMinutes(setHours(now, 2), 59);
-    } else if (currentHour < 15) {
-      return setMinutes(setHours(now, 2), 59);
-    } else {
-      return setMinutes(setHours(subDays(now, -1), 2), 59);
+    if (currentHour < 18) {
+      return setMinutes(setHours(now, 1), 59);
     }
+
+    return setMinutes(setHours(subDays(now, -1), 1), 59);
   }, []);
 
   const currentShiftQuery = useMemoFirebase(() => {

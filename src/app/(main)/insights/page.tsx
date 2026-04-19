@@ -84,11 +84,11 @@ export default function InsightsPage() {
   const now = useMemo(() => new Date(), []);
   
   const shiftStart = useMemo(() => {
-    return setMinutes(setHours(now.getHours() >= 15 ? now : subDays(now, 1), 15), 0);
+    return setMinutes(setHours(now.getHours() >= 18 ? now : subDays(now, 1), 18), 0);
   }, [now]);
 
   const shiftEnd = useMemo(() => {
-    return setMinutes(setHours(now.getHours() >= 2 && now.getHours() < 15 ? now : addDays(shiftStart, 1), 2), 0);
+    return setMinutes(setHours(now.getHours() >= 2 && now.getHours() < 18 ? now : addDays(shiftStart, 1), 1), 59);
   }, [now, shiftStart]);
 
   const todayStart = useMemo(() => startOfDay(now), [now]);
@@ -117,11 +117,11 @@ export default function InsightsPage() {
 
   // Query turno anterior
   const previousShiftStart = useMemo(() => {
-    return setMinutes(setHours(subDays(shiftStart, 1), 15), 0);
+    return setMinutes(setHours(subDays(shiftStart, 1), 18), 0);
   }, [shiftStart]);
   
   const previousShiftEnd = useMemo(() => {
-    return setMinutes(setHours(subDays(shiftEnd, 1), 2), 0);
+    return setMinutes(setHours(subDays(shiftEnd, 1), 1), 59);
   }, [shiftEnd]);
 
   const previousShiftQuery = useMemoFirebase(() => {

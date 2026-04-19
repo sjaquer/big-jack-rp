@@ -7,12 +7,12 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 interface LiveClockProps {
-  shiftStart?: number; // Hora de inicio del turno (default 15 = 3PM)
-  shiftEnd?: number; // Hora de fin del turno (default 2 = 2AM)
+  shiftStart?: number; // Hora de inicio del turno (default 18 = 6PM)
+  shiftEnd?: number; // Hora de fin del turno (default 2 = 2AM, equivalente a cierre 1:59AM)
   className?: string;
 }
 
-export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveClockProps) {
+export function LiveClock({ shiftStart = 18, shiftEnd = 2, className }: LiveClockProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -32,14 +32,14 @@ export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveCloc
   const getShiftProgress = () => {
     if (!isInShift) return { hoursWorked: 0, hoursRemaining: 0, progress: 0 };
     
-    const totalShiftHours = 11; // 3PM a 2AM = 11 horas
+    const totalShiftHours = (24 - shiftStart) + shiftEnd;
     let hoursWorked = 0;
     
     if (currentHour >= shiftStart) {
-      // Estamos entre 3PM y 11:59PM
+      // Estamos entre 6PM y 11:59PM
       hoursWorked = currentHour - shiftStart + (currentTime.getMinutes() / 60);
     } else {
-      // Estamos entre 12AM y 2AM
+      // Estamos entre 12AM y 1:59AM
       hoursWorked = (24 - shiftStart) + currentHour + (currentTime.getMinutes() / 60);
     }
     
@@ -100,7 +100,7 @@ export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveCloc
             {isInShift ? '🟢 En turno' : '⚪ Fuera de turno'}
           </span>
             <span className="text-[10px] text-muted-foreground hidden sm:inline">
-            Turno: 3:00 PM - 2:00 AM
+            Turno: 6:00 PM - 1:00 AM
           </span>
         </div>
         
@@ -128,7 +128,7 @@ export function LiveClock({ shiftStart = 15, shiftEnd = 2, className }: LiveCloc
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            El próximo turno comienza a las 3:00 PM
+            El próximo turno comienza a las 6:00 PM
           </p>
         )}
       </div>

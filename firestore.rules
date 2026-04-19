@@ -38,6 +38,11 @@ service cloud.firestore {
       }
     }
 
+    // Requerido para consultas collectionGroup('sale_items').
+    match /{path=**}/sale_items/{itemId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
     match /cash_flows/{docId} {
       allow read, create, update, delete: if isAuthenticated();
     }

@@ -10,8 +10,8 @@ interface HourlySalesChartProps {
   isLoading: boolean;
 }
 
-// Horas del turno de 3PM (15:00) a 2AM (02:00)
-const SHIFT_HOURS = [15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2];
+// Horas del turno de 6PM (18:00) a 1AM (01:59)
+const SHIFT_HOURS = [18, 19, 20, 21, 22, 23, 0, 1];
 
 export function HourlySalesChart({ data, isLoading }: HourlySalesChartProps) {
   const aggregatedData = useMemo(() => {
