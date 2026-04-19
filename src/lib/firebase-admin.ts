@@ -69,6 +69,16 @@ function getServiceAccountFromSplitEnv(): ServiceAccount | null {
   } as ServiceAccount;
 }
 
+function hasExplicitFirebaseAdminEnvConfig(): boolean {
+  return Boolean(
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+      process.env.FIREBASE_PRIVATE_KEY ||
+      process.env.FIREBASE_CLIENT_EMAIL ||
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  );
+}
+
 function getAdminApp() {
   const existing = getApps();
   if (existing.length > 0) {
@@ -90,7 +100,19 @@ function getAdminApp() {
       });
     } catch (error) {
       console.error('Firebase Admin cert credentials are invalid. Falling back to application default.', error);
+
+      if (hasExplicitFirebaseAdminEnvConfig()) {
+        throw new Error(
+          'Firebase Admin credentials are configured but invalid. Revisa FIREBASE_SERVICE_ACCOUNT_KEY o FIREBASE_PRIVATE_KEY/FIREBASE_CLIENT_EMAIL/FIREBASE_PROJECT_ID y asegúrate de que private_key conserve el PEM completo con BEGIN/END PRIVATE KEY.'
+        );
+      }
     }
+  }
+
+  if (hasExplicitFirebaseAdminEnvConfig()) {
+    throw new Error(
+      'Firebase Admin credentials are configured but invalid. Revisa FIREBASE_SERVICE_ACCOUNT_KEY o FIREBASE_PRIVATE_KEY/FIREBASE_CLIENT_EMAIL/FIREBASE_PROJECT_ID.'
+    );
   }
 
   return initializeApp({
