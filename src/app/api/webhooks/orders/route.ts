@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase-admin';
-import { convertInventoryQuantity } from '@/lib/unit-conversion';
 
 export const runtime = 'nodejs';
 
@@ -34,13 +33,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, x-webhook-secret',
 };
 
-type ProductIngredientSnapshot = {
-  ingredientId?: string;
-  quantity?: number;
-  unit?: string;
-  sourceType?: 'ingredient' | 'inventory_item';
-};
-
 type ProductSnapshot = {
   id: string;
   sku: string;
@@ -48,7 +40,6 @@ type ProductSnapshot = {
   salePrice: number;
   costPrice: number;
   quantity: number;
-  ingredients: ProductIngredientSnapshot[];
 };
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -114,30 +105,10 @@ async function resolveProductsBySku(inputSkus: string[]) {
       salePrice: toNumber(data.salePrice, 0),
       costPrice: toNumber(data.price, 0),
       quantity: toNumber(data.quantity, 0),
-      ingredients: Array.isArray(data.ingredients) ? (data.ingredients as ProductIngredientSnapshot[]) : [],
     });
   }
 
   return { bySku, missingSkus };
-}
-
-async function getIngredientUnits(productsBySku: Map<string, ProductSnapshot>) {
-  const ingredientIds = [...productsBySku.values()]
-    .flatMap((product) => product.ingredients)
-    .map((ingredient) => ingredient.ingredientId)
-    .filter((id): id is string => Boolean(id));
-
-  const uniqueIngredientIds = [...new Set(ingredientIds)];
-  const unitEntries = await Promise.all(
-    uniqueIngredientIds.map(async (ingredientId) => {
-      const snapshot = await adminDb.collection('ingredients').doc(ingredientId).get();
-      if (!snapshot.exists) return [ingredientId, ''] as const;
-      const data = snapshot.data() as Record<string, unknown>;
-      return [ingredientId, typeof data.unit === 'string' ? data.unit : ''] as const;
-    })
-  );
-
-  return new Map(unitEntries);
 }
 
 export async function OPTIONS() {
@@ -221,32 +192,6 @@ export async function POST(request: NextRequest) {
     }
 
     const saleRef = adminDb.collection('sales').doc();
-    const ingredientUnits = await getIngredientUnits(productsBySku);
-    const ingredientUpdates = new Map<string, { collectionName: 'ingredients' | 'inventory_items'; id: string; amount: number }>();
-
-    for (const item of resolvedItems) {
-      const product = productsBySku.get(normalizeSku(item.productSku));
-      if (!product) continue;
-
-      for (const ingredient of product.ingredients) {
-        if (!ingredient?.ingredientId || typeof ingredient.quantity !== 'number') continue;
-
-        const collectionName = ingredient.sourceType === 'inventory_item' ? 'inventory_items' : 'ingredients';
-        const key = `${collectionName}:${ingredient.ingredientId}`;
-        const current = ingredientUpdates.get(key)?.amount || 0;
-        const rawAmount = ingredient.quantity * item.quantity;
-        const adjustedAmount =
-          collectionName === 'ingredients'
-            ? convertInventoryQuantity(rawAmount, ingredient.unit, ingredientUnits.get(ingredient.ingredientId)) ?? rawAmount
-            : rawAmount;
-
-        ingredientUpdates.set(key, {
-          collectionName,
-          id: ingredient.ingredientId,
-          amount: current + adjustedAmount,
-        });
-      }
-    }
 
     const saleBatch = adminDb.batch();
 
@@ -324,58 +269,6 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const stockBatch = adminDb.batch();
-
-    for (const item of resolvedItems) {
-      const productRef = adminDb.collection('products').doc(item.productId);
-      stockBatch.update(productRef, {
-        quantity: FieldValue.increment(-item.quantity),
-      });
-    }
-
-    for (const [, update] of ingredientUpdates) {
-      const ingredientRef = adminDb.collection(update.collectionName).doc(update.id);
-      stockBatch.update(ingredientRef, {
-        quantity: FieldValue.increment(-update.amount),
-      });
-    }
-
-    const inventoryMovementRef = adminDb.collection('inventory_movements').doc();
-    stockBatch.set(inventoryMovementRef, {
-      type: 'online_sale',
-      source: order.source,
-      saleId: saleRef.id,
-      onlineOrderId: orderRef.id,
-      externalOrderId: order.eventId ?? null,
-      itemType: 'mixed',
-      amount: totalItems,
-      totalAmount,
-      skuList: resolvedItems.map((item) => item.productSku),
-      note: `Pedido online recibido por webhook${order.eventId ? ` (${order.eventId})` : ''}`,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    try {
-      await stockBatch.commit();
-    } catch (error) {
-      console.error('Error al sincronizar inventario del webhook de pedidos:', error);
-      return jsonResponse(
-        {
-          success: true,
-          orderId: orderRef.id,
-          saleId: saleRef.id,
-          erpSummary: {
-            itemsCount: totalItems,
-            uniqueItems: resolvedItems.length,
-            totalAmount,
-          },
-          message: 'Pedido registrado, pero no se pudo sincronizar el inventario.',
-          stockSync: 'failed',
-        },
-        200
-      );
-    }
-
     return jsonResponse({
       success: true,
       orderId: orderRef.id,
@@ -385,7 +278,7 @@ export async function POST(request: NextRequest) {
         uniqueItems: resolvedItems.length,
         totalAmount,
       },
-      message: 'Webhook procesado correctamente.',
+      message: 'Venta registrada correctamente.',
     });
   } catch (error) {
     console.error('Error al procesar webhook de pedidos:', error);

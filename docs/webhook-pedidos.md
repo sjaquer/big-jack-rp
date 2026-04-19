@@ -20,10 +20,9 @@ El ERP recibe SKUs y cantidades, y procesa todo como una venta normal de POS:
 2. Calcula precios con el catalogo del ERP (products.salePrice).
 3. Crea venta en sales y sale_items.
 4. Guarda el pedido en online_orders para seguimiento.
-5. Intenta descontar stock de products e ingredients.
-6. Registra movimiento en inventory_movements.
+5. Deja que el ERP maneje el resto del flujo operativo asociado a la venta.
 
-Nota: si la sincronizacion de inventario falla, el pedido y la venta igual quedan registrados y la respuesta puede incluir `stockSync: "failed"`.
+Nota: este webhook no descuenta stock ni registra movimientos de inventario de forma manual. Esa lógica queda del lado del ERP.
 
 ## Estructura del payload (request)
 
@@ -88,24 +87,7 @@ Campos:
     "uniqueItems": 2,
     "totalAmount": 42
   },
-  "message": "Webhook procesado correctamente."
-}
-```
-
-### 200 OK - pedido registrado con aviso de inventario
-
-```json
-{
-  "success": true,
-  "orderId": "webhook-menu-20260419-0001",
-  "saleId": "abc123",
-  "erpSummary": {
-    "itemsCount": 3,
-    "uniqueItems": 2,
-    "totalAmount": 42
-  },
-  "message": "Pedido registrado, pero no se pudo sincronizar el inventario.",
-  "stockSync": "failed"
+  "message": "Venta registrada correctamente."
 }
 ```
 
