@@ -22,12 +22,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, orderBy, limit, where, getDocs, doc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where, getDocs, doc, deleteDoc, writeBatch, getDoc, Timestamp, increment } from 'firebase/firestore';
 import type { Sale, SaleItem, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2, X, Receipt, Clock, User, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { convertInventoryQuantity } from '@/lib/unit-conversion';
 
 interface RecentSalesDialogProps {
   isOpen: boolean;
@@ -112,6 +113,8 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
     try {
       const batch = writeBatch(firestore);
 
+      const ingredientUnits = new Map<string, string>();
+
       // 1. Restaurar el stock de los productos
       for (const item of saleToCancel.items) {
         const productRef = doc(firestore, 'products', item.productId);
@@ -119,27 +122,38 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
 
         if (productDoc.exists()) {
           const productData = productDoc.data() as Product;
+
+          const productIngredientIds = (productData.ingredients ?? [])
+            .filter((ingredient) => (ingredient.sourceType ?? 'ingredient') === 'ingredient')
+            .map((ingredient) => ingredient.ingredientId);
+
+          await Promise.all(productIngredientIds.map(async (ingredientId) => {
+            if (ingredientUnits.has(ingredientId)) return;
+            const ingredientDoc = await getDoc(doc(firestore, 'ingredients', ingredientId));
+            if (!ingredientDoc.exists()) return;
+            const ingredientData = ingredientDoc.data() as { unit?: string };
+            if (ingredientData.unit) {
+              ingredientUnits.set(ingredientId, ingredientData.unit);
+            }
+          }));
           
           // Restaurar ingredientes
           if (productData.ingredients && productData.ingredients.length > 0) {
             for (const ingredient of productData.ingredients) {
-              const ingredientRef = doc(firestore, 'ingredients', ingredient.ingredientId);
-              const ingredientDoc = await getDoc(ingredientRef);
-              
-              if (ingredientDoc.exists()) {
-                const currentQuantity = ingredientDoc.data().quantity || 0;
-                const restoreQuantity = ingredient.quantity * item.quantity;
-                batch.update(ingredientRef, {
-                  quantity: currentQuantity + restoreQuantity,
-                });
-              }
+              const sourceType = ingredient.sourceType === 'inventory_item' ? 'inventory_items' : 'ingredients';
+              const restoreQuantity = sourceType === 'ingredients'
+                ? convertInventoryQuantity(ingredient.quantity * item.quantity, ingredient.unit, ingredientUnits.get(ingredient.ingredientId)) ?? (ingredient.quantity * item.quantity)
+                : ingredient.quantity * item.quantity;
+              const ingredientRef = doc(firestore, sourceType, ingredient.ingredientId);
+              batch.update(ingredientRef, {
+                quantity: increment(restoreQuantity),
+              });
             }
           }
 
           // Restaurar cantidad del producto
-          const currentProductQuantity = productData.quantity || 0;
           batch.update(productRef, {
-            quantity: currentProductQuantity + item.quantity,
+            quantity: increment(item.quantity),
           });
         }
       }

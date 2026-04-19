@@ -1,4 +1,5 @@
 'use client';
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -9,6 +10,7 @@ import {
 import StatCard from '@/components/dashboard/stat-card';
 import { LiveClock } from '@/components/dashboard/live-clock';
 import { StockOverview } from '@/components/dashboard/stock-overview';
+import { AIReportCard } from '@/components/dashboard/ai-report-card';
 import { AnalyticsIcon, BurgerIcon, CashRegisterIcon, GrillIcon, InventoryCrateIcon, OrderTicketIcon } from '@/components/icons';
 import {
   DollarSign,
@@ -28,7 +30,6 @@ import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Sale, Product, Ingredient } from '@/lib/types';
 import { startOfMonth, endOfMonth, subMonths, subDays, setHours, setMinutes, format } from 'date-fns';
-import { useMemo } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -191,6 +192,14 @@ export default function DashboardPage() {
     return collection(firestore, 'ingredients');
   }, [firestore]);
   const { data: ingredientsData, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
+
+  const lowStockIngredients = useMemo(() => {
+    return (ingredientsData ?? []).filter((ingredient) => ingredient.quantity <= (ingredient.minimumStock || 0));
+  }, [ingredientsData]);
+
+  const lowStockProducts = useMemo(() => {
+    return (productsData ?? []).filter((product) => product.quantity && product.quantity <= 5);
+  }, [productsData]);
 
   const monthStart = useMemo(() => startOfMonth(new Date()), []);
   const monthSalesQuery = useMemoFirebase(() => {
@@ -359,7 +368,7 @@ export default function DashboardPage() {
                 title="Ventas del Turno"
                 value={currencyFormatter.format(shiftStats.revenue)}
                 icon={DollarSign}
-                description={`${shiftStats.orders} pedidos • Turno 3PM-2AM`}
+                description={`${shiftStats.orders} pedidos • Turno 6PM-1AM`}
               />
               <StatCard
                 title="Ticket Promedio"
@@ -528,6 +537,21 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <div className="lg:col-span-12">
+              <AIReportCard
+                shiftRevenue={shiftStats.revenue}
+                shiftOrders={shiftStats.orders}
+                shiftAvgTicket={shiftStats.avgTicket}
+                monthRevenue={monthStats.revenue}
+                monthOrders={monthStats.orders}
+                growthRate={growthRate}
+                lowStockIngredients={lowStockIngredients.length}
+                lowStockProducts={lowStockProducts.length}
+                lowStockIngredientNames={lowStockIngredients.slice(0, 3).map((item) => item.name)}
+                lowStockProductNames={lowStockProducts.slice(0, 3).map((item) => item.name)}
+              />
+            </div>
           </div>
         </div>
       </div>

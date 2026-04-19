@@ -20,6 +20,7 @@ import { WeekdaySalesChart } from '@/components/dashboard/weekday-sales-chart';
 import { SalesSourceChart } from '@/components/dashboard/sales-source-chart';
 import { TopProductsTable } from '@/components/dashboard/top-products-table';
 import { HourlyPerformanceChart } from '@/components/dashboard/hourly-performance-chart';
+import { WeeklyComparison } from '@/components/dashboard/weekly-comparison';
 import { 
   TrendingUp,
   TrendingDown,
@@ -38,7 +39,7 @@ import { collection, query, where, Timestamp, collectionGroup } from 'firebase/f
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Sale, Product, SaleItem } from '@/lib/types';
-import { startOfMonth, subMonths, format, getDay, getHours, startOfWeek, startOfDay, endOfDay, subDays, setHours, setMinutes, addDays } from 'date-fns';
+import { startOfMonth, subMonths, format, getDay, getHours, startOfWeek, startOfDay, endOfDay, subDays, subWeeks, setHours, setMinutes, addDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -156,12 +157,46 @@ export default function InsightsPage() {
   }, [firestore, yesterdayStart, yesterdayEnd]);
   const { data: yesterdaySalesData, isLoading: yesterdaySalesLoading } = useCollection<Sale>(yesterdaySalesQuery);
 
+  const currentWeekStart = useMemo(() => startOfWeek(now, { weekStartsOn: 1 }), [now]);
+  const previousWeekStart = useMemo(() => subWeeks(currentWeekStart, 1), [currentWeekStart]);
+  const previousWeekComparableEnd = useMemo(() => subDays(now, 7), [now]);
+
+  const currentWeekQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'sales'),
+      where('saleDate', '>=', Timestamp.fromDate(currentWeekStart)),
+      where('saleDate', '<=', Timestamp.fromDate(now))
+    );
+  }, [firestore, currentWeekStart, now]);
+  const { data: currentWeekSales, isLoading: currentWeekLoading } = useCollection<Sale>(currentWeekQuery);
+
+  const previousWeekQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'sales'),
+      where('saleDate', '>=', Timestamp.fromDate(previousWeekStart)),
+      where('saleDate', '<=', Timestamp.fromDate(previousWeekComparableEnd))
+    );
+  }, [firestore, previousWeekStart, previousWeekComparableEnd]);
+  const { data: previousWeekSales, isLoading: previousWeekLoading } = useCollection<Sale>(previousWeekQuery);
+
   // Sale items del turno actual
   const currentShiftSaleItems = useMemo(() => {
     if (!saleItems || !currentShiftSales) return [];
     const saleIds = currentShiftSales.map((s: Sale) => s.id);
     return saleItems.filter((item: SaleItem) => saleIds.includes(item.saleId));
   }, [saleItems, currentShiftSales]);
+
+  const currentWeekSalesClipped = useMemo(() => {
+    if (!currentWeekSales) return [];
+    return currentWeekSales.filter((sale) => sale.saleDate.toDate() >= currentWeekStart && sale.saleDate.toDate() <= now);
+  }, [currentWeekSales, currentWeekStart, now]);
+
+  const previousWeekSalesClipped = useMemo(() => {
+    if (!previousWeekSales) return [];
+    return previousWeekSales.filter((sale) => sale.saleDate.toDate() >= previousWeekStart && sale.saleDate.toDate() <= previousWeekComparableEnd);
+  }, [previousWeekSales, previousWeekStart, previousWeekComparableEnd]);
 
   // Análisis de datos
   const analysis = useMemo(() => {
@@ -403,6 +438,7 @@ export default function InsightsPage() {
               <TabsTrigger value="tendencias" className="h-9 px-3 text-xs sm:text-sm">Tendencias</TabsTrigger>
               <TabsTrigger value="turno" className="h-9 px-3 text-xs sm:text-sm">Turno</TabsTrigger>
               <TabsTrigger value="diario" className="h-9 px-3 text-xs sm:text-sm">Comparacion</TabsTrigger>
+              <TabsTrigger value="semanal" className="h-9 px-3 text-xs sm:text-sm">Semanal</TabsTrigger>
               <TabsTrigger value="productos" className="h-9 px-3 text-xs sm:text-sm">Productos</TabsTrigger>
               <TabsTrigger value="ia" className="h-9 px-3 text-xs sm:text-sm">IA</TabsTrigger>
             </TabsList>
@@ -558,6 +594,55 @@ export default function InsightsPage() {
                       products={productsData ?? []} 
                       saleItems={saleItems ?? []} 
                       isLoading={productsLoading || saleItemsLoading}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Tab: Comparación Semanal */}
+            <TabsContent value="semanal" className="space-y-3 sm:space-y-4">
+              <WeeklyComparison
+                currentWeekSales={currentWeekSalesClipped}
+                previousWeekSales={previousWeekSalesClipped}
+                isLoading={currentWeekLoading || previousWeekLoading}
+              />
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Tendencia semanal</CardTitle>
+                  <CardDescription>Últimos 7 días para detectar aceleraciones o caídas</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SalesTrendChart
+                    data={currentWeekSalesClipped}
+                    isLoading={currentWeekLoading}
+                    days={7}
+                  />
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-headline">Métodos de Pago</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <PaymentMethodsChart
+                      data={currentWeekSalesClipped}
+                      isLoading={currentWeekLoading}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-headline">Ventas por Hora</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <HourlyPerformanceChart
+                      data={currentWeekSalesClipped}
+                      isLoading={currentWeekLoading}
                     />
                   </CardContent>
                 </Card>

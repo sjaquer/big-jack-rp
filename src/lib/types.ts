@@ -26,10 +26,13 @@ export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
   otros: 'Otros',
 };
 
+export type ProductIngredientSourceType = 'ingredient' | 'inventory_item';
+
 export interface ProductIngredient {
   ingredientId: string;
   quantity: number;
   unit: string;
+  sourceType?: ProductIngredientSourceType;
 }
 
 export interface Product {

@@ -16,6 +16,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { ProductGrid, CartPanel } from '@/components/pos/pos-components';
+import { convertInventoryQuantity } from '@/lib/unit-conversion';
 
 interface OrderItem extends Product {
   quantity: number;
@@ -280,8 +281,28 @@ export default function POSPage() {
         const productDocs = await Promise.all(
           orderItems.map(item => getDoc(doc(firestore, 'products', item.id)))
         );
+
+        const ingredientIds = [...new Set(
+          productDocs.flatMap((pDoc) => {
+            if (!pDoc.exists()) return [] as string[];
+            const productData = pDoc.data() as Product;
+            return (productData.ingredients ?? [])
+              .filter((ing) => (ing.sourceType ?? 'ingredient') === 'ingredient')
+              .map((ing) => ing.ingredientId);
+          })
+        )];
+
+        const ingredientUnits = new Map<string, string>();
+        await Promise.all(ingredientIds.map(async (ingredientId) => {
+          const ingredientDoc = await getDoc(doc(firestore, 'ingredients', ingredientId));
+          if (!ingredientDoc.exists()) return;
+          const ingredientData = ingredientDoc.data() as { unit?: string };
+          if (ingredientData.unit) {
+            ingredientUnits.set(ingredientId, ingredientData.unit);
+          }
+        }));
         
-        const ingredientUpdates = new Map<string, number>();
+        const ingredientUpdates = new Map<string, { collectionName: 'ingredients' | 'inventory_items'; id: string; amount: number }>();
         
         productDocs.forEach((pDoc, idx) => {
           if (!pDoc.exists()) return;
@@ -290,20 +311,26 @@ export default function POSPage() {
           
           if (productData.ingredients) {
             for (const ing of productData.ingredients) {
-              const currentDecrement = ingredientUpdates.get(ing.ingredientId) || 0;
+              const sourceType = ing.sourceType === 'inventory_item' ? 'inventory_items' : 'ingredients';
+              const key = `${sourceType}:${ing.ingredientId}`;
+              const currentDecrement = ingredientUpdates.get(key)?.amount || 0;
+              const rawAmount = ing.quantity * orderItem.quantity;
+              const adjustedQuantity = sourceType === 'ingredients'
+                ? convertInventoryQuantity(rawAmount, ing.unit, ingredientUnits.get(ing.ingredientId)) ?? rawAmount
+                : rawAmount;
               ingredientUpdates.set(
-                ing.ingredientId, 
-                currentDecrement + (ing.quantity * orderItem.quantity)
+                key,
+                { collectionName: sourceType, id: ing.ingredientId, amount: currentDecrement + adjustedQuantity }
               );
             }
           }
         });
         
         // Actualizar ingredientes
-        for (const [ingredientId, decrementAmount] of ingredientUpdates) {
-          const ingredientRef = doc(firestore, 'ingredients', ingredientId);
+        for (const [, update] of ingredientUpdates) {
+          const ingredientRef = doc(firestore, update.collectionName, update.id);
           batch.update(ingredientRef, {
-            quantity: increment(-decrementAmount)
+            quantity: increment(-update.amount)
           });
         }
         

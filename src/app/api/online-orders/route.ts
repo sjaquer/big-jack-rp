@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase-admin';
+import { convertInventoryQuantity } from '@/lib/unit-conversion';
 
 export const runtime = 'nodejs';
 
@@ -93,6 +94,7 @@ type ProductIngredientSnapshot = {
   ingredientId?: string;
   quantity?: number;
   unit?: string;
+  sourceType?: 'ingredient' | 'inventory_item';
 };
 
 type ProductSnapshot = {
@@ -305,19 +307,57 @@ export async function POST(request: NextRequest) {
         if (!product) continue;
         for (const ingredient of product.ingredients) {
           if (!ingredient?.ingredientId || typeof ingredient.quantity !== 'number') continue;
-          const current = requiredByIngredient.get(ingredient.ingredientId) || 0;
-          requiredByIngredient.set(ingredient.ingredientId, current + ingredient.quantity * item.quantity);
+          const sourceType = ingredient.sourceType === 'inventory_item' ? 'inventory_item' : 'ingredient';
+          const key = `${sourceType}:${ingredient.ingredientId}`;
+          const current = requiredByIngredient.get(key) || 0;
+          requiredByIngredient.set(key, current + ingredient.quantity * item.quantity);
+        }
+      }
+
+      const ingredientUnits = new Map<string, string>();
+      const ingredientIds = [...requiredByIngredient.keys()]
+        .filter((key) => key.startsWith('ingredient:'))
+        .map((key) => key.split(':')[1])
+        .filter(Boolean);
+
+      await Promise.all(ingredientIds.map(async (ingredientId) => {
+        const docSnap = await adminDb.collection('ingredients').doc(ingredientId).get();
+        if (!docSnap.exists) return;
+        const data = docSnap.data() as Record<string, unknown>;
+        const unit = typeof data.unit === 'string' ? data.unit : '';
+        if (unit) ingredientUnits.set(ingredientId, unit);
+      }));
+
+      const requiredByIngredientInStockUnits = new Map<string, number>();
+      for (const item of resolvedItems) {
+        const product = productsBySku.get(normalizeSku(item.productSku));
+        if (!product) continue;
+        for (const ingredient of product.ingredients) {
+          if (!ingredient?.ingredientId || typeof ingredient.quantity !== 'number') continue;
+          const sourceType = ingredient.sourceType === 'inventory_item' ? 'inventory_item' : 'ingredient';
+          const key = `${sourceType}:${ingredient.ingredientId}`;
+          const rawAmount = ingredient.quantity * item.quantity;
+          const adjustedAmount = sourceType === 'ingredient'
+            ? convertInventoryQuantity(rawAmount, ingredient.unit, ingredientUnits.get(ingredient.ingredientId)) ?? rawAmount
+            : rawAmount;
+          const current = requiredByIngredientInStockUnits.get(key) || 0;
+          requiredByIngredientInStockUnits.set(key, current + adjustedAmount);
         }
       }
 
       const ingredientDocs = await Promise.all(
-        [...requiredByIngredient.keys()].map(async (ingredientId) => {
-          const docSnap = await adminDb.collection('ingredients').doc(ingredientId).get();
+        [...requiredByIngredient.keys()].map(async (key) => {
+          const [sourceType, ingredientId] = key.split(':');
+          const collectionName = sourceType === 'inventory_item' ? 'inventory_items' : 'ingredients';
+          const docSnap = await adminDb.collection(collectionName).doc(ingredientId).get();
           return {
-            ingredientId,
+            ingredientId: key,
             exists: docSnap.exists,
             name: docSnap.exists ? String((docSnap.data() as Record<string, unknown>).name ?? ingredientId) : ingredientId,
             available: docSnap.exists ? toNumber((docSnap.data() as Record<string, unknown>).quantity, 0) : 0,
+            collectionName,
+            sourceType: sourceType === 'inventory_item' ? 'inventory_item' : 'ingredient',
+            rawId: ingredientId,
           };
         })
       );
@@ -326,7 +366,7 @@ export async function POST(request: NextRequest) {
         .map((ingredient) => ({
           ingredientId: ingredient.ingredientId,
           name: ingredient.name,
-          required: requiredByIngredient.get(ingredient.ingredientId) || 0,
+          required: requiredByIngredientInStockUnits.get(ingredient.ingredientId) || 0,
           available: ingredient.available,
         }))
         .filter((entry) => entry.available < entry.required);
@@ -361,15 +401,21 @@ export async function POST(request: NextRequest) {
 
     const saleRef = adminDb.collection('sales').doc();
 
-    const ingredientUpdates = new Map<string, number>();
+    const ingredientUpdates = new Map<string, { collectionName: 'ingredients' | 'inventory_items'; id: string; amount: number }>();
     for (const item of resolvedItems) {
       const product = productsBySku.get(normalizeSku(item.productSku));
       if (!product) continue;
 
       for (const ingredient of product.ingredients) {
         if (!ingredient?.ingredientId || typeof ingredient.quantity !== 'number') continue;
-        const current = ingredientUpdates.get(ingredient.ingredientId) || 0;
-        ingredientUpdates.set(ingredient.ingredientId, current + ingredient.quantity * item.quantity);
+        const sourceType = ingredient.sourceType === 'inventory_item' ? 'inventory_items' : 'ingredients';
+        const key = `${sourceType}:${ingredient.ingredientId}`;
+        const current = ingredientUpdates.get(key)?.amount || 0;
+        const rawAmount = ingredient.quantity * item.quantity;
+        const adjustedAmount = sourceType === 'ingredients'
+          ? convertInventoryQuantity(rawAmount, ingredient.unit, ingredientUnits.get(ingredient.ingredientId)) ?? rawAmount
+          : rawAmount;
+        ingredientUpdates.set(key, { collectionName: sourceType, id: ingredient.ingredientId, amount: current + adjustedAmount });
       }
     }
 
@@ -425,10 +471,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    for (const [ingredientId, amountToDecrement] of ingredientUpdates) {
-      const ingredientRef = adminDb.collection('ingredients').doc(ingredientId);
+    for (const [, update] of ingredientUpdates) {
+      const ingredientRef = adminDb.collection(update.collectionName).doc(update.id);
       batch.update(ingredientRef, {
-        quantity: FieldValue.increment(-amountToDecrement),
+        quantity: FieldValue.increment(-update.amount),
       });
     }
 

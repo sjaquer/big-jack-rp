@@ -167,7 +167,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Cantidad en stock</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 200" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 200" value={field.value ?? ''} onChange={field.onChange} />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Indica cuántas unidades hay físicamente en almacén.</FormDescription>
                       <FormMessage />
@@ -181,7 +181,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Stock mínimo</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 50" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 50" value={field.value ?? ''} onChange={field.onChange} />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Cantidad mínima a partir de la cual deberías reponer.</FormDescription>
                       <FormMessage />
@@ -195,7 +195,7 @@ export function OtherItemForm({ isOpen, onClose, item }: OtherItemFormProps) {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Costo por unidad (S/)</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 0.45" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" step="0.01" placeholder="Ej. 0.45" value={field.value ?? ''} onChange={field.onChange} />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Costo de compra por unidad o paquete. Útil para calcular el coste total del inventario.</FormDescription>
                       <FormMessage />

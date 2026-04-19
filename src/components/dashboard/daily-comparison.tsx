@@ -76,8 +76,8 @@ export function DailyComparison({ todaySales, yesterdaySales, isLoading }: Daily
       : 0;
 
     // Proyección del día (basado en el ritmo actual)
-    const hoursWorked = currentHour >= 15 ? currentHour - 15 + (currentMinutes / 60) : 0;
-    const projectedTotal = hoursWorked > 0 ? (todayTotal / hoursWorked) * 11 : 0; // 11 horas de turno (3PM-2AM)
+    const hoursWorked = currentHour >= 18 ? currentHour - 18 + (currentMinutes / 60) : 0;
+    const projectedTotal = hoursWorked > 0 ? (todayTotal / hoursWorked) * 7 : 0; // 7 horas de turno (6PM-1AM)
 
     return {
       today: {

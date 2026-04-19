@@ -350,7 +350,8 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                           type="number" 
                           placeholder={ingredient ? "Ej. 50" : "Se completa automáticamente"}
                           readOnly={!ingredient}
-                          {...field} 
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
                         />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">
@@ -368,7 +369,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Unidad</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? ingredientUnits[0]}>
                         <FormControl>
                           <SelectTrigger className="h-12 sm:h-11 text-base rounded-lg">
                             <SelectValue placeholder="Selecciona una unidad" />
@@ -394,7 +395,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Stock mínimo</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 5" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 5" value={field.value ?? ''} onChange={field.onChange} />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Nivel mínimo operativo. Cuando el inventario baje de este valor, deberías programar una reposición.</FormDescription>
                       <FormMessage />
@@ -415,8 +416,9 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                           type="number" 
                           step="0.0001" 
                           placeholder="Se calcula automáticamente" 
-                          {...field}
                           readOnly
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
                         />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">
@@ -433,7 +435,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base font-medium">Días de reposición</FormLabel>
                       <FormControl>
-                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 2" {...field} />
+                        <Input className="h-12 sm:h-11 text-base rounded-lg" type="number" placeholder="Ej. 2" value={field.value ?? ''} onChange={field.onChange} />
                       </FormControl>
                       <FormDescription className="text-xs sm:text-xs leading-relaxed text-slate-600">Número de días que suele tardar el proveedor en entregar desde que se realiza el pedido. Útil para planificar compras.</FormDescription>
                       <FormMessage />
@@ -560,7 +562,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                                       type="number" 
                                       step="0.01" 
                                       placeholder="Ej. 120.00" 
-                                      {...field}
+                                      value={field.value ?? ''}
                                       onChange={(e) => {
                                         field.onChange(e);
                                         // Calcular precio unitario automáticamente
@@ -590,7 +592,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                                       type="number" 
                                       step="0.01" 
                                       placeholder="Ej. 50" 
-                                      {...field}
+                                      value={field.value ?? ''}
                                       onChange={(e) => {
                                         field.onChange(e);
                                         // Calcular precio unitario automáticamente

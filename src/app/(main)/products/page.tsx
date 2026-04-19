@@ -18,10 +18,11 @@ import { useCollection, useFirestore } from '@/firebase';
 import { deleteDoc, doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Product, Supplier, Ingredient } from '@/lib/types';
+import type { Product, Supplier, Ingredient, InventoryItem } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
 import { BurgerIcon } from '@/components/icons';
+import { convertInventoryQuantity } from '@/lib/unit-conversion';
 // placeholderImages removed; images are no longer used in product listing
 
 export default function ProductsPage() {
@@ -46,6 +47,12 @@ export default function ProductsPage() {
     return collection(firestore, 'ingredients');
   }, [firestore]);
   const { data: ingredients, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
+
+  const inventoryItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'inventory_items');
+  }, [firestore]);
+  const { data: inventoryItems, isLoading: inventoryItemsLoading } = useCollection<InventoryItem>(inventoryItemsQuery);
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -84,24 +91,34 @@ export default function ProductsPage() {
 
   // Image handling removed: products show textual info only.
   
-  const calculateProducibleQuantity = (product: Product, allIngredients: Ingredient[]): number | string => {
+  const calculateProducibleQuantity = (
+    product: Product,
+    allIngredients: Ingredient[],
+    allInventoryItems: InventoryItem[]
+  ): number | string => {
     if (!product.ingredients || product.ingredients.length === 0) {
       return 'N/A';
     }
-    if (!allIngredients || allIngredients.length === 0) {
+    if ((!allIngredients || allIngredients.length === 0) && (!allInventoryItems || allInventoryItems.length === 0)) {
       return 0;
     }
 
     let maxProducible = Infinity;
 
     for (const recipeIngredient of product.ingredients) {
-      const inventoryIngredient = allIngredients.find(i => i.id === recipeIngredient.ingredientId);
+      const sourceType = recipeIngredient.sourceType ?? 'ingredient';
+      const inventoryIngredient = sourceType === 'inventory_item'
+        ? allInventoryItems.find(i => i.id === recipeIngredient.ingredientId)
+        : allIngredients.find(i => i.id === recipeIngredient.ingredientId);
 
       if (!inventoryIngredient) {
         return 0; // Required ingredient is not in inventory
       }
       
-      const producibleWithThisIngredient = Math.floor(inventoryIngredient.quantity / recipeIngredient.quantity);
+      const requiredQuantity = sourceType === 'ingredient'
+        ? convertInventoryQuantity(recipeIngredient.quantity, recipeIngredient.unit, inventoryIngredient.unit) ?? recipeIngredient.quantity
+        : recipeIngredient.quantity;
+      const producibleWithThisIngredient = Math.floor(inventoryIngredient.quantity / requiredQuantity);
       if (producibleWithThisIngredient < maxProducible) {
         maxProducible = producibleWithThisIngredient;
       }
@@ -110,7 +127,7 @@ export default function ProductsPage() {
     return maxProducible === Infinity ? 0 : maxProducible;
   };
 
-  const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
+  const isLoading = productsLoading || suppliersLoading || ingredientsLoading || inventoryItemsLoading;
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-orange-50/20 dark:from-slate-900 dark:to-slate-800">
@@ -119,6 +136,7 @@ export default function ProductsPage() {
         onClose={handleFormClose}
         product={selectedProduct}
         ingredients={ingredients ?? []}
+        inventoryItems={inventoryItems ?? []}
       />
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
@@ -169,7 +187,7 @@ export default function ProductsPage() {
                       <TableCell>S/ {(product.salePrice ?? 0).toFixed(2)}</TableCell>
                       <TableCell>{product.quantity ?? 0}</TableCell>
                       <TableCell>
-                        {calculateProducibleQuantity(product, ingredients ?? [])}
+                        {calculateProducibleQuantity(product, ingredients ?? [], inventoryItems ?? [])}
                       </TableCell>
                       <TableCell className="flex gap-2">
                         <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>

@@ -1,6 +1,6 @@
 
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,16 +12,17 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import type { Product, Ingredient, ProductIngredient, ProductCategory } from '@/lib/types';
+import type { Product, Ingredient, InventoryItem, ProductIngredientSourceType, ProductCategory } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 
 const ingredientSchema = z.object({
-  ingredientId: z.string().min(1, 'El ingrediente es requerido.'),
+  ingredientId: z.string().min(1, 'El insumo es requerido.'),
   quantity: z.coerce.number().min(0.01, 'La cantidad debe ser mayor a 0.'),
   unit: z.string().min(1, 'La unidad es requerida.'),
+  sourceType: z.enum(['ingredient', 'inventory_item']).default('ingredient'),
 });
 
 const formSchema = z.object({
@@ -39,13 +40,30 @@ interface ProductFormProps {
   onClose: () => void;
   product: Product | null;
   ingredients: Ingredient[];
+  inventoryItems: InventoryItem[];
 }
 
-const ingredientUnits = ['g', 'ml', 'unidad'];
+const ingredientUnits = ['kg', 'g', 'l', 'ml', 'unidad', 'paquete'];
 const categoryOptions = Object.entries(PRODUCT_CATEGORY_LABELS) as Array<[
   ProductCategory,
   string
 ]>;
+
+type RecipeSourceType = ProductIngredientSourceType;
+
+interface RecipeOption {
+  key: string;
+  sourceType: RecipeSourceType;
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  categoryLabel: string;
+}
+
+function getRecipeSourceKey(sourceType: RecipeSourceType, id: string): string {
+  return `${sourceType}:${id}`;
+}
 
 function generateProductSKU(name: string): string {
   if (!name) return '';
@@ -60,10 +78,36 @@ function generateProductSKU(name: string): string {
   return `PRD-${namePart}-${timestamp}`;
 }
 
-export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFormProps) {
+export function ProductForm({ isOpen, onClose, product, ingredients, inventoryItems }: ProductFormProps) {
   const firestore = useFirestore();
-  const [selectedIngredient, setSelectedIngredient] = useState('');
+  const [selectedRecipeSource, setSelectedRecipeSource] = useState('');
   // Image fields removed: POS no longer uses product images.
+
+  const recipeOptions = useMemo<RecipeOption[]>(() => {
+    const ingredientOptions = ingredients.map((item) => ({
+      key: getRecipeSourceKey('ingredient', item.id),
+      sourceType: 'ingredient' as const,
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      categoryLabel: 'Ingrediente',
+    }));
+
+    const inventoryOptions = inventoryItems.map((item) => ({
+      key: getRecipeSourceKey('inventory_item', item.id),
+      sourceType: 'inventory_item' as const,
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.type === 'packaging' || item.type === 'utensils' || item.type === 'cleaning' || item.type === 'marketing' || item.type === 'other'
+        ? 'unidad'
+        : 'unidad',
+      categoryLabel: 'Inventario',
+    }));
+
+    return [...ingredientOptions, ...inventoryOptions];
+  }, [ingredients, inventoryItems]);
 
 
   const form = useForm<FormValues>({
@@ -117,15 +161,20 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
             ingredients: [],
         });
         }
-        setSelectedIngredient('');
+        setSelectedRecipeSource('');
     }
   }, [product, form, isOpen]);
 
   const handleAddIngredient = () => {
-    const ingredient = ingredients.find(i => i.id === selectedIngredient);
-    if (ingredient) {
-        append({ ingredientId: ingredient.id, quantity: 1, unit: ingredient.unit });
-        setSelectedIngredient('');
+    const selectedSource = recipeOptions.find(option => option.key === selectedRecipeSource);
+    if (selectedSource) {
+        append({
+          ingredientId: selectedSource.id,
+          quantity: 1,
+          unit: selectedSource.unit,
+          sourceType: selectedSource.sourceType,
+        });
+        setSelectedRecipeSource('');
     }
   }
 
@@ -242,19 +291,23 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                 </section>
                 <section className="space-y-4 rounded-xl border bg-muted/30 p-3 sm:p-5 shadow-sm">
                   <div>
-                    <h3 className="font-semibold text-base sm:text-lg">Receta / Ingredientes</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Define los ingredientes que componen este producto para calcular costos. (Opcional)</p>
+                    <h3 className="font-semibold text-base sm:text-lg">Receta / Insumos</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Define los insumos, utensilios o ingredientes que se consumen al vender este producto. (Opcional)</p>
                   </div>
                   
                   {fields.length > 0 && (
                     <div className="space-y-3">
                       {fields.map((field, index) => {
-                        const ingredient = ingredients.find(i => i.id === field.ingredientId);
+                        const sourceType = field.sourceType ?? 'ingredient';
+                        const sourceKey = getRecipeSourceKey(sourceType, field.ingredientId);
+                        const recipeSource = recipeOptions.find(option => option.key === sourceKey);
                         return (
                           <div key={field.id} className="grid gap-3 sm:grid-cols-[1.2fr_auto_auto_auto] items-start p-3 rounded-lg border bg-muted/30">
                             <div className="min-w-0">
-                              <p className="font-medium text-sm sm:text-base leading-tight">{ingredient?.name}</p>
-                              <p className="text-xs text-muted-foreground">Stock: {ingredient?.quantity || 0} {ingredient?.unit}</p>
+                              <p className="font-medium text-sm sm:text-base leading-tight">{recipeSource?.name ?? 'Insumo sin resolver'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {recipeSource?.categoryLabel ?? 'Ingrediente'}: {recipeSource?.quantity || 0} {recipeSource?.unit}
+                              </p>
                             </div>
                             <FormField
                               control={form.control}
@@ -262,7 +315,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                               render={({ field }) => (
                                 <FormItem className="w-full sm:w-24">
                                   <FormLabel className="text-xs font-medium">Cantidad</FormLabel>
-                                  <Input type="number" step="0.1" {...field} className="h-12 sm:h-10 text-base rounded-lg" />
+                                  <Input type="number" step="0.1" value={field.value ?? ''} onChange={field.onChange} className="h-12 sm:h-10 text-base rounded-lg" />
                                 </FormItem>
                               )}
                             />
@@ -272,7 +325,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                               render={({ field }) => (
                                 <FormItem className="w-full sm:w-24">
                                   <FormLabel className="text-xs font-medium">Unidad</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value ?? recipeSource?.unit ?? ingredientUnits[0]}>
                                     <FormControl>
                                       <SelectTrigger className="h-12 sm:h-10 text-base rounded-lg">
                                         <SelectValue placeholder="Unidad"/>
@@ -310,15 +363,15 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                   
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                     <div className="flex-grow">
-                      <Label className="text-sm font-medium mb-1.5 block">Añadir Ingrediente</Label>
-                      <Select onValueChange={setSelectedIngredient} value={selectedIngredient}>
+                          <Label className="text-sm font-medium mb-1.5 block">Añadir Insumo</Label>
+                      <Select onValueChange={setSelectedRecipeSource} value={selectedRecipeSource}>
                         <SelectTrigger className="h-12 sm:h-10 text-base rounded-lg">
-                          <SelectValue placeholder="Selecciona un ingrediente" />
+                          <SelectValue placeholder="Selecciona un insumo" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ingredients.filter(i => !fields.some(f => f.ingredientId === i.id)).map((ingredient) => (
-                            <SelectItem key={ingredient.id} value={ingredient.id}>
-                              {ingredient.name} ({ingredient.quantity} {ingredient.unit})
+                          {recipeOptions.filter(option => !fields.some(f => getRecipeSourceKey(f.sourceType ?? 'ingredient', f.ingredientId) === option.key)).map((option) => (
+                            <SelectItem key={option.key} value={option.key}>
+                              {option.sourceType === 'inventory_item' ? 'Inventario' : 'Ingrediente'}: {option.name} ({option.quantity} {option.unit})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -328,7 +381,7 @@ export function ProductForm({ isOpen, onClose, product, ingredients }: ProductFo
                       type="button" 
                       variant="outline" 
                       onClick={handleAddIngredient} 
-                      disabled={!selectedIngredient}
+                      disabled={!selectedRecipeSource}
                       className="h-12 sm:h-10 w-full sm:w-auto rounded-lg"
                     >
                       <PlusCircle className="mr-2 h-5 w-5 sm:h-4 sm:w-4"/>
