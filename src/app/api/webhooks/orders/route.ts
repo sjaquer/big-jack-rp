@@ -248,9 +248,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const batch = adminDb.batch();
+    const saleBatch = adminDb.batch();
 
-    batch.set(saleRef, {
+    saleBatch.set(saleRef, {
       saleDate: FieldValue.serverTimestamp(),
       totalAmount,
       cashierId: 'menu-webhook',
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
 
     for (const item of resolvedItems) {
       const saleItemRef = saleRef.collection('sale_items').doc();
-      batch.set(saleItemRef, {
+      saleBatch.set(saleItemRef, {
         saleId: saleRef.id,
         productId: item.productId,
         productName: item.productName,
@@ -283,37 +283,7 @@ export async function POST(request: NextRequest) {
         lineNotes: item.lineNotes,
       });
     }
-
-    for (const item of resolvedItems) {
-      const productRef = adminDb.collection('products').doc(item.productId);
-      batch.update(productRef, {
-        quantity: FieldValue.increment(-item.quantity),
-      });
-    }
-
-    for (const [, update] of ingredientUpdates) {
-      const ingredientRef = adminDb.collection(update.collectionName).doc(update.id);
-      batch.update(ingredientRef, {
-        quantity: FieldValue.increment(-update.amount),
-      });
-    }
-
-    const inventoryMovementRef = adminDb.collection('inventory_movements').doc();
-    batch.set(inventoryMovementRef, {
-      type: 'online_sale',
-      source: order.source,
-      saleId: saleRef.id,
-      onlineOrderId: orderRef.id,
-      externalOrderId: order.eventId ?? null,
-      itemType: 'mixed',
-      amount: totalItems,
-      totalAmount,
-      skuList: resolvedItems.map((item) => item.productSku),
-      note: `Pedido online recibido por webhook${order.eventId ? ` (${order.eventId})` : ''}`,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    batch.create(orderRef, {
+    saleBatch.create(orderRef, {
       orderDate: toFirestoreOrderDate(order.orderDate),
       customerId: null,
       status: 'pending',
@@ -341,7 +311,7 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      await batch.commit();
+      await saleBatch.commit();
     } catch (error) {
       if (order.eventId && isAlreadyExistsError(error)) {
         return jsonResponse({
@@ -352,6 +322,58 @@ export async function POST(request: NextRequest) {
         });
       }
       throw error;
+    }
+
+    const stockBatch = adminDb.batch();
+
+    for (const item of resolvedItems) {
+      const productRef = adminDb.collection('products').doc(item.productId);
+      stockBatch.update(productRef, {
+        quantity: FieldValue.increment(-item.quantity),
+      });
+    }
+
+    for (const [, update] of ingredientUpdates) {
+      const ingredientRef = adminDb.collection(update.collectionName).doc(update.id);
+      stockBatch.update(ingredientRef, {
+        quantity: FieldValue.increment(-update.amount),
+      });
+    }
+
+    const inventoryMovementRef = adminDb.collection('inventory_movements').doc();
+    stockBatch.set(inventoryMovementRef, {
+      type: 'online_sale',
+      source: order.source,
+      saleId: saleRef.id,
+      onlineOrderId: orderRef.id,
+      externalOrderId: order.eventId ?? null,
+      itemType: 'mixed',
+      amount: totalItems,
+      totalAmount,
+      skuList: resolvedItems.map((item) => item.productSku),
+      note: `Pedido online recibido por webhook${order.eventId ? ` (${order.eventId})` : ''}`,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    try {
+      await stockBatch.commit();
+    } catch (error) {
+      console.error('Error al sincronizar inventario del webhook de pedidos:', error);
+      return jsonResponse(
+        {
+          success: true,
+          orderId: orderRef.id,
+          saleId: saleRef.id,
+          erpSummary: {
+            itemsCount: totalItems,
+            uniqueItems: resolvedItems.length,
+            totalAmount,
+          },
+          message: 'Pedido registrado, pero no se pudo sincronizar el inventario.',
+          stockSync: 'failed',
+        },
+        200
+      );
     }
 
     return jsonResponse({
