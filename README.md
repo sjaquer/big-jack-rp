@@ -37,9 +37,9 @@ Sistema completo de gestión para restaurantes de comida rápida, construido con
 - Preferencias y notas
 
 ### Pedidos Online
-- Recepción de pedidos externos
-- Estados de pedido (pendiente, procesando, completado)
-- Integración con delivery
+- Recepción de pedidos por webhook
+- Registro automático en ERP como venta normal
+- Descuento automático de stock por SKU
 
 ### Flujo de Caja
 - Registro de ingresos y gastos
@@ -87,35 +87,33 @@ Variables recomendadas:
 - UPLOAD_MAX_IMAGE_MB (default: 5)
 - UPLOAD_IMAGE_SUBDIR (default: images)
 - UPLOAD_ALLOWED_TYPES (CSV de MIME types)
-- ONLINE_ORDERS_API_KEY (API key para recibir pedidos externos)
+- WEBHOOK_MENU_SECRET (opcional, para validar webhook con header x-webhook-secret)
 - FIREBASE_SERVICE_ACCOUNT_KEY (opcional en local; JSON de service account en una sola línea)
 
-## 🔌 Endpoint para Pedidos Externos
+## 🔌 Webhook de Pedidos
 
-Se agregó un endpoint para que otra web de pedidos online envíe pedidos y se procese con lógica ERP completa.
+Se simplificó la integración para recibir pedidos desde la web del menú mediante un único webhook.
 
 - Método: `POST`
-- URL: `/api/online-orders`
-- URL producción: `https://bigjack-rp.vercel.app/api/online-orders`
+- URL: `/api/webhooks/orders`
+- URL producción: `https://bigjack-rp.vercel.app/api/webhooks/orders`
 - Headers:
 	- `Content-Type: application/json`
-	- `x-online-orders-key: <ONLINE_ORDERS_API_KEY>` (o `Authorization: Bearer <ONLINE_ORDERS_API_KEY>`)
+	- `x-webhook-secret: <WEBHOOK_MENU_SECRET>` (solo si configuraste secret)
 
 Ejemplo de payload:
 
 ```json
 {
-	"externalOrderId": "tienda-web-84521",
+	"eventId": "menu-20260419-0001",
 	"orderDate": "2026-04-06T14:25:00.000Z",
-	"customerName": "Juan Perez",
-	"customerPhone": "+51987654321",
+	"source": "menu-web",
+	"customer": {
+		"name": "Juan Perez",
+		"phone": "+51987654321"
+	},
 	"paymentMethod": "yape",
-	"deliveryAddress": "Av. Principal 123",
-	"source": "web",
 	"notes": "Sin cebolla",
-	"useCatalogPrice": true,
-	"acceptPriceDiff": true,
-	"enforceStock": false,
 	"items": [
 		{ "sku": "BURG-002", "quantity": 2 },
 		{ "sku": "BEB-001", "quantity": 1 }
@@ -125,16 +123,15 @@ Ejemplo de payload:
 
 Notas:
 - `sku` es obligatorio por cada item. El ERP busca el producto por SKU en `products`.
-- El precio final se toma del catálogo (`products.salePrice`) cuando `useCatalogPrice=true`.
-- Si `enforceStock=true`, el endpoint rechaza el pedido si no hay stock suficiente de productos o ingredientes.
+- El precio final se toma siempre del catálogo ERP (`products.salePrice`).
 - Se crea venta en `sales` + `sales/{saleId}/sale_items`.
 - Se descuenta stock de `products` e `ingredients` automáticamente.
 - Se registra movimiento en `inventory_movements`.
-- Si envías `externalOrderId`, el endpoint es idempotente: no duplica pedidos repetidos.
+- Si envías `eventId`, el webhook es idempotente: no duplica pedidos repetidos.
 - Los pedidos se guardan en `online_orders` y aparecen automáticamente en la cola de pedidos.
 
-Documentación completa de integración para la web externa:
-- Ver `docs/online-orders-api.md`
+Estructura completa de integración:
+- Ver `docs/webhook-pedidos.md`
 
 ## 📱 Diseño Responsivo
 

@@ -2,18 +2,18 @@
 
 ## 📋 Resumen de Cambios
 
-### 0. 🔌 Integración API de Pedidos Online con lógica ERP
-- **Ubicación**: `src/app/api/online-orders/route.ts`
-- **Documentación técnica**: `docs/online-orders-api.md`
+### 0. 🔌 Integración de Webhook de Pedidos con lógica ERP
+- **Ubicación**: `src/app/api/webhooks/orders/route.ts`
+- **Documentación técnica**: `docs/webhook-pedidos.md`
 
 #### Cambios principales:
-- ✅ Recepción de pedidos externos por endpoint seguro (`ONLINE_ORDERS_API_KEY`)
+- ✅ Recepción de pedidos externos por webhook único
 - ✅ Resolución de productos por `sku` obligatorio
 - ✅ Cálculo de precios usando catálogo ERP (`products.salePrice`)
 - ✅ Creación automática de venta en `sales` y `sale_items`
 - ✅ Descuento automático de inventario en `products` e `ingredients`
 - ✅ Registro en `inventory_movements`
-- ✅ Idempotencia usando `externalOrderId`
+- ✅ Idempotencia usando `eventId`
 
 #### Resultado:
 - El pedido aparece en la cola de pedidos (`online_orders`)

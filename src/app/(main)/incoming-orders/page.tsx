@@ -86,6 +86,39 @@ export default function IncomingOrdersPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const previousOrderIdsRef = useRef<Set<string>>(new Set());
   const isFirstLoadRef = useRef(true);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const playNewOrderSound = () => {
+    if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') return;
+
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new window.AudioContext();
+      }
+
+      const audioContext = audioContextRef.current;
+      if (audioContext.state === 'suspended') {
+        void audioContext.resume();
+      }
+
+      const now = audioContext.currentTime;
+      const gainNode = audioContext.createGain();
+      gainNode.gain.setValueAtTime(0.0001, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      gainNode.connect(audioContext.destination);
+
+      const oscillator = audioContext.createOscillator();
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(880, now);
+      oscillator.frequency.exponentialRampToValueAtTime(1320, now + 0.15);
+      oscillator.connect(gainNode);
+      oscillator.start(now);
+      oscillator.stop(now + 0.35);
+    } catch (error) {
+      console.error('No se pudo reproducir sonido de nuevo pedido:', error);
+    }
+  };
   
   // Solo cargar pedidos de las últimas 24 horas para mejor rendimiento
   const ordersQuery = useMemoFirebase(() => {
@@ -144,6 +177,10 @@ export default function IncomingOrdersPage() {
     const newOrders = onlineOnlyOrders.filter((order) => !previousOrderIdsRef.current.has(order.id));
 
     if (newOrders.length > 0) {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        playNewOrderSound();
+      }
+
       newOrders.forEach((order) => {
         const sourceKey = (order.source ?? 'otros') as OrderSource | 'otros';
         const sourceInfo = orderSourceConfig[sourceKey] ?? orderSourceConfig.otros;
