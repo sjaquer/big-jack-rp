@@ -36,6 +36,11 @@ interface QuickStockModalProps {
 
 const QUICK_AMOUNTS = [1, 5, 10, 25, 50, 100];
 
+function toFiniteNumber(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockModalProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -233,7 +238,7 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
               />
               {costPerUnit && amount && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  Total: <span className="font-semibold text-foreground">S/ {(parseFloat(costPerUnit) * parseFloat(amount || '0')).toFixed(2)}</span>
+                  Total: <span className="font-semibold text-foreground">S/ {(toFiniteNumber(costPerUnit) * toFiniteNumber(amount)).toFixed(2)}</span>
                 </p>
               )}
             </div>

@@ -5,8 +5,58 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    match /{document=**} {
+    // Colecciones permitidas para el cliente autenticado.
+    match /products/{docId} {
       allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /ingredients/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /inventory_items/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /inventory_movements/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /customers/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /online_orders/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /sales/{saleId} {
+      allow read, create, update, delete: if isAuthenticated();
+
+      match /sale_items/{itemId} {
+        allow read, create, update, delete: if isAuthenticated();
+      }
+    }
+
+    match /cash_flows/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /cash_registers/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /cash_movements/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /suppliers/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    // Denegar cualquier colección no listada.
+    match /{document=**} {
+      allow read, create, update, delete: if false;
     }
   }
 }
