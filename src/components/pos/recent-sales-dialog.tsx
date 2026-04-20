@@ -151,10 +151,6 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
             }
           }
 
-          // Restaurar cantidad del producto
-          batch.update(productRef, {
-            quantity: increment(item.quantity),
-          });
         }
       }
 

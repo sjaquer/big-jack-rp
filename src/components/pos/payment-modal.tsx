@@ -19,8 +19,8 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, User, CreditCard, Banknote, Smartphone, ArrowRightLeft, Check, UserPlus } from 'lucide-react';
-import { useCollection, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { Customer } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 export type DocumentType = '0' | '1' | '6';
 
 export interface PaymentCustomerPayload {
+  customerId?: string | null;
   name: string;
   documentType: DocumentType;
   documentNumber: string;
@@ -181,8 +182,15 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
     
     setIsProcessing(true);
     try {
-      // Save customer if requested and has valid document
-      if (saveCustomer && firestore && documentType !== '0' && !documentError && customerName.trim()) {
+      let resolvedCustomerId: string | null = selectedCustomerId;
+
+      // If a customer exists with the same document, always link the sale to that customer.
+      if (!resolvedCustomerId && existingCustomerWithDocument?.id) {
+        resolvedCustomerId = existingCustomerWithDocument.id;
+      }
+
+      // Save customer if requested and has valid document, then link sale to new customer.
+      if (!resolvedCustomerId && saveCustomer && firestore && documentType !== '0' && !documentError && customerName.trim()) {
         const nameParts = customerName.trim().split(' ');
         const firstName = nameParts[0] || customerName.trim();
         const lastName = nameParts.slice(1).join(' ') || undefined;
@@ -197,8 +205,9 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
           totalSpent: total,
           loyaltyPoints: 0,
         };
-        
-        addDocumentNonBlocking(collection(firestore, 'customers'), newCustomer);
+
+        const createdCustomerRef = await addDoc(collection(firestore, 'customers'), newCustomer);
+        resolvedCustomerId = createdCustomerRef.id;
         toast({
           title: 'Cliente guardado',
           description: `${customerName.trim()} fue añadido a tu lista de clientes.`,
@@ -208,6 +217,7 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
       await onSuccess({
         paymentMethod,
         customer: {
+          customerId: resolvedCustomerId,
           name: customerName.trim() || 'Cliente Mostrador',
           documentType,
           documentNumber: sanitizedDocument || (documentType === '0' ? '00000000' : ''),
@@ -378,7 +388,14 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-muted-foreground">Tipo Doc.</Label>
-                      <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)} disabled={isProcessing}>
+                      <Select
+                        value={documentType}
+                        onValueChange={(value) => {
+                          setDocumentType(value as DocumentType);
+                          setSelectedCustomerId(null);
+                        }}
+                        disabled={isProcessing}
+                      >
                         <SelectTrigger className="h-9 bg-background text-sm">
                           <SelectValue placeholder="Selecciona" />
                         </SelectTrigger>
@@ -397,7 +414,10 @@ export function PaymentModal({ isOpen, onClose, total, defaultPaymentMethod = 'c
                         <Label className="text-xs font-medium text-muted-foreground">Número</Label>
                         <Input
                           value={documentNumber}
-                          onChange={(e) => setDocumentNumber(e.target.value)}
+                          onChange={(e) => {
+                            setDocumentNumber(e.target.value);
+                            setSelectedCustomerId(null);
+                          }}
                           placeholder={documentType === '1' ? 'DNI (8)' : 'RUC (11)'}
                           inputMode="numeric"
                           maxLength={documentType === '1' ? 8 : 11}

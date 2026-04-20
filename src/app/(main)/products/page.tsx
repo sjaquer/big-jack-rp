@@ -22,7 +22,7 @@ import type { Product, Supplier, Ingredient, InventoryItem } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
 import { BurgerIcon } from '@/components/icons';
-import { convertInventoryQuantity } from '@/lib/unit-conversion';
+import { calculateProductProducibleQuantity } from '@/lib/product-stock';
 // placeholderImages removed; images are no longer used in product listing
 
 export default function ProductsPage() {
@@ -90,42 +90,6 @@ export default function ProductsPage() {
   };
 
   // Image handling removed: products show textual info only.
-  
-  const calculateProducibleQuantity = (
-    product: Product,
-    allIngredients: Ingredient[],
-    allInventoryItems: InventoryItem[]
-  ): number | string => {
-    if (!product.ingredients || product.ingredients.length === 0) {
-      return 'N/A';
-    }
-    if ((!allIngredients || allIngredients.length === 0) && (!allInventoryItems || allInventoryItems.length === 0)) {
-      return 0;
-    }
-
-    let maxProducible = Infinity;
-
-    for (const recipeIngredient of product.ingredients) {
-      const sourceType = recipeIngredient.sourceType ?? 'ingredient';
-      const inventoryIngredient = sourceType === 'inventory_item'
-        ? allInventoryItems.find(i => i.id === recipeIngredient.ingredientId)
-        : allIngredients.find(i => i.id === recipeIngredient.ingredientId);
-
-      if (!inventoryIngredient) {
-        return 0; // Required ingredient is not in inventory
-      }
-      
-      const requiredQuantity = sourceType === 'ingredient'
-        ? convertInventoryQuantity(recipeIngredient.quantity, recipeIngredient.unit, inventoryIngredient.unit) ?? recipeIngredient.quantity
-        : recipeIngredient.quantity;
-      const producibleWithThisIngredient = Math.floor(inventoryIngredient.quantity / requiredQuantity);
-      if (producibleWithThisIngredient < maxProducible) {
-        maxProducible = producibleWithThisIngredient;
-      }
-    }
-
-    return maxProducible === Infinity ? 0 : maxProducible;
-  };
 
   const isLoading = productsLoading || suppliersLoading || ingredientsLoading || inventoryItemsLoading;
 
@@ -187,7 +151,7 @@ export default function ProductsPage() {
                       <TableCell>S/ {(product.salePrice ?? 0).toFixed(2)}</TableCell>
                       <TableCell>{product.quantity ?? 0}</TableCell>
                       <TableCell>
-                        {calculateProducibleQuantity(product, ingredients ?? [], inventoryItems ?? [])}
+                        {calculateProductProducibleQuantity(product, ingredients ?? [], inventoryItems ?? [])}
                       </TableCell>
                       <TableCell className="flex gap-2">
                         <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>

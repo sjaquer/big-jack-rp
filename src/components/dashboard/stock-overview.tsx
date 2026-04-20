@@ -1,26 +1,28 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Ingredient, Product } from '@/lib/types';
+import type { Ingredient, InventoryItem, Product } from '@/lib/types';
 import { AlertTriangle, Package, TrendingDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
 import { Button } from '../ui/button';
+import { calculateProductProducibleQuantity } from '@/lib/product-stock';
 
 interface StockOverviewProps {
   ingredients: Ingredient[];
+  inventoryItems: InventoryItem[];
   products: Product[];
   isLoading?: boolean;
 }
 
-export function StockOverview({ ingredients, products, isLoading }: StockOverviewProps) {
+export function StockOverview({ ingredients, inventoryItems, products, isLoading }: StockOverviewProps) {
   const stockStats = useMemo(() => {
     const lowStockIngredients = ingredients.filter(
       (ing) => ing.quantity <= (ing.minimumStock || 0)
     );
     const outOfStockIngredients = ingredients.filter((ing) => ing.quantity === 0);
     const lowStockProducts = products.filter(
-      (prod) => prod.quantity && prod.quantity <= 5
+      (prod) => calculateProductProducibleQuantity(prod, ingredients, inventoryItems) <= 5
     );
     const totalItems = ingredients.length + products.length;
 
@@ -33,7 +35,7 @@ export function StockOverview({ ingredients, products, isLoading }: StockOvervie
         ? ((totalItems - (lowStockIngredients.length + lowStockProducts.length)) / totalItems) * 100
         : 100,
     };
-  }, [ingredients, products]);
+  }, [ingredients, inventoryItems, products]);
 
   if (isLoading) {
     return (
@@ -131,7 +133,7 @@ export function StockOverview({ ingredients, products, isLoading }: StockOvervie
                 {stockStats.lowStockProducts.slice(0, 3).map((prod) => (
                   <div key={prod.id} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{prod.name}</span>
-                    <span className="font-medium">{prod.quantity || 0} unidades</span>
+                    <span className="font-medium">{calculateProductProducibleQuantity(prod, ingredients, inventoryItems)} unidades</span>
                   </div>
                 ))}
                 {stockStats.lowStockProducts.length > 3 && (

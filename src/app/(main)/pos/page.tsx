@@ -269,14 +269,6 @@ export default function POSPage() {
       try {
         const batch = writeBatch(firestore);
         
-        // Actualizar stock de productos usando increment (atómico)
-        for (const item of orderItems) {
-          const productRef = doc(firestore, 'products', item.id);
-          batch.update(productRef, { 
-            quantity: increment(-item.quantity) 
-          });
-        }
-        
         // Obtener ingredientes y actualizarlos
         const productDocs = await Promise.all(
           orderItems.map(item => getDoc(doc(firestore, 'products', item.id)))
@@ -363,7 +355,7 @@ export default function POSPage() {
       
       const newOrderData = {
         orderDate: Timestamp.now(),
-        customerId: null,
+        customerId: normalizedCustomer.customerId ?? null,
         customerName: normalizedCustomer.name,
         customerPhone: null,
         status: 'pending',
@@ -398,6 +390,7 @@ export default function POSPage() {
       let createdSaleId = '';
 
       const normalizedCustomer: PaymentCustomerPayload = {
+        customerId: customer.customerId ?? null,
         name: customer.name?.trim() || WALK_IN_CUSTOMER,
         documentType: customer.documentType,
         documentNumber: customer.documentNumber || (customer.documentType === '0' ? '00000000' : ''),
@@ -431,7 +424,7 @@ export default function POSPage() {
             source: 'pos',
             deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
             createdAt: Timestamp.now(),
-            customerId: null,
+            customerId: normalizedCustomer.customerId ?? null,
             customerName: normalizedCustomer.name,
             customerDocumentType: normalizedCustomer.documentType,
             customerDocumentNumber: normalizedCustomer.documentNumber,

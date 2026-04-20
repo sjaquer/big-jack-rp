@@ -28,12 +28,13 @@ import { useCollection } from '@/firebase';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Sale, Product, Ingredient } from '@/lib/types';
+import type { Sale, Product, Ingredient, InventoryItem } from '@/lib/types';
 import { startOfMonth, endOfMonth, subMonths, subDays, setHours, setMinutes, format } from 'date-fns';
 import type { ComponentType, SVGProps } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { calculateProductProducibleQuantity } from '@/lib/product-stock';
 
 type DashboardModule = {
   href: string;
@@ -193,13 +194,19 @@ export default function DashboardPage() {
   }, [firestore]);
   const { data: ingredientsData, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
 
+  const inventoryItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'inventory_items');
+  }, [firestore]);
+  const { data: inventoryItemsData, isLoading: inventoryItemsLoading } = useCollection<InventoryItem>(inventoryItemsQuery);
+
   const lowStockIngredients = useMemo(() => {
     return (ingredientsData ?? []).filter((ingredient) => ingredient.quantity <= (ingredient.minimumStock || 0));
   }, [ingredientsData]);
 
   const lowStockProducts = useMemo(() => {
-    return (productsData ?? []).filter((product) => product.quantity && product.quantity <= 5);
-  }, [productsData]);
+    return (productsData ?? []).filter((product) => calculateProductProducibleQuantity(product, ingredientsData ?? [], inventoryItemsData ?? []) <= 5);
+  }, [productsData, ingredientsData, inventoryItemsData]);
 
   const monthStart = useMemo(() => startOfMonth(new Date()), []);
   const monthSalesQuery = useMemoFirebase(() => {
@@ -404,8 +411,9 @@ export default function DashboardPage() {
               <CardContent>
                 <StockOverview
                   ingredients={ingredientsData ?? []}
+                  inventoryItems={inventoryItemsData ?? []}
                   products={productsData ?? []}
-                  isLoading={ingredientsLoading || productsLoading}
+                  isLoading={ingredientsLoading || productsLoading || inventoryItemsLoading}
                 />
               </CardContent>
             </Card>
