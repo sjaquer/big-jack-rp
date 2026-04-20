@@ -91,6 +91,7 @@ export interface InventoryItem {
 
 
 export type SaleSource = 'pos' | 'online' | 'delivery';
+export type SalePaymentStatus = 'paid' | 'pending';
 
 export interface Sale {
   id: string;
@@ -98,6 +99,7 @@ export interface Sale {
   totalAmount: number;
   cashierId: string;
   paymentMethod: string;
+  paymentStatus?: SalePaymentStatus;
   itemsCount?: number;
   uniqueProductsCount?: number;
   source?: SaleSource;

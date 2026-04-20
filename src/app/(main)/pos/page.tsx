@@ -435,6 +435,7 @@ export default function POSPage() {
             cashierId: user.uid,
             cashierEmail: user.email || 'unknown',
             paymentMethod: paymentMethod,
+            paymentStatus: 'paid',
             itemsCount: orderSnapshot.reduce((sum, item) => sum + item.quantity, 0),
             uniqueProductsCount: orderSnapshot.length,
             source: 'pos',

@@ -21,10 +21,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, orderBy, limit, where, getDocs, doc, deleteDoc, writeBatch, getDoc, Timestamp, increment } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where, getDocs, doc, deleteDoc, writeBatch, getDoc, updateDoc, Timestamp, increment } from 'firebase/firestore';
 import type { Sale, SaleItem, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, X, Receipt, Clock, User, CreditCard, Printer } from 'lucide-react';
+import { Trash2, X, Receipt, Clock, User, CreditCard, Printer, CircleDollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { convertInventoryQuantity } from '@/lib/unit-conversion';
@@ -47,6 +47,7 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
   const [loading, setLoading] = useState(false);
   const [cancelingSaleId, setCancelingSaleId] = useState<string | null>(null);
   const [reprintingSaleId, setReprintingSaleId] = useState<string | null>(null);
+  const [updatingPaymentStatusSaleId, setUpdatingPaymentStatusSaleId] = useState<string | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleWithItems | null>(null);
 
   useEffect(() => {
@@ -227,6 +228,44 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
     }
   };
 
+  const isPendingPayment = (sale: SaleWithItems) => sale.paymentStatus === 'pending';
+
+  const handleTogglePaymentStatus = async (sale: SaleWithItems) => {
+    if (!firestore) return;
+
+    const nextStatus = isPendingPayment(sale) ? 'paid' : 'pending';
+    setUpdatingPaymentStatusSaleId(sale.id);
+
+    try {
+      const saleRef = doc(firestore, 'sales', sale.id);
+      await updateDoc(saleRef, {
+        paymentStatus: nextStatus,
+      });
+
+      setSales((prevSales) =>
+        prevSales.map((currentSale) =>
+          currentSale.id === sale.id
+            ? { ...currentSale, paymentStatus: nextStatus }
+            : currentSale
+        )
+      );
+
+      toast({
+        title: nextStatus === 'pending' ? 'Venta marcada como pendiente' : 'Venta marcada como pagada',
+        description: `Ref: ${sale.receiptReference || sale.id.slice(0, 8).toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Error actualizando estado de pago:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el estado de pago',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingPaymentStatusSaleId(null);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -268,6 +307,9 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
                           <Badge variant="outline">
                             S/ {(sale.totalAmount ?? 0).toFixed(2)}
                           </Badge>
+                          <Badge variant={isPendingPayment(sale) ? 'destructive' : 'default'}>
+                            {isPendingPayment(sale) ? 'Pendiente de pago' : 'Pagado'}
+                          </Badge>
                         </div>
 
                         <div className="text-sm space-y-1">
@@ -301,10 +343,32 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
 
                       <div className="flex flex-col gap-2 flex-shrink-0">
                         <Button
+                          variant={isPendingPayment(sale) ? 'default' : 'secondary'}
+                          size="sm"
+                          onClick={() => handleTogglePaymentStatus(sale)}
+                          disabled={
+                            updatingPaymentStatusSaleId === sale.id ||
+                            reprintingSaleId === sale.id ||
+                            cancelingSaleId === sale.id
+                          }
+                        >
+                          <CircleDollarSign className="h-4 w-4 mr-1" />
+                          {updatingPaymentStatusSaleId === sale.id
+                            ? 'Guardando...'
+                            : isPendingPayment(sale)
+                              ? 'Marcar pagado'
+                              : 'Marcar pendiente'}
+                        </Button>
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleReprintReceipt(sale)}
-                          disabled={!onReprintReceipt || reprintingSaleId === sale.id || cancelingSaleId === sale.id}
+                          disabled={
+                            !onReprintReceipt ||
+                            reprintingSaleId === sale.id ||
+                            cancelingSaleId === sale.id ||
+                            updatingPaymentStatusSaleId === sale.id
+                          }
                         >
                           <Printer className="h-4 w-4 mr-1" />
                           {reprintingSaleId === sale.id ? 'Imprimiendo...' : 'Reimprimir'}
@@ -313,7 +377,11 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
                           variant="destructive"
                           size="sm"
                           onClick={() => setSaleToCancel(sale)}
-                          disabled={cancelingSaleId === sale.id || reprintingSaleId === sale.id}
+                          disabled={
+                            cancelingSaleId === sale.id ||
+                            reprintingSaleId === sale.id ||
+                            updatingPaymentStatusSaleId === sale.id
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
