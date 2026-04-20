@@ -25,7 +25,7 @@ import { useFirestore, useUser } from '@/firebase';
 import { collection, query, orderBy, limit, where, getDocs, doc, deleteDoc, writeBatch, getDoc, Timestamp, increment } from 'firebase/firestore';
 import type { Sale, SaleItem, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, X, Receipt, Clock, User, CreditCard } from 'lucide-react';
+import { Trash2, X, Receipt, Clock, User, CreditCard, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { convertInventoryQuantity } from '@/lib/unit-conversion';
@@ -33,19 +33,21 @@ import { convertInventoryQuantity } from '@/lib/unit-conversion';
 interface RecentSalesDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onReprintReceipt?: (sale: SaleWithItems) => void | Promise<void>;
 }
 
 interface SaleWithItems extends Sale {
   items: SaleItem[];
 }
 
-export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
+export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentSalesDialogProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
   const [sales, setSales] = useState<SaleWithItems[]>([]);
   const [loading, setLoading] = useState(false);
   const [cancelingSaleId, setCancelingSaleId] = useState<string | null>(null);
+  const [reprintingSaleId, setReprintingSaleId] = useState<string | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleWithItems | null>(null);
 
   useEffect(() => {
@@ -208,6 +210,24 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
     return labels[method] || method;
   };
 
+  const handleReprintReceipt = async (sale: SaleWithItems) => {
+    if (!onReprintReceipt) return;
+
+    setReprintingSaleId(sale.id);
+    try {
+      await onReprintReceipt(sale);
+    } catch (error) {
+      console.error('Error reimprimiendo comprobante:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo reimprimir el comprobante',
+        variant: 'destructive',
+      });
+    } finally {
+      setReprintingSaleId(null);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -280,15 +300,25 @@ export function RecentSalesDialog({ isOpen, onClose }: RecentSalesDialogProps) {
                         )}
                       </div>
 
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setSaleToCancel(sale)}
-                        disabled={cancelingSaleId === sale.id}
-                        className="flex-shrink-0"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReprintReceipt(sale)}
+                          disabled={!onReprintReceipt || reprintingSaleId === sale.id || cancelingSaleId === sale.id}
+                        >
+                          <Printer className="h-4 w-4 mr-1" />
+                          {reprintingSaleId === sale.id ? 'Imprimiendo...' : 'Reimprimir'}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setSaleToCancel(sale)}
+                          disabled={cancelingSaleId === sale.id || reprintingSaleId === sale.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

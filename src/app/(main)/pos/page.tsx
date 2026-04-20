@@ -155,6 +155,22 @@ interface PaymentResult {
   customer: PaymentCustomerPayload;
 }
 
+interface RecentSaleForReprint {
+  id: string;
+  saleDate: Timestamp;
+  totalAmount: number;
+  paymentMethod: string;
+  customerName?: string | null;
+  customerDocumentType?: '0' | '1' | '6';
+  customerDocumentNumber?: string | null;
+  receiptReference?: string;
+  items: Array<{
+    productName?: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
 export default function POSPage() {
     const firestore = useFirestore();
     const { user } = useUser();
@@ -526,6 +542,41 @@ export default function POSPage() {
         setPaymentModalOpen(false);
     }
 
+    const handleReprintRecentSale = async (sale: RecentSaleForReprint) => {
+      const rawDocumentType = sale.customerDocumentType;
+      const documentType: PaymentCustomerPayload['documentType'] =
+        rawDocumentType === '1' || rawDocumentType === '6' ? rawDocumentType : '0';
+
+      const customer: PaymentCustomerPayload = {
+        customerId: null,
+        name: sale.customerName?.trim() || WALK_IN_CUSTOMER,
+        documentType,
+        documentNumber: sale.customerDocumentNumber || (documentType === '0' ? '00000000' : ''),
+      };
+
+      const saleItems = sale.items.map((item) => ({
+        productName: item.productName || 'Producto',
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotal: item.unitPrice * item.quantity,
+      }));
+
+      triggerThermalPrint({
+        reference: sale.receiptReference || sale.id.slice(0, 8).toUpperCase(),
+        issuedAt: sale.saleDate.toDate().toISOString(),
+        customer,
+        items: saleItems,
+        total: sale.totalAmount ?? 0,
+        paymentMethod: sale.paymentMethod,
+        cashierEmail: user?.email || null,
+      });
+
+      toast({
+        title: 'Comprobante enviado a impresión',
+        description: `Venta ${sale.receiptReference || sale.id.slice(0, 8).toUpperCase()}`,
+      });
+    };
+
   return (
     <div className="relative h-full w-full bg-transparent">
       {/* Mobile Cart Trigger - Floating Button */}
@@ -579,6 +630,7 @@ export default function POSPage() {
         <RecentSalesDialog 
             isOpen={isRecentSalesOpen}
             onClose={() => setRecentSalesOpen(false)}
+          onReprintReceipt={handleReprintRecentSale}
         />
       
         {/* Left Side: Product Grid */}
