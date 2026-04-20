@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, query, orderBy, limit, where, getDocs, doc, deleteDoc, writeBatch, getDoc, Timestamp, increment } from 'firebase/firestore';
 import type { Sale, SaleItem, Product } from '@/lib/types';
@@ -231,7 +230,7 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[600px] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
+        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-[600px] h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
@@ -242,7 +241,7 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-2">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <p className="text-muted-foreground">Cargando...</p>
@@ -324,7 +323,7 @@ export function RecentSalesDialog({ isOpen, onClose, onReprintReceipt }: RecentS
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
 
           <div className="flex justify-end pt-4 border-t">
             <Button variant="outline" onClick={onClose}>
