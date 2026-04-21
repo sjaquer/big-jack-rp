@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
-import { adminDb } from '@/lib/firebase-admin';
+import { MissingSkusError, processIncomingOrder } from '@/lib/orders/process-incoming-order';
 
 export const runtime = 'nodejs';
 
@@ -33,15 +32,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, x-webhook-secret',
 };
 
-type ProductSnapshot = {
-  id: string;
-  sku: string;
-  name: string;
-  salePrice: number;
-  costPrice: number;
-  quantity: number;
-};
-
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -50,65 +40,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
       'Cache-Control': 'no-store',
     },
   });
-}
-
-function normalizeSku(value: string): string {
-  return value.trim().toUpperCase();
-}
-
-function toNumber(value: unknown, fallback = 0): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function sanitizeDocId(input: string): string {
-  const normalized = input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-');
-  const trimmed = normalized.slice(0, 120).replace(/^-+|-+$/g, '');
-  return trimmed || `order-${Date.now()}`;
-}
-
-function isAlreadyExistsError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const code = (error as { code?: unknown }).code;
-  return code === 6 || code === '6' || code === 'already-exists' || code === 'ALREADY_EXISTS';
-}
-
-function toFirestoreOrderDate(value: z.infer<typeof webhookPayloadSchema>['orderDate']) {
-  if (!value) return FieldValue.serverTimestamp();
-  if (typeof value === 'number') return Timestamp.fromMillis(value);
-  return Timestamp.fromDate(new Date(value));
-}
-
-async function resolveProductsBySku(inputSkus: string[]) {
-  const uniqueSkus = [...new Set(inputSkus.map(normalizeSku))];
-  const lookups = await Promise.all(
-    uniqueSkus.map(async (sku) => {
-      const snapshot = await adminDb.collection('products').where('sku', '==', sku).limit(1).get();
-      return { sku, snapshot };
-    })
-  );
-
-  const bySku = new Map<string, ProductSnapshot>();
-  const missingSkus: string[] = [];
-
-  for (const lookup of lookups) {
-    if (lookup.snapshot.empty) {
-      missingSkus.push(lookup.sku);
-      continue;
-    }
-
-    const doc = lookup.snapshot.docs[0];
-    const data = doc.data() as Record<string, unknown>;
-    bySku.set(lookup.sku, {
-      id: doc.id,
-      sku: normalizeSku(String(data.sku ?? lookup.sku)),
-      name: String(data.name ?? `SKU ${lookup.sku}`),
-      salePrice: toNumber(data.salePrice, 0),
-      costPrice: toNumber(data.price, 0),
-      quantity: toNumber(data.quantity, 0),
-    });
-  }
-
-  return { bySku, missingSkus };
 }
 
 export async function OPTIONS() {
@@ -141,146 +72,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = parsed.data;
-    const skuList = order.items.map((item) => normalizeSku(item.sku));
-    const { bySku: productsBySku, missingSkus } = await resolveProductsBySku(skuList);
+    const result = await processIncomingOrder(parsed.data);
 
-    if (missingSkus.length > 0) {
+    return jsonResponse({
+      success: true,
+      duplicated: result.duplicated,
+      orderId: result.orderId,
+      saleId: result.saleId,
+      erpSummary: {
+        itemsCount: result.itemsCount,
+        uniqueItems: result.uniqueItems,
+        totalAmount: result.totalAmount,
+      },
+      message: result.duplicated ? 'Webhook ya procesado previamente.' : 'Venta registrada correctamente.',
+    });
+  } catch (error) {
+    if (error instanceof MissingSkusError) {
       return jsonResponse(
         {
           success: false,
           error: 'Hay SKUs no registrados en productos.',
-          missingSkus,
+          missingSkus: error.missingSkus,
         },
         400
       );
     }
 
-    const resolvedItems = order.items.map((item) => {
-      const normalizedSku = normalizeSku(item.sku);
-      const product = productsBySku.get(normalizedSku)!;
-      const unitPrice = Number(product.salePrice.toFixed(2));
-      const subtotal = Number((unitPrice * item.quantity).toFixed(2));
-
-      return {
-        productId: product.id,
-        productSku: product.sku,
-        productName: product.name,
-        quantity: item.quantity,
-        unitPrice,
-        subtotal,
-        costUnitPrice: product.costPrice,
-        lineNotes: item.notes ?? null,
-      };
-    });
-
-    const totalAmount = Number(resolvedItems.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2));
-    const totalItems = resolvedItems.reduce((sum, item) => sum + item.quantity, 0);
-
-    const orderRef = order.eventId
-      ? adminDb.collection('online_orders').doc(`webhook-${sanitizeDocId(order.eventId)}`)
-      : adminDb.collection('online_orders').doc();
-
-    const existing = await orderRef.get();
-    if (existing.exists) {
-      return jsonResponse({
-        success: true,
-        duplicated: true,
-        orderId: orderRef.id,
-        message: 'Webhook ya procesado previamente.',
-      });
-    }
-
-    const saleRef = adminDb.collection('sales').doc();
-
-    const saleBatch = adminDb.batch();
-
-    saleBatch.set(saleRef, {
-      saleDate: FieldValue.serverTimestamp(),
-      totalAmount,
-      cashierId: 'menu-webhook',
-      cashierEmail: 'menu-webhook@system.local',
-      paymentMethod: order.paymentMethod ?? 'online',
-      itemsCount: totalItems,
-      uniqueProductsCount: resolvedItems.length,
-      source: 'online',
-      deviceType: 'webhook',
-      customerId: null,
-      customerName: order.customer?.name ?? 'Cliente online',
-      createdAt: FieldValue.serverTimestamp(),
-      via: 'menu-webhook',
-      externalOrderId: order.eventId ?? null,
-      metadata: order.metadata ?? null,
-      receiptReference: (order.eventId ?? saleRef.id).slice(0, 20).toUpperCase(),
-    });
-
-    for (const item of resolvedItems) {
-      const saleItemRef = saleRef.collection('sale_items').doc();
-      saleBatch.set(saleItemRef, {
-        saleId: saleRef.id,
-        productId: item.productId,
-        productName: item.productName,
-        productSku: item.productSku,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.subtotal,
-        profit: Number(((item.unitPrice - item.costUnitPrice) * item.quantity).toFixed(2)),
-        lineNotes: item.lineNotes,
-      });
-    }
-    saleBatch.create(orderRef, {
-      orderDate: toFirestoreOrderDate(order.orderDate),
-      customerId: null,
-      status: 'pending',
-      totalAmount,
-      items: resolvedItems.map((item) => ({
-        productId: item.productId,
-        productSku: item.productSku,
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.subtotal,
-        lineNotes: item.lineNotes,
-      })),
-      itemsCount: totalItems,
-      customerName: order.customer?.name ?? 'Cliente online',
-      customerPhone: order.customer?.phone,
-      paymentMethod: order.paymentMethod ?? null,
-      notes: order.notes ?? null,
-      source: order.source,
-      externalOrderId: order.eventId ?? null,
-      saleId: saleRef.id,
-      metadata: order.metadata ?? null,
-      createdAt: FieldValue.serverTimestamp(),
-      via: 'webhook',
-    });
-
-    try {
-      await saleBatch.commit();
-    } catch (error) {
-      if (order.eventId && isAlreadyExistsError(error)) {
-        return jsonResponse({
-          success: true,
-          duplicated: true,
-          orderId: orderRef.id,
-          message: 'Webhook ya procesado previamente.',
-        });
-      }
-      throw error;
-    }
-
-    return jsonResponse({
-      success: true,
-      orderId: orderRef.id,
-      saleId: saleRef.id,
-      erpSummary: {
-        itemsCount: totalItems,
-        uniqueItems: resolvedItems.length,
-        totalAmount,
-      },
-      message: 'Venta registrada correctamente.',
-    });
-  } catch (error) {
     console.error('Error al procesar webhook de pedidos:', error);
     return jsonResponse(
       {

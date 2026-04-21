@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { OnlineOrder } from '@/lib/types';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Pencil, Trash2, Save, X } from 'lucide-react';
@@ -71,7 +71,17 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
     setIsSaving(true);
     try {
       const orderRef = doc(firestore, 'online_orders', order.id);
-      await updateDocumentNonBlocking(orderRef, editedOrder);
+      const payload: Partial<OnlineOrder> = { ...editedOrder };
+      if (editedOrder.status && editedOrder.status !== order.status) {
+        if (editedOrder.status === 'processing') {
+          payload.processingStartedAt = Timestamp.now();
+        }
+        if (editedOrder.status === 'completed') {
+          payload.completedAt = Timestamp.now();
+        }
+      }
+
+      await updateDocumentNonBlocking(orderRef, payload);
       
       toast({
         title: 'Pedido actualizado',

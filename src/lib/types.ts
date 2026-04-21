@@ -141,6 +141,7 @@ export interface OnlineOrder {
   paymentMethod?: string;
   notes?: string;
   deliveryAddress?: string;
+  processingStartedAt?: Timestamp;
   completedAt?: Timestamp;
   source?: OrderSource;
   channelTag?: 'nuevo' | 'prioritario';

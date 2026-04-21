@@ -77,6 +77,17 @@ const orderSourceConfig: Record<OrderSource | 'otros', { label: string; classNam
 };
 
 const NEW_ORDER_THRESHOLD_MINUTES = 5;
+const AUTO_TRANSITION_SECONDS = {
+  pending: 5 * 60,
+  processing: 12 * 60,
+} as const;
+
+const formatCountdown = (seconds: number) => {
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainingSeconds = safeSeconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
 
 export default function IncomingOrdersPage() {
   const firestore = useFirestore();
@@ -85,8 +96,10 @@ export default function IncomingOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<OnlineOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const previousOrderIdsRef = useRef<Set<string>>(new Set());
+  const autoTransitioningOrderIdsRef = useRef<Set<string>>(new Set());
   const isFirstLoadRef = useRef(true);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const [timerTick, setTimerTick] = useState(0);
 
   const playNewOrderSound = () => {
     if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') return;
@@ -133,40 +146,89 @@ export default function IncomingOrdersPage() {
 
   const { data: onlineOrders, isLoading } = useCollection<OnlineOrder>(ordersQuery);
 
-  const onlineOnlyOrders = useMemo(() => {
-    return (onlineOrders ?? []).filter((order) => order.source !== 'pos');
-  }, [onlineOrders]);
+  const allOrders = useMemo(() => onlineOrders ?? [], [onlineOrders]);
 
-  // Filtrar pedidos por estado (excluir pedidos de POS/local)
+  // Filtrar pedidos por estado
   const filteredOrders = useMemo(() => {
-    return onlineOnlyOrders.filter((order) => order.status === selectedTab);
-  }, [onlineOnlyOrders, selectedTab]);
+    return allOrders.filter((order) => order.status === selectedTab);
+  }, [allOrders, selectedTab]);
 
-  // Contar pedidos por estado (excluir pedidos de POS/local)
+  // Contar pedidos por estado
   const orderCounts = useMemo(() => {
     return {
-      pending: onlineOnlyOrders.filter(o => o.status === 'pending').length,
-      processing: onlineOnlyOrders.filter(o => o.status === 'processing').length,
-      completed: onlineOnlyOrders.filter(o => o.status === 'completed').length,
+      pending: allOrders.filter(o => o.status === 'pending').length,
+      processing: allOrders.filter(o => o.status === 'processing').length,
+      completed: allOrders.filter(o => o.status === 'completed').length,
     };
-  }, [onlineOnlyOrders]);
+  }, [allOrders]);
 
   const newPendingCount = useMemo(() => {
     const now = new Date();
-    return onlineOnlyOrders.filter((order) => {
-      if (order.status !== 'pending' || !order.orderDate || order.source === 'pos') return false;
+    return allOrders.filter((order) => {
+      if (order.status !== 'pending' || !order.orderDate) return false;
       return differenceInMinutes(now, order.orderDate.toDate()) <= NEW_ORDER_THRESHOLD_MINUTES;
     }).length;
-  }, [onlineOnlyOrders]);
+  }, [allOrders]);
 
   useEffect(() => {
-    if (!onlineOnlyOrders.length) {
+    const intervalId = window.setInterval(() => {
+      setTimerTick((prev) => prev + 1);
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const getTransitionRemainingSeconds = (order: OnlineOrder) => {
+    if (order.status === 'completed') return null;
+
+    const totalSeconds = AUTO_TRANSITION_SECONDS[order.status];
+    if (!totalSeconds) return null;
+
+    const baseTimestamp =
+      order.status === 'processing'
+        ? order.processingStartedAt ?? order.orderDate
+        : order.orderDate;
+
+    if (!baseTimestamp) return null;
+
+    const elapsedSeconds = Math.floor((Date.now() - baseTimestamp.toDate().getTime()) / 1000);
+    return Math.max(totalSeconds - elapsedSeconds, 0);
+  };
+
+  useEffect(() => {
+    if (!firestore || !allOrders.length) return;
+
+    allOrders.forEach((order) => {
+      const remainingSeconds = getTransitionRemainingSeconds(order);
+      if (remainingSeconds === null || remainingSeconds > 0) return;
+      if (autoTransitioningOrderIdsRef.current.has(order.id)) return;
+
+      const nextStatus = statusConfig[order.status].nextStatus;
+      if (!nextStatus) return;
+
+      const orderDocRef = doc(firestore, 'online_orders', order.id);
+      autoTransitioningOrderIdsRef.current.add(order.id);
+
+      const updatePayload: Partial<OnlineOrder> =
+        nextStatus === 'processing'
+          ? { status: 'processing', processingStartedAt: Timestamp.now() }
+          : { status: 'completed', completedAt: Timestamp.now() };
+
+      updateDocumentNonBlocking(orderDocRef, updatePayload);
+      window.setTimeout(() => {
+        autoTransitioningOrderIdsRef.current.delete(order.id);
+      }, 1500);
+    });
+  }, [allOrders, firestore, timerTick]);
+
+  useEffect(() => {
+    if (!allOrders.length) {
       previousOrderIdsRef.current = new Set();
       isFirstLoadRef.current = false;
       return;
     }
 
-    const currentIds = new Set(onlineOnlyOrders.map((order) => order.id));
+    const currentIds = new Set(allOrders.map((order) => order.id));
 
     if (isFirstLoadRef.current) {
       previousOrderIdsRef.current = currentIds;
@@ -174,7 +236,7 @@ export default function IncomingOrdersPage() {
       return;
     }
 
-    const newOrders = onlineOnlyOrders.filter((order) => !previousOrderIdsRef.current.has(order.id));
+    const newOrders = allOrders.filter((order) => !previousOrderIdsRef.current.has(order.id));
 
     if (newOrders.length > 0) {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
@@ -199,12 +261,19 @@ export default function IncomingOrdersPage() {
     }
 
     previousOrderIdsRef.current = currentIds;
-  }, [onlineOnlyOrders, toast]);
+  }, [allOrders, toast]);
 
   const handleStatusChange = (orderId: string, newStatus: OnlineOrder['status']) => {
     if (!firestore) return;
     const orderDocRef = doc(firestore, 'online_orders', orderId);
-    updateDocumentNonBlocking(orderDocRef, { status: newStatus });
+    const statusPayload: Partial<OnlineOrder> =
+      newStatus === 'processing'
+        ? { status: newStatus, processingStartedAt: Timestamp.now() }
+        : newStatus === 'completed'
+          ? { status: newStatus, completedAt: Timestamp.now() }
+          : { status: newStatus };
+
+    updateDocumentNonBlocking(orderDocRef, statusPayload);
     toast({
       title: 'Estado actualizado',
       description: 'El pedido cambió de estado correctamente.',
@@ -330,13 +399,16 @@ export default function IncomingOrdersPage() {
                     const sourceKey = (order.source ?? 'otros') as OrderSource | 'otros';
                     const sourceInfo = orderSourceConfig[sourceKey] ?? orderSourceConfig.otros;
                     const totalItems = order.items.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
+                    const remainingSeconds = getTransitionRemainingSeconds(order);
+                    const isPosOrder = sourceKey === 'pos';
 
                     return (
                       <Card
                         key={order.id}
                         className={cn(
                           'flex h-full flex-col overflow-hidden border-2 transition-all hover:shadow-xl',
-                          currentConfig.color
+                          currentConfig.color,
+                          isPosOrder && 'border-orange-500/60 bg-orange-100/60 dark:bg-orange-950/30'
                         )}
                       >
                         <CardHeader className="space-y-3 pb-3">
@@ -364,6 +436,11 @@ export default function IncomingOrdersPage() {
                             {isNewOrder && (
                               <Badge className="animate-pulse border border-amber-500/40 bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
                                 Nuevo
+                              </Badge>
+                            )}
+                            {remainingSeconds !== null && (
+                              <Badge variant="outline" className="px-2 py-0.5 text-[11px] font-semibold">
+                                Auto {statusConfig[order.status].nextLabel.toLowerCase()} en {formatCountdown(remainingSeconds)}
                               </Badge>
                             )}
                             <Badge variant="outline" className="px-2 py-0.5 text-[11px] font-semibold">

@@ -21,6 +21,7 @@ import { SalesSourceChart } from '@/components/dashboard/sales-source-chart';
 import { TopProductsTable } from '@/components/dashboard/top-products-table';
 import { HourlyPerformanceChart } from '@/components/dashboard/hourly-performance-chart';
 import { WeeklyComparison } from '@/components/dashboard/weekly-comparison';
+import { AIReportCard } from '@/components/dashboard/ai-report-card';
 import { 
   TrendingUp,
   TrendingDown,
@@ -38,13 +39,14 @@ import { useCollection } from '@/firebase';
 import { collection, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Sale, Product, SaleItem } from '@/lib/types';
+import type { Sale, Product, SaleItem, Ingredient, InventoryItem } from '@/lib/types';
 import { startOfMonth, subMonths, format, getDay, getHours, startOfWeek, startOfDay, endOfDay, subDays, subWeeks, setHours, setMinutes, addDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { AnalyticsIcon } from '@/components/icons';
+import { calculateProductProducibleQuantity } from '@/lib/product-stock';
 
 const currencyFormatter = new Intl.NumberFormat('es-PE', {
   style: 'currency',
@@ -73,6 +75,18 @@ export default function InsightsPage() {
     return collection(firestore, 'products');
   }, [firestore]);
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsQuery);
+
+  const ingredientsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'ingredients');
+  }, [firestore]);
+  const { data: ingredientsData } = useCollection<Ingredient>(ingredientsQuery);
+
+  const inventoryItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'inventory_items');
+  }, [firestore]);
+  const { data: inventoryItemsData } = useCollection<InventoryItem>(inventoryItemsQuery);
 
   // Query para sale items
   const saleItemsQuery = useMemoFirebase(() => {
@@ -156,6 +170,26 @@ export default function InsightsPage() {
     );
   }, [firestore, yesterdayStart, yesterdayEnd]);
   const { data: yesterdaySalesData, isLoading: yesterdaySalesLoading } = useCollection<Sale>(yesterdaySalesQuery);
+
+  const monthStart = useMemo(() => startOfMonth(now), [now]);
+
+  const monthSales = useMemo(() => {
+    return (salesData ?? []).filter((sale) => sale.saleDate.toDate() >= monthStart);
+  }, [salesData, monthStart]);
+
+  const monthRevenue = useMemo(() => {
+    return monthSales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
+  }, [monthSales]);
+
+  const lowStockIngredients = useMemo(() => {
+    return (ingredientsData ?? []).filter((ingredient) => ingredient.quantity <= (ingredient.minimumStock || 0));
+  }, [ingredientsData]);
+
+  const lowStockProducts = useMemo(() => {
+    return (productsData ?? []).filter(
+      (product) => calculateProductProducibleQuantity(product, ingredientsData ?? [], inventoryItemsData ?? []) <= 5
+    );
+  }, [productsData, ingredientsData, inventoryItemsData]);
 
   const currentWeekStart = useMemo(() => startOfWeek(now, { weekStartsOn: 1 }), [now]);
   const previousWeekStart = useMemo(() => subWeeks(currentWeekStart, 1), [currentWeekStart]);
@@ -715,6 +749,19 @@ export default function InsightsPage() {
 
             {/* Tab: IA */}
             <TabsContent value="ia" className="space-y-3 sm:space-y-4">
+              <AIReportCard
+                shiftRevenue={currentShiftSales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0)}
+                shiftOrders={currentShiftSales.length}
+                shiftAvgTicket={currentShiftSales.length > 0 ? currentShiftSales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0) / currentShiftSales.length : 0}
+                monthRevenue={monthRevenue}
+                monthOrders={monthSales.length}
+                growthRate={growthRate}
+                lowStockIngredients={lowStockIngredients.length}
+                lowStockProducts={lowStockProducts.length}
+                lowStockIngredientNames={lowStockIngredients.slice(0, 5).map((item) => item.name)}
+                lowStockProductNames={lowStockProducts.slice(0, 5).map((item) => item.name)}
+              />
+
               <Card className="border-teal-200 bg-gradient-to-br from-white to-teal-50/30 dark:from-slate-800 dark:to-transparent">
                 <CardHeader>
                   <div className="flex items-center gap-2">
