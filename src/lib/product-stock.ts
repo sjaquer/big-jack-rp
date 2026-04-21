@@ -18,16 +18,21 @@ export function calculateProductProducibleQuantity(
 
   for (const recipeIngredient of product.ingredients) {
     const sourceType = recipeIngredient.sourceType ?? 'ingredient';
-    const inventoryIngredient = sourceType === 'inventory_item'
+    const inventoryItem = sourceType === 'inventory_item'
       ? allInventoryItems.find((item) => item.id === recipeIngredient.ingredientId)
-      : allIngredients.find((item) => item.id === recipeIngredient.ingredientId);
+      : undefined;
+    const ingredient = sourceType === 'ingredient'
+      ? allIngredients.find((item) => item.id === recipeIngredient.ingredientId)
+      : undefined;
+
+    const inventoryIngredient = sourceType === 'inventory_item' ? inventoryItem : ingredient;
 
     if (!inventoryIngredient) {
       return 0;
     }
 
     const requiredQuantity = sourceType === 'ingredient'
-      ? convertInventoryQuantity(recipeIngredient.quantity, recipeIngredient.unit, inventoryIngredient.unit) ?? recipeIngredient.quantity
+      ? convertInventoryQuantity(recipeIngredient.quantity, recipeIngredient.unit, ingredient?.unit) ?? recipeIngredient.quantity
       : recipeIngredient.quantity;
 
     if (requiredQuantity <= 0) {

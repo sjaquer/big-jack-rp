@@ -10,7 +10,6 @@ function initializeFirestoreWithSafeTransport(firebaseApp: FirebaseApp) {
     // Improves reliability on networks where HTTP3/QUIC or streaming is blocked.
     return initializeFirestore(firebaseApp, {
       experimentalAutoDetectLongPolling: true,
-      useFetchStreams: false,
     });
   } catch {
     return getFirestore(firebaseApp);

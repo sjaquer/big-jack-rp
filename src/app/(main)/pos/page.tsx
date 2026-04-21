@@ -7,7 +7,6 @@ import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ShoppingCart } from 'lucide-react';
 import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
 import { RecentSalesDialog } from '@/components/pos/recent-sales-dialog';
-// import { CashRegister } from '@/components/pos/cash-register'; // Deshabilitado temporalmente
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, runTransaction, Timestamp, getDoc, writeBatch, increment } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
@@ -182,19 +181,6 @@ export default function POSPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
-    // const [cashBalance, setCashBalance] = useState<number>(0); // Deshabilitado - Caja chica removida
-
-    // Query para verificar si hay caja abierta - DESHABILITADO
-    // const currentRegisterQuery = useMemoFirebase(() => {
-    //   if (!firestore) return null;
-    //   return query(
-    //     collection(firestore, 'cash_registers'),
-    //     where('status', '==', 'open'),
-    //     limit(1)
-    //   );
-    // }, [firestore]);
-    // const { data: currentRegisterData } = useCollection(currentRegisterQuery);
-    // const currentRegister = currentRegisterData?.[0];
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -396,12 +382,6 @@ export default function POSPage() {
         return;
       }
 
-      // Validación de caja abierta DESHABILITADA (funcionalidad removida)
-      // if (paymentMethod === 'cash' && !currentRegister) {
-      //   toast({ variant: "destructive", title: "Caja Cerrada", description: "Debes abrir la caja antes de recibir pagos en efectivo."});
-      //   return;
-      // }
-
       const startTime = performance.now();
       let createdSaleId = '';
 
@@ -470,19 +450,6 @@ export default function POSPage() {
         
         const transactionTime = performance.now() - startTime;
         console.info(`[POS] ✅ Transacción completada en ${transactionTime.toFixed(0)}ms`);
-
-        // === REGISTRO EN CAJA CHICA DESHABILITADO ===
-        // La funcionalidad de caja chica ha sido removida temporalmente
-        // if (paymentMethod === 'cash' && currentRegister) {
-        //   try {
-        //     const cashMovementsCol = collection(firestore, 'cash_movements');
-        //     await addDocumentNonBlocking(cashMovementsCol, {...});
-        //     const registerDoc = doc(firestore, 'cash_registers', currentRegister.id);
-        //     await updateDocumentNonBlocking(registerDoc, {...});
-        //   } catch (error) {
-        //     console.error('[POS] Error al actualizar caja:', error);
-        //   }
-        // }
 
         // === FEEDBACK INMEDIATO AL USUARIO ===
         toast({
@@ -598,11 +565,6 @@ export default function POSPage() {
               <SheetTitle>Pedido Actual</SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto">
-              {/* Caja Chica en Mobile - DESHABILITADO */}
-              {/* <div className="p-4">
-                <CashRegister onBalanceUpdate={setCashBalance} userEmail={user?.email || null} />
-              </div> */}
-              
               <CartPanel
                 order={order}
                 subtotal={subtotal}
@@ -655,11 +617,6 @@ export default function POSPage() {
         {/* Right Side: Order Summary - Desktop Only */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="hidden lg:block h-full">
           <div className="h-full flex flex-col gap-3">
-            {/* Caja Chica en Desktop - DESHABILITADO */}
-            {/* <div className="flex-shrink-0">
-              <CashRegister onBalanceUpdate={setCashBalance} userEmail={user?.email || null} />
-            </div> */}
-            
             <div className="flex-1 overflow-hidden">
               <CartPanel
                 order={order}
