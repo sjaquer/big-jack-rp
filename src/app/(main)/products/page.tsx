@@ -22,7 +22,7 @@ import type { Product, Supplier, Ingredient, InventoryItem } from '@/lib/types';
 import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
 import { BurgerIcon } from '@/components/icons';
-import { calculateProductProducibleQuantity } from '@/lib/product-stock';
+import { calculateProductProducibleQuantity, calculateProductRecipeCost } from '@/lib/product-stock';
 // placeholderImages removed; images are no longer used in product listing
 
 export default function ProductsPage() {
@@ -127,6 +127,7 @@ export default function ProductsPage() {
                     <TableHead>Nombre</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Categoría</TableHead>
+                    <TableHead>Costo de Elaboración</TableHead>
                     <TableHead>Precio de Venta</TableHead>
                     <TableHead>Stock Actual</TableHead>
                     <TableHead>Stock Producible</TableHead>
@@ -136,7 +137,7 @@ export default function ProductsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
+                  {isLoading && <TableRow><TableCell colSpan={7}>Cargando...</TableCell></TableRow>}
                   {products?.map((product) => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
@@ -148,6 +149,7 @@ export default function ProductsPage() {
                           {PRODUCT_CATEGORY_LABELS[product.category ?? 'otros']}
                         </Badge>
                       </TableCell>
+                      <TableCell>S/ {calculateProductRecipeCost(product, ingredients ?? [], inventoryItems ?? []).toFixed(2)}</TableCell>
                       <TableCell>S/ {(product.salePrice ?? 0).toFixed(2)}</TableCell>
                       <TableCell>{product.quantity ?? 0}</TableCell>
                       <TableCell>

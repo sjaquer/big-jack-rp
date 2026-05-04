@@ -47,3 +47,36 @@ export function calculateProductProducibleQuantity(
 
   return maxProducible === Infinity ? 0 : maxProducible;
 }
+
+export function calculateProductRecipeCost(
+  product: Product,
+  allIngredients: Ingredient[] = [],
+  allInventoryItems: InventoryItem[] = []
+): number {
+  if (!product.ingredients || product.ingredients.length === 0) {
+    return 0;
+  }
+
+  return product.ingredients.reduce((total, recipeIngredient) => {
+    const sourceType = recipeIngredient.sourceType ?? 'ingredient';
+
+    if (sourceType === 'inventory_item') {
+      const inventoryItem = allInventoryItems.find((item) => item.id === recipeIngredient.ingredientId);
+      const costPerUnit = inventoryItem?.costPerUnit ?? 0;
+      return total + recipeIngredient.quantity * costPerUnit;
+    }
+
+    const ingredient = allIngredients.find((item) => item.id === recipeIngredient.ingredientId);
+    if (!ingredient) {
+      return total;
+    }
+
+    const requiredQuantity = convertInventoryQuantity(
+      recipeIngredient.quantity,
+      recipeIngredient.unit,
+      ingredient.unit
+    ) ?? recipeIngredient.quantity;
+
+    return total + requiredQuantity * (ingredient.cost ?? 0);
+  }, 0);
+}
