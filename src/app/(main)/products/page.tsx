@@ -12,13 +12,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 // Images removed for touch-first POS: product list shows text only
 import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { deleteDoc, doc, collection } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 import { useMemoFirebase } from '@/firebase/provider';
-import type { Product, Supplier, Ingredient } from '@/lib/types';
+import type { Product, Supplier, Ingredient, InventoryItem } from '@/lib/types';
+import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
 import { ProductForm } from '@/components/products/product-form';
+import { BurgerIcon } from '@/components/icons';
+import { calculateProductProducibleQuantity, calculateProductRecipeCost } from '@/lib/product-stock';
 // placeholderImages removed; images are no longer used in product listing
 
 export default function ProductsPage() {
@@ -44,6 +48,12 @@ export default function ProductsPage() {
   }, [firestore]);
   const { data: ingredients, isLoading: ingredientsLoading } = useCollection<Ingredient>(ingredientsQuery);
 
+  const inventoryItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'inventory_items');
+  }, [firestore]);
+  const { data: inventoryItems, isLoading: inventoryItemsLoading } = useCollection<InventoryItem>(inventoryItemsQuery);
+
   const handleAddProduct = () => {
     setSelectedProduct(null);
     setFormOpen(true);
@@ -59,95 +69,109 @@ export default function ProductsPage() {
     setSelectedProduct(null);
   };
 
-  // Image handling removed: products show textual info only.
-  
-  const calculateProducibleQuantity = (product: Product, allIngredients: Ingredient[]): number | string => {
-    if (!product.ingredients || product.ingredients.length === 0) {
-      return 'N/A';
-    }
-    if (!allIngredients || allIngredients.length === 0) {
-      return 0;
+  const { toast } = useToast();
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firestore no disponible' });
+      return;
     }
 
-    let maxProducible = Infinity;
+    const confirmed = confirm('¿Eliminar este producto? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
 
-    for (const recipeIngredient of product.ingredients) {
-      const inventoryIngredient = allIngredients.find(i => i.id === recipeIngredient.ingredientId);
-
-      if (!inventoryIngredient) {
-        return 0; // Required ingredient is not in inventory
-      }
-      
-      const producibleWithThisIngredient = Math.floor(inventoryIngredient.quantity / recipeIngredient.quantity);
-      if (producibleWithThisIngredient < maxProducible) {
-        maxProducible = producibleWithThisIngredient;
-      }
+    try {
+      await deleteDoc(doc(firestore, 'products', productId));
+      toast({ title: 'Producto eliminado', description: 'El producto se eliminó correctamente.' });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el producto.' });
     }
-
-    return maxProducible === Infinity ? 0 : maxProducible;
   };
 
-  const isLoading = productsLoading || suppliersLoading || ingredientsLoading;
+  // Image handling removed: products show textual info only.
+
+  const isLoading = productsLoading || suppliersLoading || ingredientsLoading || inventoryItemsLoading;
 
   return (
-    <>
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-orange-50/20 dark:from-slate-900 dark:to-slate-800">
       <ProductForm 
         isOpen={isFormOpen}
         onClose={handleFormClose}
         product={selectedProduct}
         ingredients={ingredients ?? []}
+        inventoryItems={inventoryItems ?? []}
       />
-      <Card>
-        <CardHeader>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
-                  <CardTitle className="font-headline text-lg sm:text-xl">Registro de Productos</CardTitle>
-                  <CardDescription className="text-sm">Gestiona todos los productos de tu inventario.</CardDescription>
+                  <h1 className="font-headline text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">Registro de Productos</h1>
+                  <p className="text-base text-slate-600 mt-1">Gestiona todos los productos de tu inventario y menú.</p>
               </div>
-              <Button onClick={handleAddProduct} size="default" className="h-11 sm:h-10 text-base w-full sm:w-auto touch-manipulation">
-                  <PlusCircle className="mr-2 h-5 w-5" />
+              <Button onClick={handleAddProduct} size="default" className="h-12 px-6 text-base w-full sm:w-auto touch-manipulation font-semibold shadow-sm hover:shadow-md transition-shadow">
+                  <BurgerIcon className="mr-2 h-5 w-5" />
                   Añadir Producto
               </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Precio de Venta</TableHead>
-                <TableHead>Stock Actual</TableHead>
-                <TableHead>Stock Producible</TableHead>
-                <TableHead>
-                  <span className="sr-only">Acciones</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={6}>Cargando...</TableCell></TableRow>}
-              {products?.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{product.sku}</Badge>
-                  </TableCell>
-                  <TableCell>S/ {product.salePrice.toFixed(2)}</TableCell>
-                  <TableCell>{product.quantity}</TableCell>
-                  <TableCell>
-                    {calculateProducibleQuantity(product, ingredients ?? [])}
-                  </TableCell>
-                  <TableCell>
-                    <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>
-                      Editar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </>
+          <Card className="flex flex-col overflow-hidden shadow-lg border-slate-200">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="font-headline text-base sm:text-lg">Listado</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Consulta y edita los productos disponibles.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-0">
+              <div className="overflow-x-auto">
+                <Table className="min-w-[900px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Costo de Elaboración</TableHead>
+                    <TableHead>Precio de Venta</TableHead>
+                    <TableHead>Stock Actual</TableHead>
+                    <TableHead>Stock Producible</TableHead>
+                    <TableHead>
+                      <span className="sr-only">Acciones</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && <TableRow><TableCell colSpan={7}>Cargando...</TableCell></TableRow>}
+                  {products?.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{product.sku}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {PRODUCT_CATEGORY_LABELS[product.category ?? 'otros']}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>S/ {calculateProductRecipeCost(product, ingredients ?? [], inventoryItems ?? []).toFixed(2)}</TableCell>
+                      <TableCell>S/ {(product.salePrice ?? 0).toFixed(2)}</TableCell>
+                      <TableCell>{product.quantity ?? 0}</TableCell>
+                      <TableCell>
+                        {calculateProductProducibleQuantity(product, ingredients ?? [], inventoryItems ?? [])}
+                      </TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button size="default" variant="outline" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleEditProduct(product)}>
+                          Editar
+                        </Button>
+                        <Button size="default" variant="destructive" className="h-10 sm:h-9 text-sm sm:text-xs touch-manipulation" onClick={() => handleDeleteProduct(product.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

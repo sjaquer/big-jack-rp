@@ -1,22 +1,173 @@
 'use client'
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import type { Product, Ingredient, Customer } from '@/lib/types';
-import { X, Plus, Minus, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
-import { PaymentModal } from '@/components/pos/payment-modal';
-import { CustomerSelector } from '@/components/customers/customer-selector';
+import type { Product, ProductCategory, Ingredient } from '@/lib/types';
+import { PRODUCT_CATEGORY_LABELS } from '@/lib/types';
+import { ShoppingCart } from 'lucide-react';
+import { PaymentModal, PaymentCustomerPayload } from '@/components/pos/payment-modal';
+import { RecentSalesDialog } from '@/components/pos/recent-sales-dialog';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, Timestamp, getDoc, writeBatch, increment } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { ProductGrid, CartPanel } from '@/components/pos/pos-components';
+import { convertInventoryQuantity } from '@/lib/unit-conversion';
 
 interface OrderItem extends Product {
   quantity: number;
+}
+
+interface ThermalPrintPayload {
+  reference: string;
+  issuedAt: string;
+  customer: PaymentCustomerPayload;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  total: number;
+  paymentMethod: string;
+  cashierEmail?: string | null;
+}
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const triggerThermalPrint = (payload: ThermalPrintPayload) => {
+  if (typeof window === 'undefined') {
+    console.info('[POS] Impresión omitida (entorno sin ventana)');
+    return;
+  }
+
+  try {
+    // Open a narrow window matching 58mm approx (at 96dpi ~ 220px). Use small chrome so print dialog is shown.
+    const printWindow = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=720,height=800');
+    if (!printWindow) {
+      console.warn('[POS] No se pudo abrir la ventana de impresión');
+      return;
+    }
+
+    const itemsHtml = payload.items
+      .map((item) => {
+        const safeName = escapeHtml(item.productName);
+        // Only show subtotal line if quantity > 1 to save space
+        const showSubtotal = item.quantity > 1;
+        return `
+        <div class="line-item">
+          <div class="row item-row">
+            <span class="left">${item.quantity} x ${safeName}</span>
+            <span class="right">S/ ${(item.unitPrice ?? 0).toFixed(2)}</span>
+          </div>
+          ${showSubtotal ? `<div class="row subtotal"><span class="left"></span><span class="right">Subtotal: S/ ${(item.subtotal ?? 0).toFixed(2)}</span></div>` : ''}
+        </div>`;
+      })
+      .join('');
+
+    const safeCustomerName = escapeHtml(payload.customer.name);
+    const safeDocumentNumber = escapeHtml(payload.customer.documentNumber);
+    const html = `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <title>Comprobante ${payload.reference}</title>
+        <style>
+          @page { size: 58mm auto; margin: 0; }
+          *, *:before, *:after { box-sizing: border-box; }
+          html, body { margin: 0; padding: 0; width: 100%; font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.1; background: #fff; font-weight: bold; }
+          .receipt { width: 100%; max-width: 58mm; margin: 0; padding: 4px 2px; }
+          .center { text-align: center; }
+          .section { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #000; }
+          .section:last-child { border-bottom: none; margin-bottom: 0; }
+          .line-item { margin-bottom: 4px; }
+          .row { display: flex; justify-content: space-between; align-items: flex-start; }
+          .item-row { gap: 4px; }
+          .item-row .left { flex: 1; word-break: break-all; font-weight: 800; }
+          .item-row .right { flex: 0 0 auto; text-align: right; white-space: nowrap; }
+          .subtotal { font-size: 9px; color: #000; margin-top: 1px; }
+          .total { font-size: 12px; font-weight: 900; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px; }
+          h1 { font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; font-weight: 900; }
+          p { margin: 2px 0; }
+          .small { font-size: 9px; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="section center">
+            <h1>Comprobante de Venta</h1>
+            <p class="small">Ref: ${payload.reference}</p>
+            <p class="small">${new Date(payload.issuedAt).toLocaleString()}</p>
+          </div>
+          
+          <div class="section">
+            <p>Cliente: ${safeCustomerName}</p>
+            <p>Doc: ${payload.customer.documentType === '0' ? 'Sin documento' : safeDocumentNumber}</p>
+            <p class="small">Atendió: JACK</p>
+          </div>
+
+          <div class="section">
+            ${itemsHtml}
+          </div>
+
+          <div class="section">
+            <div class="row"><span>Pago:</span><span>${payload.paymentMethod}</span></div>
+            <div class="row total"><span>TOTAL</span><span>S/ ${(payload.total ?? 0).toFixed(2)}</span></div>
+          </div>
+
+          <div class="section center">
+            <p style="margin-top: 8px;">*** Gracias por su compra ***</p>
+          </div>
+        </div>
+      </body>
+    </html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    // Wait for the content to layout before printing
+    printWindow.onload = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        console.warn('[POS] Error during print()', e);
+      }
+      // Close shortly after print dialog opened
+      setTimeout(() => printWindow.close(), 500);
+    };
+  } catch (error) {
+    console.error('[POS] Error al preparar la impresión térmica', error);
+  }
+};
+
+const WALK_IN_CUSTOMER = 'Cliente Mostrador';
+
+interface PaymentResult {
+  paymentMethod: string;
+  customer: PaymentCustomerPayload;
+}
+
+interface RecentSaleForReprint {
+  id: string;
+  saleDate: Timestamp;
+  totalAmount: number;
+  paymentMethod: string;
+  customerName?: string | null;
+  customerDocumentType?: '0' | '1' | '6';
+  customerDocumentNumber?: string | null;
+  receiptReference?: string;
+  items: Array<{
+    productName?: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
 }
 
 export default function POSPage() {
@@ -26,14 +177,51 @@ export default function POSPage() {
     
     const [order, setOrder] = useState<OrderItem[]>([]);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [isRecentSalesOpen, setRecentSalesOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
-    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       return collection(firestore, 'products');
     }, [firestore]);
     const { data: products, isLoading } = useCollection<Product>(productsQuery);
+
+    const categoryKeys = useMemo(() => Object.keys(PRODUCT_CATEGORY_LABELS) as ProductCategory[], []);
+    const groupedProducts = useMemo(() => {
+      // Initialize groups from the current category keys so newly added categories are present
+      const groups = categoryKeys.reduce((acc, k) => {
+        acc[k] = [] as Product[];
+        return acc;
+      }, {} as Record<ProductCategory, Product[]>);
+
+      (products ?? []).forEach((product) => {
+        const rawCategory = (product.category ?? 'otros') as ProductCategory;
+        const resolvedCategory = PRODUCT_CATEGORY_LABELS[rawCategory]
+          ? rawCategory
+          : ('otros' as ProductCategory);
+        // Ensure the group exists (defensive) before pushing
+        if (!groups[resolvedCategory]) groups[resolvedCategory] = [];
+        groups[resolvedCategory].push(product);
+      });
+
+      categoryKeys.forEach((key) => {
+        const list = groups[key] ?? [];
+        // Defensive: ensure we compare strings to avoid calling localeCompare on undefined
+        list.sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
+        groups[key] = list;
+      });
+
+      return groups;
+    }, [products, categoryKeys]);
+
+    const filteredProducts = useMemo(() => {
+      if (categoryFilter === 'all') {
+        return null;
+      }
+      return groupedProducts[categoryFilter];
+    }, [categoryFilter, groupedProducts]);
 
     // NOTE: removed image handling for touch-first POS. Products show large text + price.
 
@@ -71,142 +259,241 @@ export default function POSPage() {
     const subtotal = order.reduce((acc, item) => acc + item.salePrice * item.quantity, 0);
     const total = subtotal; // Assuming no tax for now
 
-    const handleSuccessfulPayment = async (paymentMethod: string) => {
+    // === FUNCIONES DE BACKGROUND (NO BLOQUEANTES) ===
+    
+    /**
+     * Actualiza el stock de productos e ingredientes en background
+     * Usa batched writes para eficiencia
+     */
+    const updateStocksInBackground = async (orderItems: OrderItem[]) => {
+      if (!firestore) return;
+      
+      try {
+        const batch = writeBatch(firestore);
+        
+        // Obtener ingredientes y actualizarlos
+        const productDocs = await Promise.all(
+          orderItems.map(item => getDoc(doc(firestore, 'products', item.id)))
+        );
+
+        const ingredientIds = [...new Set(
+          productDocs.flatMap((pDoc) => {
+            if (!pDoc.exists()) return [] as string[];
+            const productData = pDoc.data() as Product;
+            return (productData.ingredients ?? [])
+              .filter((ing) => (ing.sourceType ?? 'ingredient') === 'ingredient')
+              .map((ing) => ing.ingredientId);
+          })
+        )];
+
+        const ingredientUnits = new Map<string, string>();
+        await Promise.all(ingredientIds.map(async (ingredientId) => {
+          const ingredientDoc = await getDoc(doc(firestore, 'ingredients', ingredientId));
+          if (!ingredientDoc.exists()) return;
+          const ingredientData = ingredientDoc.data() as { unit?: string };
+          if (ingredientData.unit) {
+            ingredientUnits.set(ingredientId, ingredientData.unit);
+          }
+        }));
+        
+        const ingredientUpdates = new Map<string, { collectionName: 'ingredients' | 'inventory_items'; id: string; amount: number }>();
+        
+        productDocs.forEach((pDoc, idx) => {
+          if (!pDoc.exists()) return;
+          const productData = pDoc.data() as Product;
+          const orderItem = orderItems[idx];
+          
+          if (productData.ingredients) {
+            for (const ing of productData.ingredients) {
+              const sourceType = ing.sourceType === 'inventory_item' ? 'inventory_items' : 'ingredients';
+              const key = `${sourceType}:${ing.ingredientId}`;
+              const currentDecrement = ingredientUpdates.get(key)?.amount || 0;
+              const rawAmount = ing.quantity * orderItem.quantity;
+              const adjustedQuantity = sourceType === 'ingredients'
+                ? convertInventoryQuantity(rawAmount, ing.unit, ingredientUnits.get(ing.ingredientId)) ?? rawAmount
+                : rawAmount;
+              ingredientUpdates.set(
+                key,
+                { collectionName: sourceType, id: ing.ingredientId, amount: currentDecrement + adjustedQuantity }
+              );
+            }
+          }
+        });
+        
+        // Actualizar ingredientes
+        for (const [, update] of ingredientUpdates) {
+          const ingredientRef = doc(firestore, update.collectionName, update.id);
+          batch.update(ingredientRef, {
+            quantity: increment(-update.amount)
+          });
+        }
+        
+        await batch.commit();
+        console.info('[POS-BG] Stock actualizado correctamente');
+      } catch (error) {
+        console.error('[POS-BG] Error actualizando stock:', error);
+        // Aquí podrías crear una alerta o notificación para revisión manual
+      }
+    };
+
+    /**
+     * Crea la orden de cocina en background
+     */
+    const createKitchenOrderInBackground = (
+      orderItems: OrderItem[],
+      normalizedCustomer: PaymentCustomerPayload,
+      paymentMethod: string,
+      totalAmount: number
+    ) => {
+      if (!firestore) return;
+      
+      const orderItemsSnapshot = orderItems.map(item => ({
+        productId: item.id,
+        productName: item.name,
+        quantity: item.quantity,
+        unitPrice: item.salePrice,
+        subtotal: item.salePrice * item.quantity,
+      }));
+      
+      const newOrderData = {
+        orderDate: Timestamp.now(),
+        customerId: normalizedCustomer.customerId ?? null,
+        customerName: normalizedCustomer.name,
+        customerPhone: null,
+        status: 'pending',
+        totalAmount,
+        paymentMethod,
+        source: 'pos',
+        itemsCount: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+        items: orderItemsSnapshot,
+        notes: null,
+        customerDocumentType: normalizedCustomer.documentType,
+        customerDocumentNumber: normalizedCustomer.documentNumber,
+      };
+      
+      addDocumentNonBlocking(collection(firestore, 'online_orders'), newOrderData);
+      console.info('[POS-BG] Pedido enviado a cocina');
+    };
+
+    // === FUNCIÓN PRINCIPAL DE PAGO (OPTIMIZADA) ===
+    const handleSuccessfulPayment = async ({ paymentMethod, customer }: PaymentResult) => {
       if (!firestore || !user) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos o no hay usuario."});
         return;
       }
 
+      const startTime = performance.now();
+      let createdSaleId = '';
+
+      const normalizedCustomer: PaymentCustomerPayload = {
+        customerId: customer.customerId ?? null,
+        name: customer.name?.trim() || WALK_IN_CUSTOMER,
+        documentType: customer.documentType,
+        documentNumber: customer.documentNumber || (customer.documentType === '0' ? '00000000' : ''),
+      };
+
+      // Guardar copia del pedido antes de limpiar
+      const orderSnapshot = [...order];
+
       try {
+        // === TRANSACCIÓN MÍNIMA: Solo lo crítico ===
+        // Esta transacción solo hace:
+        // 1. Crear el documento de venta
+        // 2. Crear los sale_items
+        // NO actualiza stocks (eso se hace en background)
+        
         await runTransaction(firestore, async (transaction) => {
+          console.groupCollapsed('[POS] Transacción rápida de venta');
+
+          // 1. Crear documento de venta (1 escritura)
           const newSaleRef = doc(collection(firestore, 'sales'));
+          createdSaleId = newSaleRef.id;
 
-          // --- READS first: gather all product and ingredient documents needed ---
-          const productRefs = order.map(item => doc(firestore, 'products', item.id));
-          const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
-
-          // Verify products exist and build a map
-          const productsMap = new Map<string, Product>();
-          productDocs.forEach((pDoc, idx) => {
-            if (!pDoc.exists()) {
-              const missing = order[idx];
-              throw new Error(`Producto ${missing?.name || missing?.id || productRefs[idx].id} no encontrado.`);
-            }
-            productsMap.set(productRefs[idx].id, pDoc.data() as Product);
-          });
-
-          // Collect unique ingredient ids that will be touched
-          const ingredientIdSet = new Set<string>();
-          productsMap.forEach((prod) => {
-            if (prod.ingredients) {
-              for (const ri of prod.ingredients) {
-                if (ri?.ingredientId) ingredientIdSet.add(ri.ingredientId);
-              }
-            }
-          });
-
-          const ingredientIds = Array.from(ingredientIdSet);
-          const ingredientRefs = ingredientIds.map(id => doc(firestore, 'ingredients', id));
-          const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
-
-          const ingredientMap = new Map<string, Ingredient>();
-          ingredientDocs.forEach((iDoc, idx) => {
-            if (!iDoc.exists()) {
-              throw new Error(`Ingrediente con ID ${ingredientIds[idx]} no encontrado.`);
-            }
-            ingredientMap.set(ingredientIds[idx], iDoc.data() as Ingredient);
-          });
-
-          // --- All reads done. Perform writes now ---
           const saleData = {
             saleDate: serverTimestamp(),
             totalAmount: total,
             cashierId: user.uid,
             cashierEmail: user.email || 'unknown',
             paymentMethod: paymentMethod,
-            itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
-            uniqueProductsCount: order.length,
+            paymentStatus: 'paid',
+            itemsCount: orderSnapshot.reduce((sum, item) => sum + item.quantity, 0),
+            uniqueProductsCount: orderSnapshot.length,
             source: 'pos',
             deviceType: typeof window !== 'undefined' ? (window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop') : 'unknown',
             createdAt: Timestamp.now(),
-            customerId: selectedCustomer?.id || null,
-            customerName: selectedCustomer ? (selectedCustomer.nickname || `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim()) : null,
+            customerId: normalizedCustomer.customerId ?? null,
+            customerName: normalizedCustomer.name,
+            customerDocumentType: normalizedCustomer.documentType,
+            customerDocumentNumber: normalizedCustomer.documentNumber,
+            receiptReference: createdSaleId.slice(0, 8).toUpperCase(),
           };
+          
           transaction.set(newSaleRef, saleData);
+          console.info('[POS] Venta creada', { saleId: createdSaleId });
 
-          for (const item of order) {
+          // 2. Crear sale_items (N escrituras, sin lecturas adicionales)
+          for (const item of orderSnapshot) {
             const saleItemRef = doc(collection(firestore, `sales/${newSaleRef.id}/sale_items`));
-            const productData = productsMap.get(item.id)!;
             const saleItemData = {
               saleId: newSaleRef.id,
               productId: item.id,
+              productName: item.name, // Ya tenemos el nombre en memoria
               quantity: item.quantity,
               unitPrice: item.salePrice,
               profit: item.price ? (item.salePrice - item.price) * item.quantity : 0,
             };
             transaction.set(saleItemRef, saleItemData);
-
-            // Update product stock
-            const productRef = doc(firestore, 'products', item.id);
-            const newProductStock = (productData.quantity ?? 0) - item.quantity;
-            transaction.update(productRef, { quantity: newProductStock });
-
-            // Update ingredient stocks (if any)
-            if (productData.ingredients) {
-              for (const recipeIngredient of productData.ingredients) {
-                const ingredientRef = doc(firestore, 'ingredients', recipeIngredient.ingredientId);
-                const currentIngredient = ingredientMap.get(recipeIngredient.ingredientId)!;
-                const newIngredientStock = (currentIngredient.quantity ?? 0) - (recipeIngredient.quantity * item.quantity);
-                transaction.update(ingredientRef, { quantity: newIngredientStock });
-              }
-            }
           }
+          
+          console.groupEnd();
         });
         
-        // Create a corresponding online_order for the kitchen
-        const onlineOrderRef = collection(firestore, 'online_orders');
-        const newOrderData = {
-            orderDate: Timestamp.now(),
-            customerId: selectedCustomer?.id || user.uid,
-            customerName: selectedCustomer 
-              ? (selectedCustomer.nickname || `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim())
-              : `POS Venta (${paymentMethod})`,
-            customerPhone: selectedCustomer?.phone || null,
-            status: 'processing',
-            totalAmount: total,
-            paymentMethod: paymentMethod,
-            source: 'pos',
-            itemsCount: order.reduce((sum, item) => sum + item.quantity, 0),
-            items: order.map(item => ({
-                productId: item.id,
-                productName: item.name,
-                quantity: item.quantity,
-                unitPrice: item.salePrice,
-                subtotal: item.salePrice * item.quantity,
-            })),
-            notes: selectedCustomer?.preferences || null,
-        };
-        await addDocumentNonBlocking(onlineOrderRef, newOrderData);
+        const transactionTime = performance.now() - startTime;
+        console.info(`[POS] ✅ Transacción completada en ${transactionTime.toFixed(0)}ms`);
 
-        // Update customer stats if a customer was selected
-        if (selectedCustomer && firestore) {
-          const customerRef = doc(firestore, 'customers', selectedCustomer.id);
-          const pointsEarned = Math.floor(total / 10); // 1 punto por cada S/ 10 gastados
-          await updateDoc(customerRef, {
-            totalVisits: (selectedCustomer.totalVisits || 0) + 1,
-            totalSpent: (selectedCustomer.totalSpent || 0) + total,
-            loyaltyPoints: (selectedCustomer.loyaltyPoints || 0) + pointsEarned,
-            lastVisit: Timestamp.now(),
-          });
-        }
+        // === FEEDBACK INMEDIATO AL USUARIO ===
+        toast({
+          title: "✅ Venta registrada",
+          description: `Venta ${createdSaleId.slice(0, 8).toUpperCase()} • S/ ${(total ?? 0).toFixed(2)}`,
+        });
+        
+        // Limpiar pedido INMEDIATAMENTE
+        handleResetOrder();
+
+        // === TAREAS EN BACKGROUND (no bloqueantes) ===
+        // El usuario ya puede seguir trabajando mientras esto se procesa
+        
+        // 1. Actualizar stocks (productos e ingredientes)
+        updateStocksInBackground(orderSnapshot);
+        
+        // 2. Crear orden de cocina
+        createKitchenOrderInBackground(orderSnapshot, normalizedCustomer, paymentMethod, total);
 
         toast({
-          title: "Venta registrada",
-          description: selectedCustomer 
-            ? `Venta guardada. ${selectedCustomer.firstName} ganó ${Math.floor(total / 10)} puntos de lealtad.`
-            : "La venta se ha guardado, el stock se ha actualizado y el pedido fue enviado a cocina.",
+          title: 'Pedido enviado',
+          description: 'La orden quedó registrada para cocina.',
         });
-        handleResetOrder();
+
+        // 3. Imprimir comprobante interno
+        const issuedAt = new Date().toISOString();
+        const orderItemsSnapshot = orderSnapshot.map(item => ({
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.salePrice,
+          subtotal: item.salePrice * item.quantity,
+        }));
+        triggerThermalPrint({
+          reference: createdSaleId.slice(0, 8).toUpperCase(),
+          issuedAt,
+          customer: normalizedCustomer,
+          items: orderItemsSnapshot,
+          total,
+          paymentMethod,
+          cashierEmail: user?.email || null,
+        });
+
+        const totalTime = performance.now() - startTime;
+        console.info(`[POS] 🚀 Flujo completo iniciado en ${totalTime.toFixed(0)}ms (tareas de background en proceso)`);
 
       } catch (error) {
         console.error("Error creating sale:", error);
@@ -220,157 +507,133 @@ export default function POSPage() {
 
     const handleResetOrder = () => {
         setOrder([]);
-        setSelectedCustomer(null);
         setPaymentModalOpen(false);
     }
 
+    const handleReprintRecentSale = async (sale: RecentSaleForReprint) => {
+      const rawDocumentType = sale.customerDocumentType;
+      const documentType: PaymentCustomerPayload['documentType'] =
+        rawDocumentType === '1' || rawDocumentType === '6' ? rawDocumentType : '0';
+
+      const customer: PaymentCustomerPayload = {
+        customerId: null,
+        name: sale.customerName?.trim() || WALK_IN_CUSTOMER,
+        documentType,
+        documentNumber: sale.customerDocumentNumber || (documentType === '0' ? '00000000' : ''),
+      };
+
+      const saleItems = sale.items.map((item) => ({
+        productName: item.productName || 'Producto',
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotal: item.unitPrice * item.quantity,
+      }));
+
+      triggerThermalPrint({
+        reference: sale.receiptReference || sale.id.slice(0, 8).toUpperCase(),
+        issuedAt: sale.saleDate.toDate().toISOString(),
+        customer,
+        items: saleItems,
+        total: sale.totalAmount ?? 0,
+        paymentMethod: sale.paymentMethod,
+        cashierEmail: user?.email || null,
+      });
+
+      toast({
+        title: 'Comprobante enviado a impresión',
+        description: `Venta ${sale.receiptReference || sale.id.slice(0, 8).toUpperCase()}`,
+      });
+    };
+
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-6rem)] gap-4 overflow-hidden">
+    <div className="relative h-full w-full bg-transparent">
+      {/* Mobile Cart Trigger - Floating Button */}
+      <div className="lg:hidden fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-50">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button size="lg" className="rounded-full h-14 w-14 shadow-xl relative">
+              <ShoppingCart className="h-6 w-6" />
+              {order.length > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center rounded-full p-0">
+                  {order.reduce((acc, item) => acc + item.quantity, 0)}
+                </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[90%] sm:w-[400px] p-0 flex flex-col">
+            <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
+              <SheetTitle>Pedido Actual</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto">
+              <CartPanel
+                order={order}
+                subtotal={subtotal}
+                total={total}
+                selectedPaymentMethod={selectedPaymentMethod}
+                setSelectedPaymentMethod={setSelectedPaymentMethod}
+                handleResetOrder={handleResetOrder}
+                updateQuantity={updateQuantity}
+                setPaymentModalOpen={setPaymentModalOpen}
+                firestore={firestore}
+                triggerThermalPrint={triggerThermalPrint}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      <ResizablePanelGroup direction="horizontal" className="h-full w-full gap-3 lg:gap-4">
         <PaymentModal 
             isOpen={isPaymentModalOpen}
             onClose={() => setPaymentModalOpen(false)}
             total={total}
+            defaultPaymentMethod={selectedPaymentMethod}
             onSuccess={handleSuccessfulPayment}
         />
+        <RecentSalesDialog 
+            isOpen={isRecentSalesOpen}
+            onClose={() => setRecentSalesOpen(false)}
+          onReprintReceipt={handleReprintRecentSale}
+        />
       
-      {/* Left Side: Product Grid */}
-      <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/20">
-            <h2 className="text-xl font-headline font-bold">Productos</h2>
-        </div>
-        
-        <ScrollArea className="flex-1 p-4">
-            {isLoading ? (
-                <div className="flex items-center justify-center h-full">
-                    <p className="text-lg text-muted-foreground animate-pulse">Cargando productos...</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
-                {products?.map((product) => (
-                    <button
-                    key={product.id}
-                    className="group relative flex flex-col items-center text-center bg-card rounded-xl border-2 border-transparent hover:border-primary/50 active:scale-95 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md touch-manipulation"
-                    onClick={() => addToOrder(product)}
-                    >
-                        {recentlyAdded === product.id && (
-                        <div className="absolute inset-0 bg-primary/90 flex items-center justify-center z-20 animate-in fade-in-0 zoom-in-95 duration-200">
-                            <CheckCircle className="h-12 w-12 text-primary-foreground" />
-                        </div>
-                        )}
-                        <div className="w-full p-6 sm:p-8 flex flex-col items-center justify-center bg-card min-h-[8rem]">
-                          <p className="text-lg sm:text-2xl font-bold text-center leading-tight">{product.name}</p>
-                          <p className="mt-2 text-base sm:text-lg font-extrabold text-primary">S/ {product.salePrice.toFixed(2)}</p>
-                        </div>
-                    </button>
-                ))}
-                </div>
-            )}
-        </ScrollArea>
-      </div>
+        {/* Left Side: Product Grid */}
+        <ResizablePanel defaultSize={65} minSize={40} className="h-full">
+          <ProductGrid
+            isLoading={isLoading}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            categoryKeys={categoryKeys}
+            groupedProducts={groupedProducts}
+            filteredProducts={filteredProducts}
+            recentlyAdded={recentlyAdded}
+            addToOrder={addToOrder}
+            setRecentSalesOpen={setRecentSalesOpen}
+          />
+        </ResizablePanel>
 
-      {/* Right Side: Order Summary */}
-      <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-background rounded-xl border shadow-sm overflow-hidden h-[40vh] lg:h-auto flex-shrink-0">
-        {/* Customer Selector Header */}
-        <div className="p-4 border-b bg-muted/20 space-y-3">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-headline font-bold flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5" />
-                    Pedido Actual
-                </h2>
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleResetOrder}
-                    className="text-muted-foreground hover:text-destructive"
-                    disabled={order.length === 0}
-                >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpiar
-                </Button>
+        {/* Divider Handle - Hidden on mobile if we want, but ResizablePanelGroup handles it usually */}
+        <ResizableHandle withHandle className="hidden lg:flex" />
+
+        {/* Right Side: Order Summary - Desktop Only */}
+        <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="hidden lg:block h-full">
+          <div className="h-full flex flex-col gap-3">
+            <div className="flex-1 overflow-hidden">
+              <CartPanel
+                order={order}
+                subtotal={subtotal}
+                total={total}
+            selectedPaymentMethod={selectedPaymentMethod}
+            setSelectedPaymentMethod={setSelectedPaymentMethod}
+            handleResetOrder={handleResetOrder}
+            updateQuantity={updateQuantity}
+            setPaymentModalOpen={setPaymentModalOpen}
+            firestore={firestore}
+            triggerThermalPrint={triggerThermalPrint}
+          />
             </div>
-            <CustomerSelector
-                selectedCustomer={selectedCustomer}
-                onSelectCustomer={setSelectedCustomer}
-            />
-        </div>
-
-        {/* Order Items List */}
-        <ScrollArea className="flex-1 bg-muted/10">
-            {order.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted-foreground space-y-4">
-                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-                        <ShoppingCart className="h-10 w-10 opacity-20" />
-                    </div>
-                    <div>
-                        <p className="text-lg font-medium">El pedido está vacío</p>
-                        <p className="text-sm">Selecciona productos del menú para comenzar</p>
-                    </div>
-                </div>
-            ) : (
-                <div className="p-4 space-y-3">
-                    {order.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-lg border shadow-sm animate-in slide-in-from-left-5 duration-300">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base truncate">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">S/ {item.salePrice.toFixed(2)} c/u</p>
-                          </div>
-
-                            <div className="flex items-center gap-0.5 sm:gap-1 bg-muted/30 rounded-lg p-0.5 sm:p-1 flex-shrink-0">
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-md hover:bg-background hover:shadow-sm touch-manipulation" 
-                                    onClick={() => updateQuantity(item.id, -1)}
-                                >
-                                    <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
-                                </Button>
-                                <span className="font-bold text-base sm:text-lg w-6 sm:w-8 text-center tabular-nums">{item.quantity}</span>
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-md hover:bg-background hover:shadow-sm touch-manipulation" 
-                                    onClick={() => updateQuantity(item.id, 1)}
-                                >
-                                    <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-                                </Button>
-                            </div>
-                            
-                            <div className="text-right min-w-[5rem] flex-shrink-0">
-                              <p className="font-bold text-sm sm:text-base whitespace-nowrap">S/ {(item.salePrice * item.quantity).toFixed(2)}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </ScrollArea>
-
-        {/* Footer Totals & Action */}
-        <div className="p-4 bg-background border-t space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-            <div className="space-y-2">
-                <div className="flex justify-between text-sm sm:text-base text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span className="font-medium">S/ {subtotal.toFixed(2)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-end gap-2">
-                    <span className="text-base sm:text-lg font-semibold">Total a Pagar</span>
-                    <span className="text-2xl sm:text-3xl font-bold text-primary whitespace-nowrap">S/ {total.toFixed(2)}</span>
-                </div>
-            </div>
-            
-            <Button 
-                className="w-full h-16 text-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.98] touch-manipulation" 
-                size="lg" 
-                onClick={() => setPaymentModalOpen(true)}
-                disabled={order.length === 0}
-            >
-                Procesar Pago
-                <span className="ml-2 bg-primary-foreground/20 px-2 py-0.5 rounded text-sm">
-                    (S/ {total.toFixed(2)})
-                </span>
-            </Button>
-        </div>
-      </div>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }

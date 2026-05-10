@@ -2,6 +2,23 @@
 
 ## 📋 Resumen de Cambios
 
+### 0. 🔌 Integración de Webhook de Pedidos con lógica ERP
+- **Ubicación**: `src/app/api/webhooks/orders/route.ts`
+- **Documentación técnica**: `docs/webhook-pedidos.md`
+
+#### Cambios principales:
+- ✅ Recepción de pedidos externos por webhook único
+- ✅ Resolución de productos por `sku` obligatorio
+- ✅ Cálculo de precios usando catálogo ERP (`products.salePrice`)
+- ✅ Creación automática de venta en `sales` y `sale_items`
+- ✅ Descuento automático de inventario en `products` e `ingredients`
+- ✅ Registro en `inventory_movements`
+- ✅ Idempotencia usando `eventId`
+
+#### Resultado:
+- El pedido aparece en la cola de pedidos (`online_orders`)
+- El ERP mantiene consistencia entre pedido, venta e inventario
+
 ### 1. 🔒 **Seguridad del Login**
 - **Ubicación**: `src/app/login/page.tsx`
 - **Cambio**: Eliminado el enlace de registro ("¿No tienes cuenta? Regístrate")
@@ -276,6 +293,41 @@ Todos los componentes están optimizados para:
 5. **Notificaciones**: SMS/Email para promociones
 6. **Reportes**: Análisis de clientes frecuentes
 7. **Exportar Datos**: CSV de base de clientes
+
+---
+
+## 🆕 Actualización 2025.12
+
+### 4. 🗂️ POS por Categorías y Guía Paso a Paso
+- **Ubicación**: `src/app/(main)/pos/page.tsx`
+- **Cambios Clave**:
+  - Catálogo filtrado por categorías (`Productos`, `Hamburguesas`, `Bebidas`, etc.) usando `PRODUCT_CATEGORY_LABELS`.
+  - Selección de clientes eliminada: todas las ventas se registran como "Cliente Mostrador".
+  - Bloque informativo dentro del panel derecho con el paso a paso para cobrar por POS.
+- **Modal de Pago** (`src/components/pos/payment-modal.tsx`):
+  - Campos rápidos para capturar tipo de documento (Consumidor Final, DNI, RUC), número y nombre/razón social.
+  - Validaciones automáticas (DNI = 8 dígitos, RUC = 11 dígitos).
+  - Los datos ingresados viajan con la venta y se imprimen en el comprobante interno.
+- **Tipos**: `Product` ahora incluye `category` (`src/lib/types.ts`).
+- **Formularios**: `src/components/products/product-form.tsx` permite elegir categoría al crear/editar.
+
+### 5. 📊 Dashboard Financiero y Flujo de Caja
+- **Dashboard** (`src/app/(main)/dashboard/page.tsx`):
+  - Tarjetas nuevas con ingresos diarios, neto diario, ingresos mensuales y cantidad de ventas.
+  - “Nodos” para Hoy / Semana / Mes con ingresos, costos, gastos y neto.
+  - Se integran los gastos del flujo de caja para calcular utilidades reales.
+- **Flujo de Caja** (`src/app/(main)/cash-flow/page.tsx`):
+  - Nuevo módulo en el menú (icono billetera) para registrar ingresos/gastos.
+  - Formulario rápido con tipo, categoría, monto, método y nota.
+  - Tabla con historial y resumen mensual (ingresos, gastos y neto).
+- **Tipos nuevos**: `CashFlowEntry`, `CashFlowSummary`, `order.source` y referencia de comprobante en `Sale`.
+
+### 6. 🍳 Pedidos de Cocina con Etiquetas
+- **Página**: `src/app/(main)/incoming-orders/page.tsx`
+- **Mejoras**:
+  - Etiquetas de origen para diferenciar pedidos de POS (En tienda) y Pedidos Ya.
+  - Contador y badge animado para destacar ingresos nuevos en la pestaña “Nuevos”.
+  - Cards muestran etiqueta “Nuevo ingreso” durante los primeros 5 minutos.
 
 ---
 

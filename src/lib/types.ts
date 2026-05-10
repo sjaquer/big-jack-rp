@@ -1,16 +1,45 @@
 
 import { Timestamp } from 'firebase/firestore';
 
+export type ProductCategory =
+  | 'combos'
+  | 'hamburguesas'
+  | 'salchipapas'
+  | 'choripanes'
+  | 'adicionales'
+  | 'pollos'
+  | 'bebidas'
+  | 'acompanamientos'
+  | 'postres'
+  | 'otros';
+
+export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
+  combos: 'Combos',
+  hamburguesas: 'Hamburguesas',
+  salchipapas: 'Salchipapas',
+  choripanes: 'Choripanes',
+  adicionales: 'Adicionales',
+  pollos: 'Pollos & Parrilla',
+  bebidas: 'Bebidas',
+  acompanamientos: 'Acompañamientos',
+  postres: 'Postres',
+  otros: 'Otros',
+};
+
+export type ProductIngredientSourceType = 'ingredient' | 'inventory_item';
+
 export interface ProductIngredient {
   ingredientId: string;
   quantity: number;
   unit: string;
+  sourceType?: ProductIngredientSourceType;
 }
 
 export interface Product {
   id: string;
   name: string;
   sku: string;
+  category?: ProductCategory;
   ingredients?: ProductIngredient[];
   price: number;
   salePrice: number;
@@ -21,11 +50,13 @@ export interface Product {
   imageHint?: string;
 }
 
-export type IngredientCategory = 'protein' | 'vegetable' | 'dairy' | 'sauce' | 'bakery' | 'other';
+export type IngredientCategory = 'protein' | 'vegetable' | 'dairy' | 'sauce' | 'bakery' | 'additional' | 'other';
 
 export interface IngredientProvider {
   name: string;
   pricePerUnit: number;
+  totalPrice?: number;
+  purchaseQuantity?: number;
 }
 
 export interface Ingredient {
@@ -59,18 +90,32 @@ export interface InventoryItem {
 }
 
 
+export type SaleSource = 'pos' | 'online' | 'delivery';
+export type SalePaymentStatus = 'paid' | 'pending';
+
 export interface Sale {
   id: string;
   saleDate: Timestamp;
   totalAmount: number;
   cashierId: string;
   paymentMethod: string;
+  paymentStatus?: SalePaymentStatus;
+  itemsCount?: number;
+  uniqueProductsCount?: number;
+  source?: SaleSource;
+  deviceType?: string;
+  customerId?: string | null;
+  customerName?: string | null;
+  customerDocumentType?: '0' | '1' | '6';
+  customerDocumentNumber?: string | null;
+  receiptReference?: string;
 }
 
 export interface SaleItem {
   id: string;
   saleId: string;
   productId: string;
+  productName?: string;
   quantity: number;
   unitPrice: number;
 }
@@ -82,10 +127,12 @@ export interface OrderItem {
     unitPrice: number;
 }
 
+export type OrderSource = 'pos' | 'delivery' | 'pedidosya' | 'web' | 'otros';
+
 export interface OnlineOrder {
   id: string;
   orderDate: Timestamp;
-  customerId: string;
+  customerId: string | null;
   status: 'pending' | 'processing' | 'completed';
   totalAmount: number;
   items: OrderItem[];
@@ -94,7 +141,12 @@ export interface OnlineOrder {
   paymentMethod?: string;
   notes?: string;
   deliveryAddress?: string;
+  processingStartedAt?: Timestamp;
   completedAt?: Timestamp;
+  source?: OrderSource;
+  channelTag?: 'nuevo' | 'prioritario';
+  customerDocumentType?: '0' | '1' | '6';
+  customerDocumentNumber?: string | null;
 }
 
 export interface Customer {
@@ -104,6 +156,9 @@ export interface Customer {
   nickname?: string;
   phone?: string;
   email?: string;
+  documentType?: '0' | '1' | '6'; // 0: Sin doc, 1: DNI, 6: RUC
+  documentNumber?: string;
+  address?: string;
   allergies?: string[];
   preferences?: string;
   notes?: string;
@@ -124,4 +179,25 @@ export interface OtherItem {
   name: string;
   stock: number;
   minStock: number;
+}
+
+export type CashFlowType = 'income' | 'expense';
+
+export interface CashFlowEntry {
+  id: string;
+  type: CashFlowType;
+  category: string;
+  amount: number;
+  paymentMethod: string;
+  note?: string;
+  entryDate: Timestamp;
+  createdBy?: string;
+  createdAt?: Timestamp;
+}
+
+export interface CashFlowSummary {
+  period: 'daily' | 'weekly' | 'monthly';
+  income: number;
+  expenses: number;
+  net: number;
 }

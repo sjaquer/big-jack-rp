@@ -49,15 +49,17 @@ export default function IncomingOrdersPage() {
 
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-headline font-bold">Gestión de Pedidos Entrantes</h1>
-        <p className="text-muted-foreground">Revisa y actualiza el estado de todos los pedidos a preparar.</p>
-      </div>
-      {isLoading && <p>Cargando pedidos...</p>}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {onlineOrders?.map((order) => (
-          <Card key={order.id} className="hover:shadow-lg transition-shadow">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/20 dark:from-slate-900 dark:to-slate-800">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-headline font-bold text-slate-900 tracking-tight">Gestión de Pedidos Entrantes</h1>
+            <p className="text-base text-slate-600 mt-1">Revisa y actualiza el estado de todos los pedidos a preparar.</p>
+          </div>
+          {isLoading && <p className="text-slate-500">Cargando pedidos...</p>}
+          <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {onlineOrders?.map((order) => (
+              <Card key={order.id} className="hover:shadow-xl transition-all duration-200 border-slate-200 shadow-md">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -71,7 +73,7 @@ export default function IncomingOrdersPage() {
             </CardHeader>
             <CardContent>
                <div className="text-sm">
-                <p className="font-medium">Cliente: {order.customerName ?? order.customerId.slice(0,10)}</p>
+                <p className="font-medium">Cliente: {order.customerName ?? order.customerId?.slice(0, 10) ?? 'Sin cliente'}</p>
               </div>
                <Accordion type="single" collapsible className="w-full mt-4">
                 <AccordionItem value="items" className="border-none">
@@ -83,7 +85,7 @@ export default function IncomingOrdersPage() {
                       {order.items.map(item => (
                         <div key={item.productId} className="flex justify-between text-xs sm:text-sm p-2 rounded-md bg-muted/30">
                           <span className="font-medium">{item.quantity} x {item.productName}</span>
-                          <span className="font-semibold">S/ {(item.quantity * item.unitPrice).toFixed(2)}</span>
+                          <span className="font-semibold">S/ {((item.quantity ?? 0) * (item.unitPrice ?? 0)).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -93,7 +95,7 @@ export default function IncomingOrdersPage() {
               <div className="mt-4 pt-4 border-t">
                 <p className="flex justify-between font-semibold">
                   <span>Total:</span>
-                  <span>S/ {order.totalAmount.toFixed(2)}</span>
+                  <span>S/ {(order.totalAmount ?? 0).toFixed(2)}</span>
                 </p>
               </div>
             </CardContent>
@@ -101,13 +103,13 @@ export default function IncomingOrdersPage() {
               <Button
                 variant="outline"
                 onClick={() => handleViewDetails(order)}
-                className="w-full h-11 text-base touch-manipulation"
+                className="w-full h-12 text-base touch-manipulation"
               >
                 <Eye className="mr-2 h-5 w-5" />
                 Ver Detalles
               </Button>
               <Select defaultValue={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus as OnlineOrder['status'])}>
-                <SelectTrigger className="h-12 text-base font-medium touch-manipulation">
+                <SelectTrigger className="h-12 text-base font-semibold touch-manipulation shadow-sm">
                   <SelectValue placeholder="Cambiar estado" />
                 </SelectTrigger>
                 <SelectContent>
@@ -126,6 +128,8 @@ export default function IncomingOrdersPage() {
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
       />
+        </div>
+      </div>
     </div>
   );
 }

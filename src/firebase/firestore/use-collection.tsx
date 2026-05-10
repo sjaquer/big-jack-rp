@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { isDemoMode } from '@/lib/demo-mode';
+import { getDemoData } from '@/lib/demo-data';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -30,6 +32,7 @@ export interface UseCollectionResult<T> {
 */
 export interface InternalQuery extends Query<DocumentData> {
   _query: {
+    collectionGroup?: string;
     path: {
       canonicalString(): string;
       toString(): string;
@@ -62,6 +65,26 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Verificar modo demo
+    if (isDemoMode()) {
+      setIsLoading(true);
+      // Obtener el path de la colección para determinar qué datos demo devolver
+      let collectionPath = '';
+      if (memoizedTargetRefOrQuery) {
+        if (memoizedTargetRefOrQuery.type === 'collection') {
+          collectionPath = (memoizedTargetRefOrQuery as CollectionReference).path;
+        } else {
+          collectionPath = (memoizedTargetRefOrQuery as unknown as InternalQuery)._query?.path?.toString() || '';
+        }
+      }
+      
+      const demoData = getDemoData(collectionPath) as ResultItemType[];
+      setData(demoData);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
@@ -86,10 +109,24 @@ export function useCollection<T = any>(
       },
       (error: FirestoreError) => {
         // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        const path: string = (() => {
+          if (memoizedTargetRefOrQuery.type === 'collection') {
+            return (memoizedTargetRefOrQuery as CollectionReference).path;
+          }
+
+          const internalQuery = memoizedTargetRefOrQuery as unknown as InternalQuery;
+          const queryPath = internalQuery._query.path.canonicalString();
+
+          if (queryPath) {
+            return queryPath;
+          }
+
+          if (internalQuery._query.collectionGroup) {
+            return `collectionGroup:${internalQuery._query.collectionGroup}`;
+          }
+
+          return 'unknown-query-path';
+        })();
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',

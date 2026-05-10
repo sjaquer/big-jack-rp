@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { OnlineOrder } from '@/lib/types';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Pencil, Trash2, Save, X } from 'lucide-react';
@@ -35,7 +35,7 @@ const paymentMethodLabels: { [key: string]: string } = {
   card: 'Tarjeta',
   yape: 'Yape',
   plin: 'Plin',
-  transfer: 'Transferencia',
+  transfer: 'Pedidos Ya',
 };
 
 export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDialogProps) {
@@ -71,7 +71,17 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
     setIsSaving(true);
     try {
       const orderRef = doc(firestore, 'online_orders', order.id);
-      await updateDocumentNonBlocking(orderRef, editedOrder);
+      const payload: Partial<OnlineOrder> = { ...editedOrder };
+      if (editedOrder.status && editedOrder.status !== order.status) {
+        if (editedOrder.status === 'processing') {
+          payload.processingStartedAt = Timestamp.now();
+        }
+        if (editedOrder.status === 'completed') {
+          payload.completedAt = Timestamp.now();
+        }
+      }
+
+      await updateDocumentNonBlocking(orderRef, payload);
       
       toast({
         title: 'Pedido actualizado',
@@ -278,11 +288,11 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
                     <div className="flex-1">
                       <p className="font-medium text-base">{item.productName}</p>
                       <p className="text-sm text-muted-foreground">
-                        Cantidad: {item.quantity} × S/ {item.unitPrice.toFixed(2)}
+                        Cantidad: {item.quantity} × S/ {(item.unitPrice ?? 0).toFixed(2)}
                       </p>
                     </div>
                     <p className="font-semibold text-base">
-                      S/ {(item.quantity * item.unitPrice).toFixed(2)}
+                      S/ {((item.quantity ?? 0) * (item.unitPrice ?? 0)).toFixed(2)}
                     </p>
                   </div>
                 ))}
@@ -291,7 +301,7 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
               <div className="flex justify-between items-center pt-4 border-t-2">
                 <span className="text-lg font-semibold">Total:</span>
                 <span className="text-2xl font-bold text-primary">
-                  S/ {order.totalAmount.toFixed(2)}
+                  S/ {(order.totalAmount ?? 0).toFixed(2)}
                 </span>
               </div>
             </div>

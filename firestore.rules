@@ -1,11 +1,67 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
-    // Regla global: si el usuario ha iniciado sesión, puede leer y escribir en cualquier documento.
+    // Colecciones permitidas para el cliente autenticado.
+    match /products/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /ingredients/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /inventory_items/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /inventory_movements/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /customers/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /online_orders/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /sales/{saleId} {
+      allow read, create, update, delete: if isAuthenticated();
+
+      match /sale_items/{itemId} {
+        allow read, create, update, delete: if isAuthenticated();
+      }
+    }
+
+    // Requerido para consultas collectionGroup('sale_items').
+    match /{path=**}/sale_items/{itemId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /cash_flows/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /cash_registers/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /cash_movements/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /suppliers/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    // Denegar cualquier colección no listada.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, create, update, delete: if false;
     }
   }
 }
