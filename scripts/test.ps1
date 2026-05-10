@@ -9,11 +9,11 @@ if ($Attempts -lt 1) {
 
 $ErrorActionPreference = "Stop"
 
-# ==============================
-# CONFIG HARD-CODEADA (LOCAL)
-# ==============================
-$WebhookUrl = "https://bigjack-rp.vercel.app/api/webhooks/orders"
-$WebhookSecret = "pkwevojn2981334ou3m86b9209u25161v3rtf6g5g15iu5n19"
+# ==========================================
+# CONFIG (USA VARIABLES DE ENTORNO O DEFAULTS)
+# ==========================================
+$WebhookUrl = $env:TEST_WEBHOOK_URL -if $env:TEST_WEBHOOK_URL -else "http://localhost:9002/api/webhooks/orders"
+$WebhookSecret = $env:TEST_WEBHOOK_SECRET -if $env:TEST_WEBHOOK_SECRET -else "your-local-secret-here"
 
 # SKUs reales compartidos por ti
 $CatalogSkus = @(

@@ -1,200 +1,140 @@
-# Big Jack RP
+# Big Jack RP - ERP Operativo
 
-ERP operativo para restaurante fast food, construido con Next.js 15 + Firebase.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-11-orange?style=flat&logo=firebase)](https://firebase.google.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 
-Este proyecto centraliza ventas POS, pedidos online, inventario, clientes, caja e insights en una sola plataforma.
+ERP operativo moderno para restaurantes fast food, optimizado para velocidad y facilidad de uso.
 
-## 1. Estado Actual Del Proyecto
+---
 
-Implementado y activo:
-- POS completo con registro de venta y comprobante.
-- Cola de pedidos unificada (POS + web) en `incoming-orders`.
-- Transición de estados con temporizador automático en pedidos.
-- Integración webhook para menú digital por SKU.
-- Flujo ERP normal aplicado a pedidos webhook (venta + stock + pedido).
-- Dashboard compacto (solo KPIs críticos).
-- Informe IA movido a Insights (pestaña IA).
+## 🇪🇸 Resumen del Proyecto
 
-## 2. Stack Tecnológico
+**Big Jack RP** es una solución integral que centraliza ventas POS, pedidos online, gestión de inventario por recetas, base de datos de clientes e insights generados por IA en una sola plataforma.
 
-- Frontend: Next.js 15, React 18, TypeScript
-- UI: Tailwind CSS, shadcn/ui, Radix
-- Base de datos: Firestore
-- Auth: Firebase Auth
-- Admin backend: firebase-admin
-- IA: Genkit + Google GenAI
-- Charts: Recharts
+### Estado Actual
+- **POS Completo**: Registro de ventas rápido con gestión de efectivo.
+- **Cola de Pedidos Unificada**: Gestión en tiempo real de pedidos locales y online.
+- **Inventario Inteligente**: Descuento automático de stock basado en recetas (ingredientes).
+- **Integración Webhook**: Listo para recibir pedidos de menús digitales externos.
+- **Insights con IA**: Reportes ejecutivos generados automáticamente mediante Google GenAI.
 
-## 3. Estructura Funcional
+---
 
-### 3.1 App Router
+## 🇺🇸 Project Overview
 
-- `src/app/(main)/dashboard/page.tsx`: panel ejecutivo compacto
-- `src/app/(main)/pos/page.tsx`: punto de venta
-- `src/app/(main)/incoming-orders/page.tsx`: cola operativa de pedidos
-- `src/app/(main)/insights/page.tsx`: analítica avanzada + IA
-- `src/app/(main)/inventory/*`: inventario
-- `src/app/(main)/customers/*`: clientes
-- `src/app/(main)/cash-flow/*`: flujo de caja
+**Big Jack RP** is a modern ERP solution designed for fast-food restaurants. It centralizes POS sales, online orders, recipe-based inventory management, customer tracking, and AI-driven business insights into a single unified platform.
 
-### 3.2 APIs
+### Key Features
+- **Full POS System**: Fast sales registration and cash flow management.
+- **Unified Order Queue**: Real-time management of both local and online orders.
+- **Smart Inventory**: Automatic stock deduction based on product recipes and ingredients.
+- **Webhook Integration**: Ready to receive orders from external digital menus via a secure API.
+- **AI Insights**: Executive reports automatically generated using Google GenAI (Genkit).
 
-- `src/app/api/webhooks/orders/route.ts`
-  - Recibe pedidos del menú digital
-  - Solo valida y delega procesamiento al servicio interno
-- `src/app/api/ai/dashboard-report/route.ts`
-  - Genera reporte IA desde métricas ERP
+---
 
-### 3.3 Servicios Backend Internos
+## 🛠 Tech Stack
 
-- `src/lib/orders/process-incoming-order.ts`
-  - Servicio central para procesar pedidos entrantes por SKU
-  - Resuelve productos por SKU
-  - Registra venta (`sales` + `sale_items`)
-  - Descuenta stock según receta en `ingredients` e `inventory_items`
-  - Crea orden en `online_orders`
-  - Maneja idempotencia por `eventId`
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Database & Auth**: Firebase (Firestore & Auth)
+- **AI Engine**: Google GenAI + Genkit
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Charts**: Recharts
 
-## 4. Flujo Operativo De Pedidos
+---
 
-## 4.1 POS (local)
+## 🚀 Quick Start / Inicio Rápido
 
-1. Usuario cobra en POS.
-2. Se registra `sales` y `sale_items`.
-3. Se descuenta stock en background.
-4. Se crea pedido en `online_orders` con `source: pos`.
-5. El pedido aparece en `incoming-orders`.
+### Prerequisites
+- Node.js 18+
+- A Firebase Project
 
-## 4.2 Webhook (menú digital)
+### Setup / Configuración
 
-1. Menú digital envía payload con SKUs.
-2. Webhook valida `WEBHOOK_MENU_SECRET` (si configurado).
-3. Webhook valida estructura del payload.
-4. Webhook delega a `processIncomingOrder`.
-5. ERP aplica flujo normal completo (venta + stock + cola pedidos).
+1. **Clone the repository / Clonar el repositorio**:
+   ```bash
+   git clone https://github.com/youruser/big-jack-rp.git
+   cd big-jack-rp
+   ```
 
-Importante:
-- El contrato de entrada del webhook se mantiene estable para no exigir cambios al menú digital.
-- El webhook no contiene lógica de negocio pesada; la lógica vive en servicio ERP interno.
+2. **Install dependencies / Instalar dependencias**:
+   ```bash
+   npm install
+   ```
 
-## 5. Modelo De Datos (Colecciones Principales)
+3. **Configure Environment Variables / Configurar Variables**:
+   Copy `.env.example` to `.env` and fill in your Firebase credentials.
+   ```bash
+   cp .env.example .env
+   ```
 
-- `products`
-  - Catálogo, SKU, precio venta, receta (ingredientes/insumos)
-- `ingredients`
-  - Materia prima con unidad y stock
-- `inventory_items`
-  - Insumos no-receta clásica (empaques, etc.)
-- `sales`
-  - Cabecera de venta
-- `sales/{saleId}/sale_items`
-  - Detalle por producto
-- `online_orders`
-  - Cola de pedidos para operación cocina/despacho
-- `customers`
-  - Maestro de clientes
-- `cash_movements`
-  - Flujo caja
+4. **Run Development Server / Ejecutar en Desarrollo**:
+   ```bash
+   npm run dev
+   ```
+   The app will be available at [http://localhost:9002](http://localhost:9002).
 
-## 6. Variables De Entorno
+---
 
-Mínimas para cliente Firebase:
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+## 🔒 Security / Seguridad
 
-Servidor/Admin:
-- `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON en una línea, recomendado)
-- `FIREBASE_PROJECT_ID` (fallback)
+- **Environment Variables**: Never commit your `.env` file. A template is provided in `.env.example`.
+- **Firebase Rules**: Ensure you deploy the rules provided in `firestore.rules` to your Firebase project.
+- **Webhook Secret**: Always use a strong `WEBHOOK_MENU_SECRET` in production to authorize incoming orders.
 
-Webhook:
-- `WEBHOOK_MENU_SECRET` (secreto compartido con menú digital)
+---
 
-Uploads:
-- `UPLOAD_MAX_IMAGE_MB`
-- `UPLOAD_IMAGE_SUBDIR`
-- `UPLOAD_ALLOWED_TYPES`
+## 📁 Project Structure / Estructura
 
-## 7. Contrato Webhook (estable)
+- `src/app`: Next.js pages and API routes.
+- `src/components`: Reusable UI components.
+- `src/firebase`: Firebase configuration and custom hooks.
+- `src/lib`: Core business logic (inventory, order processing).
+- `src/ai`: Genkit AI flows and configurations.
 
-Endpoint:
-- `POST /api/webhooks/orders`
+---
 
-Headers:
-- `Content-Type: application/json`
-- `x-webhook-secret: <WEBHOOK_MENU_SECRET>` (si configurado)
+## 📖 Documentación Técnica / Technical Docs
 
-Payload ejemplo:
+### 1. Modelo de Datos / Data Model (Firestore)
+- `products`: Catálogo, SKU, precio, receta.
+- `ingredients`: Materia prima y stock.
+- `sales`: Cabecera de ventas.
+- `online_orders`: Cola operativa de pedidos.
+- `customers`: Maestro de clientes.
+- `cash_movements`: Flujo de caja.
 
+### 2. Contrato Webhook / Webhook Contract
+**Endpoint**: `POST /api/webhooks/orders`
+
+**Headers**:
+- `x-webhook-secret`: `<WEBHOOK_MENU_SECRET>`
+
+**Payload**:
 ```json
 {
-  "eventId": "menu-20260419-0001",
-  "orderDate": "2026-04-06T14:25:00.000Z",
+  "eventId": "unique-event-id",
+  "orderDate": "ISO-8601",
   "source": "menu-web",
-  "customer": {
-    "name": "Juan Perez",
-    "phone": "+51987654321"
-  },
-  "paymentMethod": "yape",
-  "notes": "Sin cebolla",
-  "items": [
-    { "sku": "BURG-002", "quantity": 2 },
-    { "sku": "BEB-001", "quantity": 1 }
-  ],
-  "metadata": {
-    "channel": "menu-digital"
-  }
+  "customer": { "name": "...", "phone": "..." },
+  "items": [{ "sku": "...", "quantity": 1 }]
 }
 ```
 
-Respuestas:
-- `200`: procesado OK o duplicado controlado por `eventId`
-- `400`: payload inválido o SKU inexistente
-- `401`: secreto inválido
-- `500`: error interno
+### 3. Scripts
+- `npm run dev`: Inicia en puerto 9002.
+- `npm run build`: Build de producción.
+- `npm run lint`: Chequeo de calidad.
+- `npm run typecheck`: Validación de tipos TS.
 
-## 8. Scripts
+---
 
-- `npm run dev`: entorno local en puerto 9002
-- `npm run build`: build producción
-- `npm run start`: levantar build en puerto 3000
-- `npm run typecheck`: chequeo TypeScript
-- `npm run lint`: lint (pendiente migración a ESLint CLI por deprecación de `next lint`)
-- `npm run genkit:dev`: servidor local de flujos IA
+## 📄 License / Licencia
 
-## 9. Módulos De IA
+Este proyecto está bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-- Flow: `src/ai/flows/generate-dashboard-report.ts`
-  - Insumo: métricas operativas
-  - Salida: resumen ejecutivo + hallazgos + riesgos + plan de acción
-- UI consumo:
-  - `src/components/dashboard/ai-report-card.tsx`
-  - Renderizado actual en `src/app/(main)/insights/page.tsx` (tab IA)
+---
 
-## 10. Limpieza Técnica Realizada
-
-Se removió código obsoleto/no referenciado:
-- `src/components/dashboard/sales-list.tsx`
-- `src/components/dashboard/stock-overview.tsx`
-- `src/components/pos/cash-register.tsx`
-- `src/app/api/online-orders/` (carpeta vacía)
-- Bloques comentados legacy de caja chica en `src/app/(main)/pos/page.tsx`
-
-Además se corrigieron errores de tipado:
-- `src/firebase/index.ts`
-- `src/lib/product-stock.ts`
-
-## 11. Próximos Pasos Recomendados
-
-1. Migrar `next lint` al ESLint CLI oficial (`next-lint-to-eslint-cli`).
-2. Agregar pruebas de integración para webhook (casos: OK, SKU faltante, duplicado por `eventId`, secreto inválido).
-3. Documentar Firestore rules por módulo en `docs/` (si se va a auditar seguridad por entorno).
-4. Incorporar changelog por versión para operación.
-
-## 12. Notas De Seguridad
-
-- No commitear secrets reales en repositorio.
-- Rotar credenciales si se expusieron accidentalmente.
-- Mantener `WEBHOOK_MENU_SECRET` distinto por ambiente (dev/staging/prod).
+*Desarrollado con ❤️ para la eficiencia operativa.*
