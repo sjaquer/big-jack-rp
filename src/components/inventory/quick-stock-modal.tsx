@@ -17,6 +17,7 @@ import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from 
 import { doc, collection, increment, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Minus, Package, ShoppingCart } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 type ItemType = 'ingredient' | 'other_item';
@@ -49,6 +50,7 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState('');
   const [costPerUnit, setCostPerUnit] = useState<string>('');
+  const [registerExpense, setRegisterExpense] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleQuickAmount = (value: number) => {
@@ -108,6 +110,20 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
       };
 
       addDocumentNonBlocking(collection(firestore, 'inventory_movements'), movementData);
+
+      // Si es una entrada con costo, y el usuario eligió registrar el gasto
+      if (mode === 'add' && movementData.totalCost && movementData.totalCost > 0 && registerExpense) {
+        const cashFlowData = {
+          type: 'expense',
+          category: 'Insumos',
+          amount: movementData.totalCost,
+          paymentMethod: 'Efectivo', // Por defecto, luego puede editarlo en la página
+          note: `Compra de ${item.name} (${numAmount} ${item.unit || 'unidades'})${note ? ' - ' + note : ''}`,
+          entryDate: Timestamp.now(),
+          createdAt: Timestamp.now(),
+        };
+        addDocumentNonBlocking(collection(firestore, 'cash_flows'), cashFlowData);
+      }
 
       toast({
         title: mode === 'add' ? '✅ Stock agregado' : '✅ Stock descontado',
@@ -237,9 +253,24 @@ export function QuickStockModal({ isOpen, onClose, item, itemType }: QuickStockM
                 step="0.01"
               />
               {costPerUnit && amount && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Total: <span className="font-semibold text-foreground">S/ {(toFiniteNumber(costPerUnit) * toFiniteNumber(amount)).toFixed(2)}</span>
-                </p>
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Total a pagar: <span className="font-semibold text-foreground">S/ {(toFiniteNumber(costPerUnit) * toFiniteNumber(amount)).toFixed(2)}</span>
+                  </p>
+                  <div className="flex items-center space-x-2 bg-muted/30 p-2.5 rounded-lg border">
+                    <Checkbox 
+                      id="registerExpense" 
+                      checked={registerExpense}
+                      onCheckedChange={(checked) => setRegisterExpense(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="registerExpense"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-slate-700"
+                    >
+                      Registrar gasto automáticamente en Caja
+                    </label>
+                  </div>
+                </div>
               )}
             </div>
           )}
