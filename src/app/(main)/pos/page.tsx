@@ -16,6 +16,8 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Badge } from "@/components/ui/badge";
 import { ProductGrid, CartPanel } from '@/components/pos/pos-components';
 import { convertInventoryQuantity } from '@/lib/unit-conversion';
+import { QuickSearch } from '@/components/pos/quick-search';
+import { useEffect } from 'react';
 
 interface OrderItem extends Product {
   quantity: number;
@@ -181,6 +183,8 @@ export default function POSPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<'all' | ProductCategory>('all');
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchInitialQuery, setSearchInitialQuery] = useState('');
 
     const productsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -545,6 +549,37 @@ export default function POSPage() {
       });
     };
 
+    // ESCUCHA GLOBAL DE TECLADO PARA BÚSQUEDA RÁPIDA
+    useEffect(() => {
+      const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        // Si ya hay un modal abierto o el foco está en un input/textarea, no hacer nada
+        if (
+          isPaymentModalOpen || 
+          isRecentSalesOpen || 
+          isSearchOpen ||
+          e.target instanceof HTMLInputElement || 
+          e.target instanceof HTMLTextAreaElement ||
+          e.target instanceof HTMLSelectElement
+        ) {
+          return;
+        }
+
+        // Ignorar teclas de control (Ctrl, Alt, Meta, Tab, etc.)
+        if (e.ctrlKey || e.altKey || e.metaKey || e.key === 'Tab' || e.key === 'Shift') {
+          return;
+        }
+
+        // Si es una tecla "imprimible" (longitud 1), iniciar búsqueda
+        if (e.key.length === 1) {
+          setSearchInitialQuery(e.key);
+          setIsSearchOpen(true);
+        }
+      };
+
+      window.addEventListener('keydown', handleGlobalKeyDown);
+      return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [isPaymentModalOpen, isRecentSalesOpen, isSearchOpen]);
+
   return (
     <div className="relative h-full w-full bg-transparent">
       {/* Mobile Cart Trigger - Floating Button */}
@@ -594,6 +629,13 @@ export default function POSPage() {
             isOpen={isRecentSalesOpen}
             onClose={() => setRecentSalesOpen(false)}
           onReprintReceipt={handleReprintRecentSale}
+        />
+        <QuickSearch
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            products={products || []}
+            addToOrder={addToOrder}
+            initialQuery={searchInitialQuery}
         />
       
         {/* Left Side: Product Grid */}
