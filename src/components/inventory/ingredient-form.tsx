@@ -58,8 +58,12 @@ function toFiniteNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatNumber(value: unknown, decimals: number): string {
-  return toFiniteNumber(value).toFixed(decimals);
+function formatNumber(value: unknown, maxDecimals: number, minDecimals: number = 2): string {
+  const num = toFiniteNumber(value);
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: minDecimals,
+    maximumFractionDigits: maxDecimals,
+  });
 }
 
 const formSchema = z.object({
@@ -570,7 +574,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                                         const purchaseQuantity = toFiniteNumber(form.watch(`providers.${index}.purchaseQuantity`));
                                         if (totalPrice > 0 && purchaseQuantity > 0) {
                                           const pricePerUnit = totalPrice / purchaseQuantity;
-                                          form.setValue(`providers.${index}.pricePerUnit`, parseFloat(pricePerUnit.toFixed(4)));
+                                          form.setValue(`providers.${index}.pricePerUnit`, Number(pricePerUnit.toFixed(6)));
                                         }
                                       }}
                                     />
@@ -600,7 +604,7 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                                         const totalPrice = toFiniteNumber(form.watch(`providers.${index}.totalPrice`));
                                         if (totalPrice > 0 && purchaseQuantity > 0) {
                                           const pricePerUnit = totalPrice / purchaseQuantity;
-                                          form.setValue(`providers.${index}.pricePerUnit`, parseFloat(pricePerUnit.toFixed(4)));
+                                          form.setValue(`providers.${index}.pricePerUnit`, Number(pricePerUnit.toFixed(6)));
                                         }
                                       }}
                                     />
@@ -624,10 +628,17 @@ export function IngredientForm({ isOpen, onClose, ingredient }: IngredientFormPr
                                     Calculado automáticamente
                                   </p>
                                 </div>
-                                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                                  S/ {formatNumber(watchedPricePerUnit, 4)}
-                                  <span className="text-sm font-normal ml-1">por {watchedUnit}</span>
-                                </p>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                                    S/ {formatNumber(watchedPricePerUnit, 6, 2)}
+                                    <span className="text-sm font-normal ml-1">por {watchedUnit}</span>
+                                  </p>
+                                  {(watchedUnit === 'g' || watchedUnit === 'ml') && (
+                                    <p className="text-xs font-semibold text-green-600 dark:text-green-400 mt-1 bg-green-100 dark:bg-green-900/30 inline-block px-2 py-0.5 rounded">
+                                      (Equivale a S/ {formatNumber(watchedPricePerUnit * 1000, 2)} por {watchedUnit === 'g' ? 'kg' : 'L'})
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}
